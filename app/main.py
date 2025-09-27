@@ -38,8 +38,6 @@ async def main():
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
-
-    # роутеры
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
     dp.include_router(h_quiz_energy.router)
@@ -52,17 +50,14 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
-    dp.include_router(h_admin_stats.router)
-            dp.include_router(h_navigator.router)
+    dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
     dp.include_router(h_lead.router)
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
-    dp.include_router(h_profile.router)
-    dp.include_router(h_promo.router)
-
+    dp.include_router(h_admin_stats.router)
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
@@ -81,6 +76,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
