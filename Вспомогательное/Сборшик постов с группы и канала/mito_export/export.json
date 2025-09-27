@@ -1,0 +1,378 @@
+{
+  "chat_id": -1001858905974,
+  "title": "МИТОсообщество 🧬",
+  "exported_at": "2025-09-25T21:34:47.980457",
+  "topics": [
+    {
+      "id": 1,
+      "title": "Разное",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1"
+    },
+    {
+      "id": 3,
+      "title": "Вебинары доктора Марии Павловой",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3"
+    },
+    {
+      "id": 4,
+      "title": "Исследования",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/4"
+    },
+    {
+      "id": 5,
+      "title": "EXTRA (полипренолы)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/5"
+    },
+    {
+      "id": 8,
+      "title": "STONE (детокс)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/8"
+    },
+    {
+      "id": 9,
+      "title": "MIT UP (коллаген, уролитин A)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/9"
+    },
+    {
+      "id": 10,
+      "title": "BLEND (полипренолы)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/10"
+    },
+    {
+      "id": 11,
+      "title": "MOBIO (метабиотик)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/11"
+    },
+    {
+      "id": 13,
+      "title": "VITEN (иммунитет)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/13"
+    },
+    {
+      "id": 15,
+      "title": "Серия NASH",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/15"
+    },
+    {
+      "id": 16,
+      "title": "МИТОХОНДРИИ",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/16"
+    },
+    {
+      "id": 17,
+      "title": "ПОЛИПРЕНОЛЫ",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/17"
+    },
+    {
+      "id": 18,
+      "title": "Маркетинг",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/18"
+    },
+    {
+      "id": 101,
+      "title": "Низкоуглеводное питание",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/101"
+    },
+    {
+      "id": 181,
+      "title": "О! Тест (на омега-3)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/181"
+    },
+    {
+      "id": 221,
+      "title": "MITOпрограмма",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/221"
+    },
+    {
+      "id": 261,
+      "title": "EXO (кетоны)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/261"
+    },
+    {
+      "id": 275,
+      "title": "Хвойный хлорофилл",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/275"
+    },
+    {
+      "id": 314,
+      "title": "Онкология",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/314"
+    },
+    {
+      "id": 359,
+      "title": "Отзывы",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/359"
+    },
+    {
+      "id": 364,
+      "title": "Напитки (кофе, шоколад, чай…)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/364"
+    },
+    {
+      "id": 383,
+      "title": "Очки (сон)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/383"
+    },
+    {
+      "id": 415,
+      "title": "Производство",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/415"
+    },
+    {
+      "id": 459,
+      "title": "Экспертные эфиры",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/459"
+    },
+    {
+      "id": 513,
+      "title": "Масло МСТ (мозг, энергия)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/513"
+    },
+    {
+      "id": 539,
+      "title": "Вебинары доктора Ольги Анатольевны",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/539"
+    },
+    {
+      "id": 592,
+      "title": "Протеин",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/592"
+    },
+    {
+      "id": 637,
+      "title": "Уход",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/637"
+    },
+    {
+      "id": 701,
+      "title": "drops (pH баланс)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/701"
+    },
+    {
+      "id": 1031,
+      "title": "Сыворотка (уход)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1031"
+    },
+    {
+      "id": 1159,
+      "title": "BEET SHOT (оксид азота)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1159"
+    },
+    {
+      "id": 1205,
+      "title": "TÉO GREEN (клетчатка, кишечник)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1205"
+    },
+    {
+      "id": 1614,
+      "title": "Дети",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1614"
+    },
+    {
+      "id": 1615,
+      "title": "Наборы",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1615"
+    },
+    {
+      "id": 1618,
+      "title": "Спорт",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1618"
+    },
+    {
+      "id": 1856,
+      "title": "Документы",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/1856"
+    },
+    {
+      "id": 2043,
+      "title": "PARAKILL (антипаразитарка)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/2043"
+    },
+    {
+      "id": 2667,
+      "title": "Эфиры Надежды Гурской",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/2667"
+    },
+    {
+      "id": 2728,
+      "title": "ViMi",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/2728"
+    },
+    {
+      "id": 2979,
+      "title": "T8 ERA TO GO",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/2979"
+    },
+    {
+      "id": 3076,
+      "title": "Вебинары доктора Яны Лопастейской",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3076"
+    },
+    {
+      "id": 3100,
+      "title": "Эфиры Натальи Дмитренко",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3100"
+    },
+    {
+      "id": 3273,
+      "title": "Вебинары Юлии Хохолковой",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3273"
+    },
+    {
+      "id": 3331,
+      "title": "МИТОlife (новости)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3331"
+    },
+    {
+      "id": 3332,
+      "title": "МИТОрост (про ментальность)",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3332"
+    },
+    {
+      "id": 3342,
+      "title": "Материалы",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3342"
+    },
+    {
+      "id": 3343,
+      "title": "Мы в соц.сетях",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3343"
+    },
+    {
+      "id": 3456,
+      "title": "Эфиры Алины Хлебодаровой",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3456"
+    },
+    {
+      "id": 3525,
+      "title": "Отзывы МИТОсообщество, бизнес",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3525"
+    },
+    {
+      "id": 3670,
+      "title": "IQ - код",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3670"
+    },
+    {
+      "id": 3745,
+      "title": "ERA Mitomatrix",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/3745"
+    },
+    {
+      "id": 4583,
+      "title": "Эфиры Олеси Халиной",
+      "total_msgs": 0,
+      "last_date": "",
+      "topic_url": "https://t.me/c/1001858905974/4583"
+    },
+    {
+      "id": 0,
+      "title": "Общий поток",
+      "total_msgs": 4020,
+      "last_date": "2025-09-25 19:56",
+      "topic_url": ""
+    }
+  ]
+}
