@@ -1,4 +1,4 @@
-import httpx
+﻿import httpx
 from app.config import settings
 
 async def ai_generate(prompt: str, sys: str = "Ты — эксперт по здоровью, пиши кратко и по делу на русском."):
@@ -24,3 +24,4 @@ async def ai_generate(prompt: str, sys: str = "Ты — эксперт по зд
             return data["choices"][0]["message"]["content"].strip()
     except Exception as e:
         return f"⚠️ Ошибка генерации: {e}"
+

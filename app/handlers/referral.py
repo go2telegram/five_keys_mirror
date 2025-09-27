@@ -1,4 +1,4 @@
-# app/handlers/referral.py
+﻿# app/handlers/referral.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
@@ -70,3 +70,4 @@ async def ref_menu_msg(m: Message):
     )
     await m.answer(text, reply_markup=_kb_ref(link))
     save_event(uid, USERS.get(uid, {}).get("source"), "ref_menu")
+

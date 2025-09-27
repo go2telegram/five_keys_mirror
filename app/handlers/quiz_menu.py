@@ -1,4 +1,4 @@
-# app/handlers/quiz_menu.py
+﻿# app/handlers/quiz_menu.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
@@ -13,3 +13,4 @@ async def quiz_menu(c: CallbackQuery):
         "🗂 <b>Все квизы</b>\n\nВыбери ключ здоровья, который хочешь проверить:",
         reply_markup=kb_quiz_menu()
     )
+

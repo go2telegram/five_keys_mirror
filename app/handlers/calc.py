@@ -1,4 +1,4 @@
-import re
+﻿import re
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 
@@ -172,3 +172,4 @@ async def handle_bmi(m: Message):
     )
     await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
     SESSIONS.pop(m.from_user.id, None)
+

@@ -1,4 +1,4 @@
-# app/handlers/notify.py
+﻿# app/handlers/notify.py
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -29,3 +29,4 @@ async def notify_help(m: Message):
         "• /notify_on — включить\n"
         "• /notify_off — выключить"
     )
+

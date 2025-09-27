@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,3 +24,4 @@ else
 fi
 
 echo "[INFO] Логи: tail -f $LOG_DIR/bot.log $LOG_DIR/lt.log"
+

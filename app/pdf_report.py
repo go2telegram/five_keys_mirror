@@ -1,4 +1,4 @@
-from io import BytesIO
+﻿from io import BytesIO
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -229,3 +229,4 @@ def build_pdf(
     doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
     buf.seek(0)
     return buf.read()
+

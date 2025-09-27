@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal
 
 REM ===== Определяем папку, где лежит батник =====
@@ -21,3 +21,4 @@ start "LT" cmd /k "cd /d "%TUNNEL_DIR%" && node tunnel.js"
 
 echo [INFO] Запущены BOT и LT. Не закрывай окна во время работы.
 pause
+

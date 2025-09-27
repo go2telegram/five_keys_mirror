@@ -1,4 +1,4 @@
-# app/handlers/lead.py
+﻿# app/handlers/lead.py
 import re
 from datetime import datetime
 from aiogram import Router, F
@@ -102,3 +102,4 @@ async def lead_done(m: Message, state: FSMContext):
         pass
 
     await m.answer("Спасибо! Я передал заявку. Мы свяжемся с вами в ближайшее время. 🙌", reply_markup=kb_main())
+

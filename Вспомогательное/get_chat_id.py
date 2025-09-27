@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.client.default import DefaultBotProperties
@@ -25,3 +25,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

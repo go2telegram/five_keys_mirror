@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
 
@@ -72,3 +72,4 @@ async def notify_no(c: CallbackQuery):
 @router.callback_query(F.data == "home")
 async def back_home(c: CallbackQuery):
     await c.message.answer(WELCOME, reply_markup=kb_main())
+

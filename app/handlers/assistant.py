@@ -1,4 +1,4 @@
-from aiogram import Router
+﻿from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from app.utils_openai import ai_generate
@@ -14,3 +14,4 @@ async def assistant_cmd(m: Message):
         return
     txt = await ai_generate(prompt)
     await m.answer(txt)
+

@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -15,3 +15,4 @@ async def reg_open(c: CallbackQuery):
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(1, 1)
     await c.message.edit_text(REG_TEXT, reply_markup=kb.as_markup())
+

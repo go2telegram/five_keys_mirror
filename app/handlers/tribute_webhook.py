@@ -1,4 +1,4 @@
-import hmac, hashlib, json, os
+﻿import hmac, hashlib, json, os
 from aiohttp import web
 from datetime import datetime, timezone, timedelta
 
@@ -107,3 +107,4 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         return web.json_response({"ok": True})
 
     return web.json_response({"ok": True, "ignored": ev or ""})
+

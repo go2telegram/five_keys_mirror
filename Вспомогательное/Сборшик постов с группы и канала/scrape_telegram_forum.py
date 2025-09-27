@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Экспорт разделов (forum topics) и примеров контента из телеграм-группы.
 Авторизуется через Telethon от имени пользователя.
@@ -405,3 +405,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+

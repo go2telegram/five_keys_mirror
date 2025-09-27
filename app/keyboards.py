@@ -1,4 +1,4 @@
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+﻿from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
 from app.config import settings
 from app.products import PRODUCTS, BUY_URLS
@@ -147,3 +147,4 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
     rows = [1] * len(codes)
     kb.adjust(*(rows + [1, 1, 2]))
     return kb.as_markup()
+

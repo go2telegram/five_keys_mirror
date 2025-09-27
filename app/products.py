@@ -1,4 +1,4 @@
-# app/products.py
+﻿# app/products.py
 
 BASE = "https://raw.githubusercontent.com/go2telegram/media/main/media/products"
 
@@ -98,3 +98,4 @@ GOAL_MAP = {
     "sleep": ["MAG_B6", "OMEGA3", "D3"],
     "beauty_joint": ["ERA_MIT_UP", "OMEGA3"],
 }
+

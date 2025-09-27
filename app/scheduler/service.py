@@ -1,4 +1,4 @@
-# app/scheduler/service.py
+﻿# app/scheduler/service.py
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
@@ -31,3 +31,4 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     )
     scheduler.start()
     return scheduler
+

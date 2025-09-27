@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timezone
@@ -54,3 +54,4 @@ async def sub_check(c: CallbackQuery):
             "Пока подписка не найдена. Завершите оплату в Tribute и дождитесь подтверждения (вебхук).",
             reply_markup=_kb_sub_menu()
         )
+

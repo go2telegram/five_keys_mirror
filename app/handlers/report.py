@@ -1,4 +1,4 @@
-# app/handlers/report.py
+﻿# app/handlers/report.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from aiogram.filters import Command
@@ -68,3 +68,4 @@ async def pdf_cmd(m: Message):
     pdf_bytes = _compose_pdf(plan)
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     await m.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
+

@@ -6,7 +6,7 @@ from aiohttp import web
 from app.config import settings
 from app.scheduler.service import start_scheduler
 
-# СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЂРѕСѓС‚РµСЂС‹
+# существующие роутеры
 from app.handlers import start as h_start
 from app.handlers import calc as h_calc
 from app.handlers import quiz_energy as h_quiz_energy
@@ -24,7 +24,7 @@ from app.handlers import notify as h_notify
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
 
-# РЅРѕРІС‹Рµ
+# новые
 from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
@@ -38,7 +38,7 @@ async def main():
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
 
-    # СЂРѕСѓС‚РµСЂС‹
+    # роутеры
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
     dp.include_router(h_quiz_energy.router)
@@ -63,7 +63,7 @@ async def main():
 
     start_scheduler(bot)
 
-    # aiohttp СЃРµСЂРІРµСЂ РґР»СЏ Tribute
+    # aiohttp сервер для Tribute
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
@@ -74,8 +74,9 @@ async def main():
         f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
     await site.start()
 
-    print("Bot is runningвЂ¦")
+    print("Bot is running…")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+

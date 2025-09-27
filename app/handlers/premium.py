@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timezone
@@ -49,3 +49,4 @@ async def premium_menu(c: CallbackQuery):
         await c.message.edit_text("💎 MITO Basic — доступ к разделам:", reply_markup=_kb_links(BASIC_LINKS))
     else:
         await c.message.edit_text("💎 MITO Pro — полный доступ:", reply_markup=_kb_links(PRO_LINKS))
+

@@ -1,4 +1,4 @@
-import datetime as dt
+﻿import datetime as dt
 from typing import Any, Dict, Optional, List
 
 # tg_id -> {subs, tz, source, asked_notify, last_plan}
@@ -42,3 +42,4 @@ def get_leads_last(n: int = 10) -> list[dict]:
 
 def get_leads_all() -> list[dict]:
     return LEADS[:]  # копия списка (для админ-экспорта)
+

@@ -1,4 +1,4 @@
-# app/handlers/admin.py
+﻿# app/handlers/admin.py
 from aiogram import Router
 from aiogram.types import Message, BufferedInputFile
 from aiogram.filters import Command
@@ -105,3 +105,4 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+

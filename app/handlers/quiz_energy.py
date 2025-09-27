@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from app.keyboards import kb_buylist_pdf
@@ -117,3 +117,4 @@ async def quiz_energy_step(c: CallbackQuery):
         f"Вопрос {idx + 1}/{len(ENERGY_QUESTIONS)}:\n{qtext}",
         reply_markup=kb_quiz_q(idx),
     )
+

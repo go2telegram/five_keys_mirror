@@ -1,4 +1,4 @@
-# app/handlers/navigator.py
+﻿# app/handlers/navigator.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -117,3 +117,4 @@ async def nav_category(c: CallbackQuery):
         return
     title = NAV[cat_key]["title"]
     await c.message.edit_text(f"{title}\nВыбери, что открыть:", reply_markup=kb_nav_category(cat_key))
+

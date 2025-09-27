@@ -1,4 +1,4 @@
-from typing import List, Tuple
+﻿from typing import List, Tuple
 from aiogram import Bot
 from aiogram.types import InputMediaPhoto, BufferedInputFile
 from app.products import PRODUCTS
@@ -128,3 +128,4 @@ async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
             print(f"[media] single sent {f.media.file_name}")
         except Exception as e:
             print(f"[media] single fail: {e}")
+

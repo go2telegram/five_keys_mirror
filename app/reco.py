@@ -1,4 +1,4 @@
-from typing import List
+﻿from typing import List
 from app.products import PRODUCTS
 
 # Контекстные подсказки, зависящие от ситуации
@@ -122,3 +122,4 @@ def product_lines(codes: List[str], context: str) -> List[str]:
         else:
             out.append(f"— <b>{title}</b>: {generic}")
     return out
+

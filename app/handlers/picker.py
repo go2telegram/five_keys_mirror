@@ -1,4 +1,4 @@
-# app/handlers/picker.py
+﻿# app/handlers/picker.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -312,3 +312,4 @@ async def pick_finalize(c: CallbackQuery):
             "order_url": settings.VILAVI_ORDER_NO_REG,
         }
     )
+
