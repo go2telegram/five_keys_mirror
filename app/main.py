@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
@@ -6,7 +6,7 @@ from aiohttp import web
 from app.config import settings
 from app.scheduler.service import start_scheduler
 
-# существующие роутеры
+# СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЂРѕСѓС‚РµСЂС‹
 from app.handlers import start as h_start
 from app.handlers import calc as h_calc
 from app.handlers import quiz_energy as h_quiz_energy
@@ -24,11 +24,13 @@ from app.handlers import notify as h_notify
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
 
-# новые
+# РЅРѕРІС‹Рµ
 from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from app.handlers import profile as h_profile
+from app.handlers import promo as h_promo
 
 
 async def main():
@@ -36,7 +38,7 @@ async def main():
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
 
-    # роутеры
+    # СЂРѕСѓС‚РµСЂС‹
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
     dp.include_router(h_quiz_energy.router)
@@ -56,10 +58,12 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(h_profile.router)
+    dp.include_router(h_promo.router)
 
     start_scheduler(bot)
 
-    # aiohttp сервер для Tribute
+    # aiohttp СЃРµСЂРІРµСЂ РґР»СЏ Tribute
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
@@ -70,7 +74,7 @@ async def main():
         f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
     await site.start()
 
-    print("Bot is running…")
+    print("Bot is runningвЂ¦")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
