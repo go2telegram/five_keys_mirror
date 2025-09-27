@@ -32,3 +32,4 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler.start()
     return scheduler
 
+

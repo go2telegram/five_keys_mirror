@@ -89,3 +89,31 @@ async def drip_campaign(bot: Bot):
                 except Exception:
                     pass
                 u["last_upsell_ts"] = now.isoformat()
+# --- expiry reminders ---
+async def notify_expiring(bot):
+    """
+    ведомляет пользователей у кого подписка заканчивается через 3 дня, через 1 день и сегодня.
+    """
+    from app.storage_sqlite import get_session
+    from app.db.models import Subscription
+    now = datetime.now(timezone.utc).date()
+    targets = set()
+    with get_session() as s:
+        subs = s.query(Subscription).all()
+        for sub in subs:
+            d = sub.until.date()
+            delta = (d - now).days
+            if delta in (3, 1, 0):
+                targets.add((sub.user_id, delta, sub.plan, sub.until))
+
+    for uid, delta, plan, until in targets:
+        if delta == 3:
+            text = f" одписка {plan.upper()} истечёт через 3 дня (до {until:%d.%m.%Y}). родлить?"
+        elif delta == 1:
+            text = f" автра истекает подписка {plan.upper()} (до {until:%d.%m.%Y}). ажмите одписка для продления."
+        else:
+            text = f" Сегодня заканчивается подписка {plan.upper()} (до {until:%d.%m.%Y}). родлить сейчас?"
+        try:
+            await bot.send_message(uid, text)
+        except Exception:
+            pass
