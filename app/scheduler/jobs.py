@@ -7,32 +7,32 @@ from app.texts import DRIP_FREE_MESSAGES, UPSELL_BASIC_MESSAGE
 from app.utils_openai import ai_generate
 
 # ---------------------------------------------------------
-# жедневные "мягкие" напоминания (по подписке на рассылку)
+# Ежедневные "мягкие" напоминания (по подписке на рассылку)
 # ---------------------------------------------------------
 async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     """
-    ассылка коротких напоминаний тем, кто согласился (USERS[uid]['subs'] == True).
-    ни недели фильтруем по tz; тексты  короткие, через ChatGPT для свежести.
+    Рассылка коротких напоминаний тем, кто согласился (USERS[uid]['subs'] == True).
+    Дни недели фильтруем по tz; тексты — короткие, через ChatGPT для свежести.
     """
     now_local = datetime.now(ZoneInfo(tz_name))
     wd = now_local.strftime("%a")  # 'Mon','Tue',...
     if weekdays and wd not in weekdays:
         return
 
-    # енерим короткий совет (34 строки)
+    # Генерим короткий совет (3–4 строки)
     prompt = (
-        "Сделай короткий мотивирующий чек-лист (34 строки) для энергии и здоровья: "
-        "сон, утренний свет, 30 минут быстрой ходьбы. иши дружелюбно, без воды."
+        "Сделай короткий мотивирующий чек-лист (3–4 строки) для энергии и здоровья: "
+        "сон, утренний свет, 30 минут быстрой ходьбы. Пиши дружелюбно, без воды."
     )
     text = await ai_generate(prompt)
 
-    # оллбек
+    # Фоллбек
     if not text or not text.strip():
         text = (
-            "икро-челлендж дня:\n"
-            " Сон 79 часов\n"
-            " 10 мин утреннего света\n"
-            " 30 мин быстрой ходьбы"
+            "Микро-челлендж дня:\n"
+            "• Сон 7–9 часов\n"
+            "• 10 мин утреннего света\n"
+            "• 30 мин быстрой ходьбы"
         )
 
     for uid, profile in USERS.items():
@@ -44,7 +44,7 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
             pass
 
 # ---------------------------------------------------------
-# Drip & Upsell  по сегментам (бесплатники / BasicPro)
+# Drip & Upsell — по сегментам (бесплатники / Basic→Pro)
 # ---------------------------------------------------------
 DRIP_COOLDOWN = timedelta(hours=72)
 UPSELL_COOLDOWN = timedelta(days=7)
@@ -66,7 +66,7 @@ async def drip_campaign(bot: Bot):
             except Exception:
                 active = False
 
-        # есплатники  drip
+        # Бесплатники → drip
         if not active:
             last = u.get("last_drip_ts")
             if (not last) or (now - datetime.fromisoformat(last) >= DRIP_COOLDOWN):
@@ -80,7 +80,7 @@ async def drip_campaign(bot: Bot):
                 u["drip_idx"] = idx + 1
             continue
 
-        # Basic  апселл
+        # Basic → апселл
         if active and plan == "basic":
             last_up = u.get("last_upsell_ts")
             if (not last_up) or (now - datetime.fromisoformat(last_up) >= UPSELL_COOLDOWN):

@@ -19,6 +19,8 @@ from app.handlers import picker as h_picker
 from app.handlers import reg as h_reg
 from app.handlers import assistant as h_assistant
 from app.handlers import admin as h_admin
+from app.handlers import admin_stats as h_admin_stats
+from app.handlers import admin_stats as h_admin_stats
 from app.handlers import navigator as h_navigator
 from app.handlers import notify as h_notify
 from app.handlers import report as h_report
@@ -51,6 +53,8 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
+    dp.include_router(h_admin_stats.router)
+    dp.include_router(h_admin_stats.router)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
