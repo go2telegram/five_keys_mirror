@@ -73,3 +73,4 @@ async def promo_apply(m: Message, state: FSMContext):
     used.add(code)
     await state.clear()
     await m.answer(text)
+

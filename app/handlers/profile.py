@@ -52,3 +52,4 @@ async def profile(m: Message):
         f"оманды: <code>/ref</code> — ссылка друга, <code>/promo</code> — промокод."
     )
     await m.answer(text)
+
