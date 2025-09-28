@@ -83,8 +83,11 @@ async def lead_done(m: Message, state: FSMContext):
         "comment": comment,
         "ts": datetime.utcnow().isoformat()
     }
-    add_lead(lead)
-
+    add_lead(\)
+        try:
+            await m.bot.send_message(settings.LEADS_CHAT_ID, f" ид: user={m.from_user.id}, contact={contact}")
+        except Exception:
+            pass
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID
     text_admin = (
@@ -102,4 +105,5 @@ async def lead_done(m: Message, state: FSMContext):
         pass
 
     await m.answer("Спасибо! Я передал заявку. Мы свяжемся с вами в ближайшее время. 🙌", reply_markup=kb_main())
+
 
