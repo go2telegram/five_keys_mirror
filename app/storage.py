@@ -81,6 +81,7 @@ def mark_promo(user_id: int, code: str) -> None:
     _mark_promo_db(user_id, code)
 
 def save_event(user_id: int, source, name: str, meta: Optional[dict] = None):
+    # Сохраняем в  (как и прежде)
     m = None
     if meta:
         try:
@@ -90,6 +91,16 @@ def save_event(user_id: int, source, name: str, meta: Optional[dict] = None):
             m = str(meta)
     _save_event_db(user_id, name, m)
 
+    # едём in-memory ленту для старых админ-хендлеров
+    try:
+        EVENTS.append({
+            "user_id": user_id,
+            "name": name,
+            "meta": meta,
+            "ts": _utcnow().isoformat()
+        })
+    except Exception:
+        pass
 def migrate_users_to_db() -> int:
     """
     ереносит подписки/рефералку из текущего кэша USERS в .
@@ -136,3 +147,40 @@ def get_last_plan(uid: int) -> Optional[str]:
     """ернёт последний выбранный план из сессии/кэша."""
     s = SESSIONS.get(uid, {})
     return s.get("last_plan") or USERS.get(uid, {}).get("last_plan")
+# --- legacy events feed for admin handlers ---
+from typing import Deque
+from collections import deque
+
+# ольцевая очередь последних событий (для быстрых админ-полос)
+EVENTS: Deque[dict] = deque(maxlen=2000)
+
+def get_leads_last(limit: int = 50):
+    """
+    оследние lead-события из  (и не зависит от in-memory ленты).
+    озвращает [{user_id, name, meta, ts}, ...] по убыванию времени.
+    """
+    from app.storage_sqlite import get_session
+    from app.db.models import Event
+    with get_session() as s:
+        rows = (
+            s.query(Event)
+             .filter(Event.name.like('lead%'))
+             .order_by(Event.ts.desc())
+             .limit(limit)
+             .all()
+        )
+        return [{"user_id": r.user_id, "name": r.name, "meta": r.meta, "ts": r.ts.isoformat()} for r in rows]
+
+def get_leads_all():
+    """се lead-события (осторожно  может быть длинно)."""
+    from app.storage_sqlite import get_session
+    from app.db.models import Event
+    with get_session() as s:
+        rows = (
+            s.query(Event)
+             .filter(Event.name.like('lead%'))
+             .order_by(Event.ts.desc())
+             .all()
+        )
+        return [{"user_id": r.user_id, "name": r.name, "meta": r.meta, "ts": r.ts.isoformat()} for r in rows]
+
