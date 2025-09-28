@@ -184,3 +184,25 @@ def get_leads_all():
         )
         return [{"user_id": r.user_id, "name": r.name, "meta": r.meta, "ts": r.ts.isoformat()} for r in rows]
 
+# --- legacy add_lead shim for lead handler ---
+def add_lead(user_id: int, contact: str, note: Optional[str] = None) -> None:
+    """
+    Сохраняем лид как событие в  (name='lead_new') и дублируем в in-memory ленту EVENTS.
+    """
+    data = {"contact": contact}
+    if note:
+        data["note"] = note
+    try:
+        # сохраняем в 
+        save_event(user_id, source=None, name="lead_new", meta=data)
+    except Exception:
+        pass
+    try:
+        EVENTS.append({
+            "user_id": user_id,
+            "name": "lead_new",
+            "meta": data,
+            "ts": _utcnow().isoformat()
+        })
+    except Exception:
+        pass
