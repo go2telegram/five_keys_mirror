@@ -116,3 +116,23 @@ def migrate_users_to_db() -> int:
     except Exception:
         pass
     return migrated
+# --- legacy session cache for handlers (calc, etc.) ---
+# хранит лёгкие пользовательские состояния; не требует 
+SESSIONS: Dict[int, Dict[str, Any]] = {}
+
+def get_session(uid: int) -> Dict[str, Any]:
+    """ернёт/создаст сессию пользователя (in-memory)."""
+    return SESSIONS.setdefault(uid, {})
+
+def set_last_plan(uid: int, plan: str) -> None:
+    """Совместимость со старым /calc: запоминаем выбранный план."""
+    s = get_session(uid)
+    s["last_plan"] = plan
+    # зеркалим в USERS для UI/профиля
+    u = USERS.setdefault(uid, {})
+    u["last_plan"] = plan
+
+def get_last_plan(uid: int) -> Optional[str]:
+    """ернёт последний выбранный план из сессии/кэша."""
+    s = SESSIONS.get(uid, {})
+    return s.get("last_plan") or USERS.get(uid, {}).get("last_plan")
