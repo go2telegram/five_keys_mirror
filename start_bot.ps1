@@ -1,17 +1,12 @@
-﻿param(
-  [switch]$NoVenv  # если хочешь запустить глобальным python
-)
+﻿param([switch]$NoVenv)
 
-Write-Host "`n===============================" -ForegroundColor Cyan
-Write-Host " апуск Telegram-бота" -ForegroundColor Cyan
-Write-Host "===============================" -ForegroundColor Cyan
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $root
 
-if (-not $NoVenv -and (Test-Path .\.venv\Scripts\Activate.ps1)) {
-  Write-Host " ктивирую venv..."
-  . .\.venv\Scripts\Activate.ps1
+$venvPy = Join-Path $root ".venv\Scripts\python.exe"
+if (-not $NoVenv -and (Test-Path $venvPy)) {
+    & $venvPy .\run.py
 } else {
-  Write-Warning " venv не найден или отключён флагом -NoVenv  запускаю глобальный Python."
+    Write-Warning " venv не найден или отключён флагом -NoVenv  запускаю глобальный Python."
+    python .\run.py
 }
-
-# апуск
-python .\run.py
