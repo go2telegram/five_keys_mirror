@@ -95,3 +95,48 @@ async def admin_export(m: Message):
     with open(path, "wb") as f:
         f.write(data)
     await m.answer_document(FSInputFile(path), caption=f"кспорт подписок (period: {period or 'all'})")
+from aiogram.filters import Command
+from aiogram.types import Message, FSInputFile
+from io import StringIO
+import csv
+from datetime import datetime, timedelta, timezone
+
+from app.config import settings
+from app.storage_sqlite import get_session
+from app.db.models import Event
+
+def _utcnow(): return datetime.now(timezone.utc)
+def _range_for(period: str):
+    now = _utcnow()
+    period = (period or "").lower()
+    if period in ("7d","7","week"): return now - timedelta(days=7), now
+    if period in ("30d","30","month"): return now - timedelta(days=30), now
+    if period in ("today","1d"): return now.replace(hour=0, minute=0, second=0, microsecond=0), now
+    return None, None
+
+@router.message(Command("admin_export_leads"))
+async def admin_export_leads(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+    args = (m.text or "").split()[1:]
+    period = args[0] if args else ""
+    date_from, date_to = _range_for(period)
+
+    with get_session() as s:
+        q = s.query(Event).filter(Event.name.like("lead%"))
+        if date_from and date_to:
+            q = q.filter(Event.ts.between(date_from, date_to))
+        rows = q.order_by(Event.ts.desc()).all()
+
+    buff = StringIO()
+    w = csv.writer(buff, delimiter=";")
+    w.writerow(["user_id","name","meta","ts"])
+    for r in rows:
+        w.writerow([r.user_id, r.name, r.meta or "", r.ts.isoformat()])
+
+    fname = f"leads_{period or 'all'}_{datetime.now():%Y%m%d_%H%M%S}.csv"
+    path = f"./{fname}"
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(buff.getvalue())
+
+    await m.answer_document(FSInputFile(path), caption=f"кспорт лидов (period: {period or 'all'})")
