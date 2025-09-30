@@ -44,7 +44,7 @@ async def init_db() -> None:
             db_path = Path(path)
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    async def _upgrade() -> None:
+    def _upgrade() -> None:
         from alembic import command
         from alembic.config import Config
 
