@@ -1,71 +1,68 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import F, Router
 from aiogram.filters import CommandStart
+from aiogram.types import CallbackQuery, Message
 
-from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
+from app.db.session import session_scope
 from app.keyboards import kb_main, kb_yes_no
-from app.storage import USERS, save_event
+from app.repo import events as events_repo
+from app.repo import referrals as referrals_repo
+from app.repo import users as users_repo
+from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, WELCOME
 
 router = Router()
-
-
-def _ensure_ref_fields(uid: int):
-    u = USERS.setdefault(uid, {})
-    u.setdefault("ref_code", str(uid))
-    u.setdefault("referred_by", None)
-    u.setdefault("ref_clicks", 0)
-    u.setdefault("ref_joins", 0)
-    u.setdefault("ref_conversions", 0)
-    u.setdefault("ref_users", set())
 
 
 @router.message(CommandStart())
 async def start(message: Message):
     tg_id = message.from_user.id
+    username = message.from_user.username
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
-    USERS.setdefault(
-        tg_id, {"subs": False, "tz": "Europe/Moscow", "source": None})
-    save_event(tg_id, payload, "start")
-    _ensure_ref_fields(tg_id)
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, tg_id, username)
+        await events_repo.log(session, tg_id, "start", {"payload": payload})
 
-    # --- обработка реферального кода ---
-    if payload.startswith("ref_"):
-        try:
-            ref_id = int(payload.split("_", 1)[1])
-        except Exception:
-            ref_id = None
-        if ref_id and ref_id != tg_id:
-            _ensure_ref_fields(ref_id)
-            if tg_id not in USERS[ref_id]["ref_users"]:
-                USERS[ref_id]["ref_clicks"] += 1
-            if USERS[tg_id].get("referred_by") is None:
-                USERS[tg_id]["referred_by"] = ref_id
-                USERS[ref_id]["ref_users"].add(tg_id)
-                USERS[ref_id]["ref_joins"] += 1
-            save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+        if payload.startswith("ref_"):
+            try:
+                ref_id = int(payload.split("_", 1)[1])
+            except (ValueError, IndexError):
+                ref_id = None
+            if ref_id and ref_id != tg_id:
+                await users_repo.get_or_create_user(session, ref_id)
+                existing_ref = await referrals_repo.get_by_invited(session, tg_id)
+                if existing_ref is None:
+                    await referrals_repo.create(session, ref_id, tg_id)
+                await users_repo.set_referrer(session, tg_id, ref_id)
+                await events_repo.log(session, tg_id, "ref_join", {"referrer_id": ref_id})
+
+        already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
+        await session.commit()
 
     await message.answer(WELCOME, reply_markup=kb_main())
 
-    if not USERS[tg_id].get("asked_notify"):
-        USERS[tg_id]["asked_notify"] = True
-        await message.answer(ASK_NOTIFY, reply_markup=kb_yes_no("notify:yes", "notify:no"))
+    if not already_prompted:
+        async with session_scope() as session:
+            await events_repo.log(session, tg_id, "notify_prompted", {})
+            await session.commit()
+        await message.answer(
+            ASK_NOTIFY, reply_markup=kb_yes_no("notify:yes", "notify:no")
+        )
 
 
 @router.callback_query(F.data == "notify:yes")
 async def notify_yes(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = True
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_on")
+    async with session_scope() as session:
+        await events_repo.log(session, c.from_user.id, "notify_on", {})
+        await session.commit()
     await c.message.edit_text(NOTIFY_ON)
 
 
 @router.callback_query(F.data == "notify:no")
 async def notify_no(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = False
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_off")
+    async with session_scope() as session:
+        await events_repo.log(session, c.from_user.id, "notify_off", {})
+        await session.commit()
     await c.message.edit_text(NOTIFY_OFF)
 
 

@@ -3,12 +3,15 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.config import settings
+from app.db.session import session_scope
 from app.keyboards import kb_goal_menu, kb_buylist_pdf
 from app.products import PRODUCTS, GOAL_MAP
-from app.utils_media import send_product_album
+from app.repo import events as events_repo
+from app.repo import users as users_repo
 from app.reco import product_lines
-from app.storage import set_last_plan, SESSIONS
-from app.config import settings
+from app.storage import SESSIONS, set_last_plan
+from app.utils_media import send_product_album
 
 router = Router()
 
@@ -298,17 +301,30 @@ async def pick_finalize(c: CallbackQuery):
     if age == "50p":
         notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците по согласованию с врачом."
 
-    set_last_plan(
-        c.from_user.id,
-        {
-            "title": meta["title"],
-            "context": goal_key,
-            "context_name": meta["context_name"],
-            "level": f"{level_label}, {desc}",
-            "products": rec_codes[:3],
-            "lines": lines,
-            "actions": actions,
-            "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG,
-        }
-    )
+    plan_payload = {
+        "title": meta["title"],
+        "context": goal_key,
+        "context_name": meta["context_name"],
+        "level": f"{level_label}, {desc}",
+        "products": rec_codes[:3],
+        "lines": lines,
+        "actions": actions,
+        "notes": notes,
+        "order_url": settings.VILAVI_ORDER_NO_REG,
+    }
+
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        await set_last_plan(session, c.from_user.id, plan_payload)
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "picker_plan",
+            {
+                "goal": goal_key,
+                "level": level,
+                "budget": budget,
+                "season": season,
+            },
+        )
+        await session.commit()

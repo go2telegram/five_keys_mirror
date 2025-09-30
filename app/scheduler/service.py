@@ -15,7 +15,7 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     """
     Поднимаем APScheduler и запускаем джобу рассылки по расписанию.
     """
-    scheduler = AsyncIOScheduler(timezone=settings.TZ)
+    scheduler = AsyncIOScheduler(timezone=settings.TIMEZONE)
     weekdays = _parse_weekdays(getattr(settings, "NOTIFY_WEEKDAYS", ""))
 
     # Каждый день в NOTIFY_HOUR_LOCAL (локальное TZ); фильтр по weekday внутри job
@@ -23,7 +23,7 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler.add_job(
         send_nudges,
         trigger=trigger,
-        args=[bot, settings.TZ, weekdays],
+        args=[bot, settings.TIMEZONE, weekdays],
         name="send_nudges",
         misfire_grace_time=600,
         coalesce=True,

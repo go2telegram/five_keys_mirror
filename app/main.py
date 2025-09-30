@@ -4,6 +4,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 from app.config import settings
+from app.db.session import init_db
 from app.scheduler.service import start_scheduler
 
 # существующие роутеры
@@ -32,6 +33,7 @@ from app.handlers import referral as h_referral
 
 
 async def main():
+    await init_db()
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()

@@ -7,9 +7,9 @@ class Settings(BaseSettings):
     ADMIN_ID: int
     LEADS_CHAT_ID: int | None = None
 
-    DATABASE_URL: str | None = None
+    DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
     REDIS_URL: str | None = None
-    TZ: str = "Europe/Moscow"
+    TIMEZONE: str = "Europe/Moscow"
 
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""

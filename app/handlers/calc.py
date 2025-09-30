@@ -2,11 +2,14 @@ import re
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 
+from app.config import settings
+from app.db.session import session_scope
 from app.keyboards import kb_calc_menu, kb_back_home, kb_buylist_pdf
+from app.repo import events as events_repo
+from app.repo import users as users_repo
 from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
-from app.config import settings
 
 router = Router()
 
@@ -77,20 +80,28 @@ async def handle_msd(m: Message):
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
     # для PDF
-    set_last_plan(
-        m.from_user.id,
-        {
-            "title": "План: Идеальный вес (MSD)",
-            "context": "msd",
-            "context_name": "Калькулятор MSD",
-            "level": None,
-            "products": rec_codes,
-            "lines": lines,
-            "actions": actions,
-            "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG
-        }
-    )
+    plan_payload = {
+        "title": "План: Идеальный вес (MSD)",
+        "context": "msd",
+        "context_name": "Калькулятор MSD",
+        "level": None,
+        "products": rec_codes,
+        "lines": lines,
+        "actions": actions,
+        "notes": notes,
+        "order_url": settings.VILAVI_ORDER_NO_REG,
+    }
+
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, m.from_user.id, m.from_user.username)
+        await set_last_plan(session, m.from_user.id, plan_payload)
+        await events_repo.log(
+            session,
+            m.from_user.id,
+            "calc_finish",
+            {"calc": "msd", "ideal_weight": ideal},
+        )
+        await session.commit()
 
     text = (
         f"Ориентир по формуле MSD: <b>{ideal} кг</b>.\n\n"
@@ -147,20 +158,28 @@ async def handle_bmi(m: Message):
     ]
     notes = "Если есть ЖКТ-жалобы — начни с TEO GREEN + MOBIO и режима питания."
 
-    set_last_plan(
-        m.from_user.id,
-        {
-            "title": "План: Индекс массы тела (ИМТ)",
-            "context": "bmi",
-            "context_name": "Калькулятор ИМТ",
-            "level": cat,
-            "products": rec_codes,
-            "lines": lines,
-            "actions": actions,
-            "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG
-        }
-    )
+    plan_payload = {
+        "title": "План: Индекс массы тела (ИМТ)",
+        "context": "bmi",
+        "context_name": "Калькулятор ИМТ",
+        "level": cat,
+        "products": rec_codes,
+        "lines": lines,
+        "actions": actions,
+        "notes": notes,
+        "order_url": settings.VILAVI_ORDER_NO_REG,
+    }
+
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, m.from_user.id, m.from_user.username)
+        await set_last_plan(session, m.from_user.id, plan_payload)
+        await events_repo.log(
+            session,
+            m.from_user.id,
+            "calc_finish",
+            {"calc": "bmi", "bmi": bmi, "category": cat},
+        )
+        await session.commit()
 
     text = (
         f"ИМТ: <b>{bmi}</b> — {cat}.\n\n"

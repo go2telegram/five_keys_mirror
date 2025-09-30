@@ -1,11 +1,14 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
+from app.config import settings
+from app.db.session import session_scope
 from app.keyboards import kb_buylist_pdf
-from app.storage import SESSIONS, USERS, save_event, set_last_plan
+from app.repo import events as events_repo
+from app.repo import users as users_repo
+from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
-from app.config import settings
 
 router = Router()
 
@@ -84,20 +87,28 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         notes = "Если были антибиотики — курс MOBIO поможет быстрее восстановиться."
 
-        set_last_plan(
-            c.from_user.id,
-            {
-                "title": "План: ЖКТ / микробиом",
-                "context": "gut",
-                "context_name": "ЖКТ / микробиом",
-                "level": level,
-                "products": rec_codes[:3],
-                "lines": lines,
-                "actions": actions,
-                "notes": notes,
-                "order_url": settings.VILAVI_ORDER_NO_REG,
-            }
-        )
+        plan_payload = {
+            "title": "План: ЖКТ / микробиом",
+            "context": "gut",
+            "context_name": "ЖКТ / микробиом",
+            "level": level,
+            "products": rec_codes[:3],
+            "lines": lines,
+            "actions": actions,
+            "notes": notes,
+            "order_url": settings.VILAVI_ORDER_NO_REG,
+        }
+
+        async with session_scope() as session:
+            await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+            await set_last_plan(session, c.from_user.id, plan_payload)
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "quiz_finish",
+                {"quiz": "gut", "score": total, "level": level},
+            )
+            await session.commit()
 
         msg = [
             f"Итог: <b>{level}</b>\n",
@@ -109,8 +120,6 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:gut", rec_codes[:3]))
 
-        save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
-                   {"quiz": "gut", "score": total, "level": level})
         SESSIONS.pop(c.from_user.id, None)
         return
 

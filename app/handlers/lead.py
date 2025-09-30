@@ -1,15 +1,17 @@
 # app/handlers/lead.py
 import re
-from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 
-from app.keyboards import kb_cancel_home, kb_main
-from app.storage import add_lead
 from app.config import settings
+from app.db.session import session_scope
+from app.keyboards import kb_cancel_home, kb_main
+from app.repo import events as events_repo
+from app.repo import leads as leads_repo
+from app.repo import users as users_repo
 
 router = Router()
 
@@ -75,15 +77,28 @@ async def lead_done(m: Message, state: FSMContext):
     if comment == "-":
         comment = ""
 
-    lead = {
-        "user_id": m.from_user.id,
-        "username": (m.from_user.username and "@" + m.from_user.username) or "(нет)",
-        "name": name,
-        "phone": phone,
-        "comment": comment,
-        "ts": datetime.utcnow().isoformat()
-    }
-    add_lead(lead)
+    username = m.from_user.username
+
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, m.from_user.id, username)
+        lead = await leads_repo.add(
+            session,
+            user_id=m.from_user.id,
+            username=username,
+            name=name,
+            phone=phone,
+            comment=comment,
+        )
+        await events_repo.log(
+            session,
+            m.from_user.id,
+            "lead_created",
+            {
+                "lead_id": lead.id,
+                "name": name,
+            },
+        )
+        await session.commit()
 
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID
