@@ -1,0 +1,39 @@
+name: Build offline wheels (win_amd64, py311)
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - wheels-packages.txt
+      - .github/workflows/build_wheels.yml
+
+jobs:
+  wheels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download wheels for Windows cp311
+        run: |
+          python -m pip install --upgrade pip
+          mkdir -p dist/wheels
+          python -m pip download -r wheels-packages.txt -d dist/wheels \
+            --only-binary=:all: \
+            --platform win_amd64 \
+            --python-version 3.11 \
+            --implementation cp \
+            --abi cp311
+
+      - name: Archive wheels
+        run: |
+          cd dist && zip -r wheels-win_amd64-cp311.zip wheels
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-win_amd64-cp311
+          path: dist/wheels-win_amd64-cp311.zip

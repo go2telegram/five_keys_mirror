@@ -20,6 +20,25 @@ cp .env.example .env
 
 В `.env` укажите `BOT_TOKEN`, `ADMIN_ID` и другие ключи. По умолчанию используется SQLite (`sqlite+aiosqlite:///./var/bot.db`), поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
 
+## Офлайн установка
+
+1. В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (кнопка *Run workflow*).
+2. После завершения скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels` рядом с проектом.
+3. Активируйте виртуальное окружение и выполните установку пакетов офлайн:
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   powershell -ExecutionPolicy Bypass -File .\scripts\offline_install.ps1 -WheelsDir .\wheels
+   ```
+4. Подготовьте конфигурацию и примените миграции:
+   ```powershell
+   Copy-Item .env.example .env
+   notepad .env  # заполните BOT_TOKEN, DB_URL=sqlite+aiosqlite:///./var/bot.db, TIMEZONE, ADMIN_ID
+   mkdir var
+   alembic upgrade head
+   python scripts\db_check.py
+   python -m app.main
+   ```
+
 ## База данных и миграции
 
 Пример `.env`:
