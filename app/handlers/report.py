@@ -49,7 +49,7 @@ def _compose_pdf(plan: dict) -> bytes:
     )
 
 
-@router.callback_query(F.data == "pdf:last")
+@router.callback_query(F.data.in_({"report:last", "pdf:last"}))
 async def pdf_last_cb(c: CallbackQuery):
     async with session_scope() as session:
         plan = await get_last_plan(session, c.from_user.id)

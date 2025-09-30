@@ -20,6 +20,7 @@ cp .env.example .env
 
 В `.env` укажите `BOT_TOKEN`, `ADMIN_ID` и другие ключи. По умолчанию используется SQLite (`sqlite+aiosqlite:///./var/bot.db`),
 поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
+Включение Tribute webhook-а опционально: задайте `RUN_TRIBUTE_WEBHOOK=true`, если нужен приём уведомлений от Tribute.
 
 ## Офлайн установка (Windows, Python 3.11)
 
@@ -70,7 +71,8 @@ make dev                      # локальный запуск (python -m app.m
 make dev
 ```
 
-Команда вызовет `init_db()`, выполнит миграции и поднимет polling + aiohttp webhook сервер Tribute.
+Команда вызовет `init_db()`, выполнит миграции и запустит polling.
+Tribute webhook поднимется только если в `.env` указан `RUN_TRIBUTE_WEBHOOK=true`.
 
 ## Admin CRUD
 

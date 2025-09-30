@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     TRIBUTE_WEBHOOK_PATH: str = "/tribute/webhook"
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
+    RUN_TRIBUTE_WEBHOOK: bool = False
+    TRIBUTE_PORT: int = 8080
 
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"

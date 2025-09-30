@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
@@ -23,6 +25,7 @@ from app.handlers import admin as h_admin
 from app.handlers import admin_crud as h_admin_crud
 from app.handlers import navigator as h_navigator
 from app.handlers import notify as h_notify
+from app.handlers import profile as h_profile
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
 
@@ -34,9 +37,16 @@ from app.handlers import referral as h_referral
 
 
 async def main():
-    await init_db()
-    bot = Bot(token=settings.BOT_TOKEN,
-              default=DefaultBotProperties(parse_mode="HTML"))
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    current_rev = await init_db()
+    logger.info("current alembic version: %s", current_rev or "unknown")
+
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode="HTML"),
+    )
     dp = Dispatcher()
 
     # роутеры
@@ -55,6 +65,7 @@ async def main():
     dp.include_router(h_admin_crud.router)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
+    dp.include_router(h_profile.router)
     dp.include_router(h_report.router)
     dp.include_router(h_lead.router)
     dp.include_router(h_subscription.router)
@@ -63,19 +74,35 @@ async def main():
 
     start_scheduler(bot)
 
-    # aiohttp сервер для Tribute
-    app_web = web.Application()
-    app_web.router.add_post(
-        settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
-    runner = web.AppRunner(app_web)
-    await runner.setup()
-    site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
-    print(
-        f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
-    await site.start()
+    runner: web.AppRunner | None = None
+    if settings.RUN_TRIBUTE_WEBHOOK:
+        app_web = web.Application()
+        app_web.router.add_post(
+            settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook
+        )
+        runner = web.AppRunner(app_web)
+        await runner.setup()
+        site = web.TCPSite(
+            runner,
+            host=settings.WEB_HOST,
+            port=settings.TRIBUTE_PORT,
+        )
+        await site.start()
+        logger.info(
+            "Tribute webhook server at http://%s:%s%s",
+            settings.WEB_HOST,
+            settings.TRIBUTE_PORT,
+            settings.TRIBUTE_WEBHOOK_PATH,
+        )
+    else:
+        logger.info("Tribute webhook server disabled (RUN_TRIBUTE_WEBHOOK=false)")
 
-    print("Bot is running…")
-    await dp.start_polling(bot)
+    logger.info("Bot is running…")
+    try:
+        await dp.start_polling(bot)
+    finally:
+        if runner is not None:
+            await runner.cleanup()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -7,9 +7,13 @@ from app.keyboards import kb_main, kb_yes_no
 from app.repo import events as events_repo
 from app.repo import referrals as referrals_repo
 from app.repo import users as users_repo
-from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, WELCOME
+from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON
 
 router = Router()
+
+START_GREETING = (
+    "Привет! На связи «Пять ключей здоровья». Выбирай раздел в меню ниже:"
+)
 
 
 @router.message(CommandStart())
@@ -39,7 +43,7 @@ async def start(message: Message):
         already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
         await session.commit()
 
-    await message.answer(WELCOME, reply_markup=kb_main())
+    await message.answer(START_GREETING, reply_markup=kb_main())
 
     if not already_prompted:
         async with session_scope() as session:
@@ -68,4 +72,4 @@ async def notify_no(c: CallbackQuery):
 
 @router.callback_query(F.data == "home")
 async def back_home(c: CallbackQuery):
-    await c.message.answer(WELCOME, reply_markup=kb_main())
+    await c.message.answer(START_GREETING, reply_markup=kb_main())

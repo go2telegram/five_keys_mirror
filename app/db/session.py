@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-import logging
 from pathlib import Path
 from typing import AsyncIterator
 
@@ -13,7 +12,6 @@ from app.config import settings
 
 _DB_PATH_PREFIX = "sqlite"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-logger = logging.getLogger(__name__)
 
 async_engine = create_async_engine(
     settings.DB_URL,
@@ -59,7 +57,7 @@ def _alembic_upgrade_head_sync(db_url: str) -> str | None:
         engine.dispose()
 
 
-async def init_db() -> None:
+async def init_db() -> str | None:
     """Ensure database exists and run migrations."""
     if settings.DB_URL.startswith(_DB_PATH_PREFIX):
         # sqlite path like sqlite+aiosqlite:///./var/bot.db
@@ -71,4 +69,4 @@ async def init_db() -> None:
     current_rev = await asyncio.to_thread(
         _alembic_upgrade_head_sync, settings.DB_URL
     )
-    logger.info("Alembic migrations applied; current revision: %s", current_rev or "unknown")
+    return current_rev

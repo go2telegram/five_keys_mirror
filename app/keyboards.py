@@ -9,20 +9,19 @@ from app.products import PRODUCTS, BUY_URLS
 def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="🗂 Все квизы", callback_data="quiz:menu")
-    kb.button(text="🧭 Навигатор", callback_data="nav:root")
+    kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
     kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
-    kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
-    kb.button(text="🎁 Регистрация со скидкой", callback_data="reg:open")
+    kb.button(text="🎁 Регистрация", callback_data="reg:open")
+    kb.button(text="💎 Премиум", callback_data="premium:menu")
+    kb.button(text="👤 Профиль", callback_data="profile:open")
+    kb.button(text="🔗 Реф. ссылка", callback_data="ref:menu")
+    kb.button(text="🎫 Подписка", callback_data="sub:menu")
+    kb.button(text="🧭 Навигатор", callback_data="nav:root")
+    kb.button(text="🧾 PDF отчёт", callback_data="report:last")
+    kb.button(text="🔔 Уведомления", callback_data="notify:help")
 
-    # Новые пункты
-    kb.button(text="💎 Подписка", callback_data="sub:menu")
-    kb.button(text="🔓 Premium", callback_data="premium:menu")
-    kb.button(text="👥 Пригласить друга", callback_data="ref:menu")
-
-    # Раскладка
-    kb.adjust(1, 2, 1, 1, 1, 3)
+    kb.adjust(2, 2, 2, 2, 2, 1)
     return kb.as_markup()
 
 # ---------- Меню «Все квизы» ----------
@@ -107,7 +106,7 @@ def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
     if settings.VILAVI_REF_LINK_DISCOUNT:
         kb.button(text="🔗 Заказать со скидкой",
                   url=settings.VILAVI_REF_LINK_DISCOUNT)
-    kb.button(text="📄 PDF-план", callback_data="pdf:last")
+    kb.button(text="📄 PDF-план", callback_data="report:last")
     kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home")
@@ -137,7 +136,7 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
         title = p.get("title", code)
         kb.button(text=f"🛒 Купить {title}", url=url)
 
-    kb.button(text="📄 PDF-план", callback_data="pdf:last")
+    kb.button(text="📄 PDF-план", callback_data="report:last")
     if settings.VILAVI_REF_LINK_DISCOUNT:
         kb.button(text="🔗 Заказать со скидкой",
                   url=settings.VILAVI_REF_LINK_DISCOUNT)
