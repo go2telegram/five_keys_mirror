@@ -1,5 +1,4 @@
 from aiogram import F, Router
-from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 

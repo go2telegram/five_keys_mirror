@@ -51,9 +51,9 @@ def kb_yes_no(cb_yes: str, cb_no: str) -> InlineKeyboardMarkup:
 # ---------- Назад + Домой ----------
 
 
-def kb_back_home(back_cb: str) -> InlineKeyboardMarkup:
+def kb_back_home(back_cb: str | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Назад", callback_data=back_cb)
+    kb.button(text="⬅️ Назад", callback_data=back_cb or "home")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(2)
     return kb.as_markup()

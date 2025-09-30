@@ -1,11 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
-    BOT_TOKEN: str
-    ADMIN_ID: int
-    ADMIN_USER_IDS: list[int] = []
+    BOT_TOKEN: str = ""
+    ADMIN_ID: int = 0
+    ADMIN_USER_IDS: list[int] = Field(default_factory=list)
     LEADS_CHAT_ID: int | None = None
 
     DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     @classmethod
     def _fix_admin_id(cls, v):
         # просто показать приём — админ id должен быть int
+        if v in (None, ""):
+            return 0
         return int(v)
 
     @field_validator("ADMIN_USER_IDS", mode="before")

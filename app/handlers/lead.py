@@ -1,10 +1,11 @@
 # app/handlers/lead.py
 import re
-from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+
+from aiogram import F, Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
 
 from app.config import settings
 from app.db.session import session_scope

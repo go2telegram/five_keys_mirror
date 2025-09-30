@@ -2,7 +2,6 @@ import asyncio
 import importlib.util
 import json
 import os
-import sys
 from typing import Iterable, Tuple
 
 from dotenv import load_dotenv
