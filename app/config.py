@@ -5,6 +5,7 @@ from pydantic import field_validator
 class Settings(BaseSettings):
     BOT_TOKEN: str
     ADMIN_ID: int
+    LEADS_CHAT_ID: int | None = None
 
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None

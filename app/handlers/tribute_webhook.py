@@ -75,13 +75,17 @@ async def tribute_webhook(request: web.Request) -> web.Response:
     ev = data.get("name")
     payload = data.get("payload", {}) or {}
     tg_id = payload.get("telegram_user_id")
+    try:
+        tg_id_int = int(tg_id) if tg_id is not None else None
+    except (TypeError, ValueError):
+        tg_id_int = None
     sub_name = payload.get("subscription_name") or payload.get("donation_name") or ""
     expires = payload.get("expires_at")
 
     if ev == "new_subscription":
         plan = _infer_plan(sub_name) or "basic"
-        if tg_id:
-            user_id = int(tg_id)
+        if tg_id_int:
+            user_id = tg_id_int
             _activate(user_id, plan, expires)
 
             # учёт конверсии для реферала
@@ -97,9 +101,14 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         return web.json_response({"ok": False, "reason": "no_telegram_id"}, status=400)
 
     if ev == "cancelled_subscription":
-        if tg_id and tg_id in USERS and USERS[tg_id].get("subscription") and expires:
+        if (
+            tg_id_int
+            and tg_id_int in USERS
+            and USERS[tg_id_int].get("subscription")
+            and expires
+        ):
             try:
-                USERS[tg_id]["subscription"]["until"] = datetime.fromisoformat(
+                USERS[tg_id_int]["subscription"]["until"] = datetime.fromisoformat(
                     expires.replace("Z", "+00:00")
                 ).isoformat()
             except Exception:
