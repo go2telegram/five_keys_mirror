@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence, Tuple
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Referral
@@ -23,7 +23,7 @@ async def create(
 
 
 async def convert(
-    session: AsyncSession, invited_id: int, bonus_days: int
+    session: AsyncSession, invited_id: int, bonus_days: int = 0
 ) -> Optional[Referral]:
     referral = await get_by_invited(session, invited_id)
     if referral is None:
@@ -85,3 +85,45 @@ async def stats_for_referrer(
     invited = invited_res.scalar_one()
     converted = converted_res.scalar_one()
     return invited, converted
+
+
+async def list_for(
+    session: AsyncSession,
+    referrer_id: int,
+    limit: int,
+    offset: int,
+    period: Optional[str] = None,
+) -> list[Referral]:
+    stmt = select(Referral).where(Referral.referrer_id == referrer_id)
+    stmt = _apply_period_filter(stmt, period)
+    stmt = stmt.order_by(Referral.joined_at.desc()).limit(limit).offset(offset)
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
+async def count_for(
+    session: AsyncSession,
+    referrer_id: int,
+    period: Optional[str] = None,
+) -> int:
+    stmt = select(func.count(Referral.id)).where(Referral.referrer_id == referrer_id)
+    stmt = _apply_period_filter(stmt, period)
+    result = await session.execute(stmt)
+    return result.scalar_one()
+
+
+def _apply_period_filter(stmt, period: Optional[str]):
+    if period in (None, "", "all"):
+        return stmt
+    now = datetime.now(timezone.utc)
+    delta: Optional[timedelta]
+    if period == "7d":
+        delta = timedelta(days=7)
+    elif period == "30d":
+        delta = timedelta(days=30)
+    else:
+        delta = None
+    if delta is None:
+        return stmt
+    threshold = now - delta
+    return stmt.where(Referral.joined_at >= threshold)

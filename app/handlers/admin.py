@@ -15,9 +15,17 @@ from app.repo import users as users_repo
 router = Router()
 
 
+def _is_admin(user_id: int | None) -> bool:
+    if user_id is None:
+        return False
+    allowed = set(settings.ADMIN_USER_IDS or [])
+    allowed.add(settings.ADMIN_ID)
+    return user_id in allowed
+
+
 @router.message(Command("stats"))
 async def stats(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not _is_admin(m.from_user.id if m.from_user else None):
         return
 
     async with session_scope() as session:
@@ -46,7 +54,7 @@ async def stats(m: Message):
 
 @router.message(Command("leads"))
 async def leads_list(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not _is_admin(m.from_user.id if m.from_user else None):
         return
 
     parts = m.text.strip().split()
@@ -82,7 +90,7 @@ async def leads_list(m: Message):
 
 @router.message(Command("leads_csv"))
 async def leads_csv(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not _is_admin(m.from_user.id if m.from_user else None):
         return
 
     parts = m.text.strip().split()

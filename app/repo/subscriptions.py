@@ -21,12 +21,15 @@ async def set_plan(
     until: datetime | None = None,
 ) -> Subscription:
     now = datetime.now(timezone.utc)
+    subscription = await get(session, user_id)
     if until is None:
         if days is None:
             raise ValueError("either days or until must be provided")
-        until = now + timedelta(days=days)
+        base = now
+        if subscription is not None and subscription.until > now:
+            base = subscription.until
+        until = base + timedelta(days=days)
 
-    subscription = await get(session, user_id)
     if subscription is None:
         subscription = Subscription(
             user_id=user_id, plan=plan, since=now, until=until
@@ -57,3 +60,11 @@ async def count_active(session: AsyncSession) -> int:
     stmt = select(func.count(Subscription.user_id)).where(Subscription.until > now)
     result = await session.execute(stmt)
     return result.scalar_one()
+
+
+async def delete(session: AsyncSession, user_id: int) -> None:
+    subscription = await get(session, user_id)
+    if subscription is None:
+        return
+    await session.delete(subscription)
+    await session.flush()

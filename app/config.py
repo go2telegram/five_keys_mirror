@@ -5,6 +5,7 @@ from pydantic import field_validator
 class Settings(BaseSettings):
     BOT_TOKEN: str
     ADMIN_ID: int
+    ADMIN_USER_IDS: list[int] = []
     LEADS_CHAT_ID: int | None = None
 
     DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
@@ -57,6 +58,16 @@ class Settings(BaseSettings):
     def _fix_admin_id(cls, v):
         # просто показать приём — админ id должен быть int
         return int(v)
+
+    @field_validator("ADMIN_USER_IDS", mode="before")
+    @classmethod
+    def _parse_admin_ids(cls, v):
+        if v in (None, "", []):
+            return []
+        if isinstance(v, (list, tuple, set)):
+            return [int(item) for item in v]
+        parts = [part.strip() for part in str(v).split(",") if part.strip()]
+        return [int(part) for part in parts]
 
 
 settings = Settings()

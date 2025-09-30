@@ -47,6 +47,17 @@ make dev
 
 Команда вызовет `init_db()`, выполнит миграции и поднимет polling + aiohttp webhook сервер Tribute.
 
+## Admin CRUD
+
+Для администратора доступны команды управления базой (нужен `ADMIN_ID` или `ADMIN_USER_IDS` в `.env`):
+
+- `/admin_help` — справка по доступным операциям.
+- `/users [page] [query]` — список пользователей (пагинация, поиск по username/id).
+- `/user <id>` — карточка пользователя и подписки.
+- `/sub_get <id>` / `/sub_set <id> <plan> <days>` / `/sub_del <id>` — управление подписками.
+- `/refs <id> [period]` — список рефералов (периоды `7d`, `30d`, `all`).
+- `/ref_convert <invited_id> [bonus_days]` — отметить конверсию и начислить бонусные дни рефереру.
+
 ## Тесты
 
 ```bash

@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
+os.environ.setdefault("ADMIN_USER_IDS", "1,2")
 
 pytest.importorskip("aiosqlite")
 
@@ -78,6 +79,17 @@ def test_subscriptions_set_plan():
             assert current.plan == "pro"
             assert abs((current.until - future).total_seconds()) < 1
 
+            await subscriptions.set_plan(session, 1, "pro", days=5)
+            await session.commit()
+
+            _, extended = await subscriptions.is_active(session, 1)
+            assert extended.until >= future
+
+            await subscriptions.delete(session, 1)
+            await session.commit()
+
+            assert await subscriptions.get(session, 1) is None
+
     run(_test())
 
 
@@ -85,10 +97,11 @@ def test_referrals():
     async def _test():
         async with SessionManager() as session:
             await referrals.create(session, referrer_id=10, invited_id=20)
+            await referrals.create(session, referrer_id=10, invited_id=21)
             await session.commit()
 
             invited, converted = await referrals.stats_for_referrer(session, 10)
-            assert invited == 1
+            assert invited == 2
             assert converted == 0
 
             await referrals.convert(session, invited_id=20, bonus_days=3)
@@ -96,6 +109,38 @@ def test_referrals():
 
             invited, converted = await referrals.stats_for_referrer(session, 10)
             assert converted == 1
+
+            listed = await referrals.list_for(session, 10, limit=20, offset=0, period="all")
+            assert len(listed) == 2
+            assert {item.invited_id for item in listed} == {20, 21}
+
+            count_7d = await referrals.count_for(session, 10, period="7d")
+            assert count_7d == 2
+
+    run(_test())
+
+
+def test_users_find():
+    async def _test():
+        async with SessionManager() as session:
+            await users.get_or_create_user(session, 1, "alpha")
+            await users.get_or_create_user(session, 2, "beta")
+            await users.get_or_create_user(session, 3, "gamma")
+            await session.commit()
+
+            total = await users.count(session)
+            assert total == 3
+
+            subset = await users.find(session, "bet", limit=20, offset=0)
+            assert len(subset) == 1
+            assert subset[0].id == 2
+
+            direct = await users.find(session, "3", limit=20, offset=0)
+            assert len(direct) == 1
+            assert direct[0].id == 3
+
+            counted = await users.count(session, "alp")
+            assert counted == 1
 
     run(_test())
 
