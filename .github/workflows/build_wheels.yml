@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - wheels-packages.txt
+      - requirements.txt
       - .github/workflows/build_wheels.yml
 
 jobs:
@@ -27,6 +28,27 @@ jobs:
             --python-version 3.11 \
             --implementation cp \
             --abi cp311
+          python -m pip download -r requirements.txt -d dist/wheels \
+            --only-binary=:all: \
+            --platform win_amd64 \
+            --python-version 3.11 \
+            --implementation cp \
+            --abi cp311
+
+      - name: Deduplicate wheels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          wheel_dir = Path('dist/wheels')
+          seen = {}
+          for path in sorted(wheel_dir.glob('*.whl')):
+            name = path.name
+            if name in seen:
+              path.unlink()
+            else:
+              seen[name] = path
+          PY
 
       - name: Archive wheels
         run: |
@@ -37,3 +59,41 @@ jobs:
         with:
           name: wheels-win_amd64-cp311
           path: dist/wheels-win_amd64-cp311.zip
+
+  offline-smoke:
+    runs-on: ubuntu-latest
+    needs: wheels
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download wheels artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-win_amd64-cp311
+          path: dist
+
+      - name: Offline install and smoke test
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          unzip dist/wheels-win_amd64-cp311.zip -d dist
+          python -m pip install --no-index --find-links dist/wheels \
+            -r requirements.txt \
+            -r wheels-packages.txt
+          cat <<'ENV' > .env
+          BOT_TOKEN=TEST:FAKE
+          DB_URL=sqlite+aiosqlite:///./var/bot.db
+          TIMEZONE=Europe/Moscow
+          ADMIN_ID=1
+          ENV
+          mkdir -p var
+          alembic upgrade head
+          python scripts/db_check.py
+          python - <<'PY'
+          import aiogram, sqlalchemy, reportlab, apscheduler, httpx
+          print('smoke ok')
+          PY

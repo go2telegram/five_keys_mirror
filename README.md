@@ -23,24 +23,25 @@ cp .env.example .env
 
 ## Офлайн установка (Windows, Python 3.11)
 
-1. В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (*Actions → Build offline wheels → Run workflow*).
-2. После завершения скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels` рядом с проектом.
-3. Создайте виртуальное окружение и активируйте его:
+1) В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (*Actions → Build offline wheels → Run workflow*), скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels`.
+2) Создайте и активируйте виртуальное окружение:
    ```powershell
    python -m venv .venv
    .\.venv\Scripts\Activate.ps1
    ```
-4. Установите зависимости строго из локальной папки с колёсами:
+3) Выполните офлайн-установку зависимостей из распакованных колёс:
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\offline_install.ps1 -WheelsDir .\wheels
    ```
-5. Настройте окружение и прогоните миграции:
+4) Подготовьте `.env` с ключами (`BOT_TOKEN`, `DB_URL=sqlite+aiosqlite:///./var/bot.db`, `TIMEZONE`, `ADMIN_ID`).
+5) Примените миграции и убедитесь, что проверка БД проходит успешно:
    ```powershell
-   Copy-Item .env.example .env
-   notepad .env  # заполните BOT_TOKEN, DB_URL=sqlite+aiosqlite:///./var/bot.db, TIMEZONE, ADMIN_ID
    mkdir var
    alembic upgrade head
    python scripts\db_check.py  # ok должно быть true
+   ```
+6) Запустите бота:
+   ```powershell
    python -m app.main
    ```
 
