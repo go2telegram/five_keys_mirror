@@ -1,2 +1,4 @@
 # Development dependencies
 aiosqlite>=0.19
+pytest==8.3.3
+pytest-asyncio==0.23.7

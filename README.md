@@ -5,7 +5,7 @@
 ## Требования
 
 - Python 3.11+
-- Poetry или venv (пример ниже использует `python -m venv`)
+- venv или любая другая система виртуальных окружений
 - Docker (для продового запуска)
 
 ## Установка (dev)
@@ -18,24 +18,29 @@ pip install -r requirements-dev.txt  # включает aiosqlite для SQLite
 cp .env.example .env
 ```
 
-В `.env` укажите `BOT_TOKEN`, `ADMIN_ID` и другие ключи. По умолчанию используется SQLite (`sqlite+aiosqlite:///./var/bot.db`), поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
+В `.env` укажите `BOT_TOKEN`, `ADMIN_ID` и другие ключи. По умолчанию используется SQLite (`sqlite+aiosqlite:///./var/bot.db`),
+поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
 
-## Офлайн установка
+## Офлайн установка (Windows, Python 3.11)
 
-1. В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (кнопка *Run workflow*).
+1. В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (*Actions → Build offline wheels → Run workflow*).
 2. После завершения скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels` рядом с проектом.
-3. Активируйте виртуальное окружение и выполните установку пакетов офлайн:
+3. Создайте виртуальное окружение и активируйте его:
    ```powershell
+   python -m venv .venv
    .\.venv\Scripts\Activate.ps1
+   ```
+4. Установите зависимости строго из локальной папки с колёсами:
+   ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\offline_install.ps1 -WheelsDir .\wheels
    ```
-4. Подготовьте конфигурацию и примените миграции:
+5. Настройте окружение и прогоните миграции:
    ```powershell
    Copy-Item .env.example .env
    notepad .env  # заполните BOT_TOKEN, DB_URL=sqlite+aiosqlite:///./var/bot.db, TIMEZONE, ADMIN_ID
    mkdir var
    alembic upgrade head
-   python scripts\db_check.py
+   python scripts\db_check.py  # ok должно быть true
    python -m app.main
    ```
 
