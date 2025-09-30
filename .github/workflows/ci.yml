@@ -10,6 +10,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt
+      - name: Install SQLite driver
+        run: pip install aiosqlite
       - run: echo "BOT_TOKEN=test" >> $GITHUB_ENV
       - run: echo "ADMIN_ID=1" >> $GITHUB_ENV
       - run: echo "DB_URL=sqlite+aiosqlite:///./var/bot.db" >> $GITHUB_ENV

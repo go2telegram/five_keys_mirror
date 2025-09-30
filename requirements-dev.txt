@@ -1,0 +1,2 @@
+# Development dependencies
+aiosqlite>=0.19

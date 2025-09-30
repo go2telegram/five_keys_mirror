@@ -1,11 +1,20 @@
+import importlib.util
 import json
 import os
+import sys
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
 
 load_dotenv()
-url = os.getenv("DB_URL", "sqlite:///var/bot.db").replace("+aiosqlite", "")
+raw_url = os.getenv("DB_URL", "sqlite:///var/bot.db")
+
+if raw_url.startswith("sqlite+") and "aiosqlite" in raw_url:
+    if importlib.util.find_spec("aiosqlite") is None:
+        print("missing driver: aiosqlite (install with pip install aiosqlite)")
+        sys.exit(1)
+
+url = raw_url.replace("+aiosqlite", "")
 engine = create_engine(url, future=True)
 
 
