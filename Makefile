@@ -1,21 +1,14 @@
-.PHONY: dev migrate upgrade downgrade test
-
-DEV_PYTHON ?= python
-
-var:
-mkdir -p var
+.PHONY: migrate upgrade db-check dev
 
 migrate:
-alembic revision --autogenerate -m "$(msg)"
+@alembic revision -m "$(msg)" --autogenerate
 
-upgrade: var
-alembic upgrade head
+upgrade:
+@mkdir -p var
+@alembic upgrade head
 
-downgrade:
-alembic downgrade -1
+db-check:
+@python scripts/db_check.py
 
-dev: upgrade
-$(DEV_PYTHON) -m app.main
-
-test:
-pytest
+dev:
+@python -m app.main

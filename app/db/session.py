@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 from typing import AsyncIterator
 
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 
 _DB_PATH_PREFIX = "sqlite"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+logger = logging.getLogger(__name__)
 
 async_engine = create_async_engine(
     settings.DB_URL,
@@ -35,6 +39,26 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+def _alembic_upgrade_head_sync(db_url: str) -> str | None:
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", "alembic")
+    cfg.set_main_option("sqlalchemy.url", db_url)
+    command.upgrade(cfg, "head")
+
+    sync_url = db_url.replace("+aiosqlite", "").replace("+asyncpg", "")
+    engine = create_engine(sync_url, future=True)
+    try:
+        with engine.connect() as connection:
+            return connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one_or_none()
+    finally:
+        engine.dispose()
+
+
 async def init_db() -> None:
     """Ensure database exists and run migrations."""
     if settings.DB_URL.startswith(_DB_PATH_PREFIX):
@@ -44,13 +68,7 @@ async def init_db() -> None:
             db_path = Path(path)
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _upgrade() -> None:
-        from alembic import command
-        from alembic.config import Config
-
-        root_path = Path(__file__).resolve().parents[2]
-        cfg = Config(str(root_path / "alembic.ini"))
-        cfg.set_main_option("sqlalchemy.url", settings.DB_URL)
-        command.upgrade(cfg, "head")
-
-    await asyncio.to_thread(_upgrade)
+    current_rev = await asyncio.to_thread(
+        _alembic_upgrade_head_sync, settings.DB_URL
+    )
+    logger.info("Alembic migrations applied; current revision: %s", current_rev or "unknown")
