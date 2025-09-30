@@ -4,6 +4,7 @@ aiosqlite==0.21.0
 python-dotenv==1.0.1
 APScheduler==3.10.4
 httpx==0.27.2
+tzdata==2025.1
 
 # core stack
 SQLAlchemy==2.0.32
