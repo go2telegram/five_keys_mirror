@@ -9,12 +9,12 @@ from app.repo import referrals as referrals_repo
 from app.repo import users as users_repo
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON
 
-router = Router()
+router = Router(name="start")
 
-START_GREETING = (
+GREETING = (
     "\u041f\u0440\u0438\u0432\u0435\u0442! \u041d\u0430 \u0441\u0432\u044f\u0437\u0438 "
     "\xab\u041f\u044f\u0442\u044c \u043a\u043b\u044e\u0447\u0435\u0439 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u044f\xbb. "
-    "\u0412\u044b\u0431\u0438\u0440\u0430\u0439 \u0440\u0430\u0437\u0434\u0435\u043b \u0432 \u043c\u0435\u043d\u044e \u043d\u0438\u0436\u0435:\n\n"
+    "\u0412\u044b\u0431\u0438\u0440\u0430\u0439 \u0440\u0430\u0437\u0434\u0435\u043b \u0432 \u043c\u0435\u043d\u044e \u043d\u0438\u0436\u0435:"
 )
 
 
@@ -45,7 +45,7 @@ async def start(message: Message):
         already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
         await session.commit()
 
-    await message.answer(START_GREETING, reply_markup=kb_main())
+    await message.answer(GREETING, reply_markup=kb_main())
 
     if not already_prompted:
         async with session_scope() as session:
@@ -74,4 +74,4 @@ async def notify_no(c: CallbackQuery):
 
 @router.callback_query(F.data.in_({"home", "home:main"}))
 async def back_home(c: CallbackQuery):
-    await c.message.answer(START_GREETING, reply_markup=kb_main())
+    await c.message.answer(GREETING, reply_markup=kb_main())
