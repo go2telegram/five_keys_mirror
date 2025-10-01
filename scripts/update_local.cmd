@@ -1,6 +1,8 @@
 @echo off
-set SCRIPT_DIR=%~dp0
-powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%update_local.ps1" %*
+setlocal
+cd /d "%~dp0.."
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0update_local.ps1" %*
 echo.
-echo Log files (if any) saved under .\logs
+echo ===================== DONE =====================
+echo Log: .\logs\update_*.log
 pause
