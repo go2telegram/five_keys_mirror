@@ -72,6 +72,6 @@ async def notify_no(c: CallbackQuery):
     await c.message.edit_text(NOTIFY_OFF)
 
 
-@router.callback_query(F.data == "home")
+@router.callback_query(F.data.in_({"home", "home:main"}))
 async def back_home(c: CallbackQuery):
     await c.message.answer(START_GREETING, reply_markup=kb_main())

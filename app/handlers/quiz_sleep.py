@@ -1,14 +1,14 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
+from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_buylist_pdf
 from app.reco import product_lines
 from app.repo import events as events_repo
 from app.repo import users as users_repo
 from app.storage import SESSIONS, set_last_plan
-from app.utils_media import send_product_album
+from app.handlers.quiz_common import safe_edit, send_product_cards
 
 router = Router()
 
@@ -39,6 +39,29 @@ def kb_quiz_q(idx: int):
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
+
+def _sleep_outcome(total: int) -> tuple[str, str, str, list[str]]:
+    if total <= 5:
+        return (
+            "mild",
+            "\u0421\u043e\u043d \u0432 \u043f\u043e\u0440\u044f\u0434\u043a\u0435",
+            "sleep_ok",
+            ["OMEGA3", "D3"],
+        )
+    if total <= 10:
+        return (
+            "moderate",
+            "\u0415\u0441\u0442\u044c \u043d\u0430\u0440\u0443\u0448\u0435\u043d\u0438\u044f \u0441\u043d\u0430",
+            "sleep_mild",
+            ["MAG_B6", "OMEGA3"],
+        )
+    return (
+        "severe",
+        "\u0421\u043e\u043d \u0441\u0435\u0440\u044c\u0451\u0437\u043d\u043e \u043d\u0430\u0440\u0443\u0448\u0435\u043d",
+        "sleep_high",
+        ["MAG_B6", "OMEGA3", "D3"],
+    )
+
 # ----------------------------
 # СТАРТ КВИЗА
 # ----------------------------
@@ -48,9 +71,10 @@ def kb_quiz_q(idx: int):
 async def quiz_sleep_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "sleep", "idx": 0, "score": 0}
     qtext, _ = SLEEP_QUESTIONS[0]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Тест сна 😴\n\nВопрос 1/{len(SLEEP_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(0),
+        kb_quiz_q(0),
     )
 
 # ----------------------------
@@ -72,21 +96,7 @@ async def quiz_sleep_step(c: CallbackQuery):
 
     if idx >= len(SLEEP_QUESTIONS):
         total = sess["score"]
-
-        if total <= 5:
-            level = "Сон в порядке"
-            rec_codes = ["OMEGA3", "D3"]
-            ctx = "sleep_ok"
-        elif total <= 10:
-            level = "Есть нарушения сна"
-            rec_codes = ["MAG_B6", "OMEGA3"]
-            ctx = "sleep_mild"
-        else:
-            level = "Сон серьёзно нарушен"
-            rec_codes = ["MAG_B6", "OMEGA3", "D3"]
-            ctx = "sleep_high"
-
-        await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
+        level_key, level_label, ctx, rec_codes = _sleep_outcome(total)
         lines = product_lines(rec_codes[:3], ctx)
 
         actions = [
@@ -100,7 +110,7 @@ async def quiz_sleep_step(c: CallbackQuery):
             "title": "План: Сон",
             "context": "sleep",
             "context_name": "Сон",
-            "level": level,
+            "level": level_label,
             "products": rec_codes[:3],
             "lines": lines,
             "actions": actions,
@@ -115,26 +125,23 @@ async def quiz_sleep_step(c: CallbackQuery):
                 session,
                 c.from_user.id,
                 "quiz_finish",
-                {"quiz": "sleep", "score": total, "level": level},
+                {"quiz": "sleep", "score": total, "level": level_label},
             )
             await session.commit()
 
-        msg = [
-            f"Итог: <b>{level}</b>\n",
-            "Что важно делать:",
-            "• Ложиться до 23:00",
-            "• Минимизировать экраны за 1 ч до сна",
-            "• Кофеин только до 16:00",
-            "• Проветрить комнату и убрать лишний свет\n",
-            "Поддержка:\n" + "\n".join(lines),
-        ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:sleep", rec_codes[:3]))
+        cards = pick_for_context("sleep", level_key, rec_codes[:3])
+        await send_product_cards(
+            c,
+            f"Итог: {level_label}",
+            cards,
+        )
 
         SESSIONS.pop(c.from_user.id, None)
         return
 
     qtext, _ = SLEEP_QUESTIONS[idx]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Вопрос {idx + 1}/{len(SLEEP_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(idx),
+        kb_quiz_q(idx),
     )

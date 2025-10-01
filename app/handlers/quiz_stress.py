@@ -1,14 +1,14 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
+from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_buylist_pdf
+from app.reco import product_lines
 from app.repo import events as events_repo
 from app.repo import users as users_repo
 from app.storage import SESSIONS, set_last_plan
-from app.utils_media import send_product_album
-from app.reco import product_lines
+from app.handlers.quiz_common import safe_edit, send_product_cards
 
 router = Router()
 
@@ -39,6 +39,29 @@ def kb_quiz_q(idx: int):
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
+
+def _stress_outcome(total: int) -> tuple[str, str, str, list[str]]:
+    if total <= 5:
+        return (
+            "mild",
+            "\u0421\u0442\u0440\u0435\u0441\u0441 \u0432 \u043d\u043e\u0440\u043c\u0435",
+            "stress_ok",
+            ["OMEGA3", "T8_BLEND"],
+        )
+    if total <= 10:
+        return (
+            "moderate",
+            "\u0423\u043c\u0435\u0440\u0435\u043d\u043d\u044b\u0439 \u0441\u0442\u0440\u0435\u0441\u0441",
+            "stress_mid",
+            ["MAG_B6", "OMEGA3"],
+        )
+    return (
+        "severe",
+        "\u0412\u044b\u0441\u043e\u043a\u0438\u0439 \u0441\u0442\u0440\u0435\u0441\u0441",
+        "stress_high",
+        ["MAG_B6", "OMEGA3", "T8_BLEND"],
+    )
+
 # ----------------------------
 # СТАРТ КВИЗА
 # ----------------------------
@@ -48,9 +71,10 @@ def kb_quiz_q(idx: int):
 async def quiz_stress_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "stress", "idx": 0, "score": 0}
     qtext, _ = STRESS_QUESTIONS[0]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Тест стресса 🧠\n\nВопрос 1/{len(STRESS_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(0),
+        kb_quiz_q(0),
     )
 
 # ----------------------------
@@ -72,21 +96,7 @@ async def quiz_stress_step(c: CallbackQuery):
 
     if idx >= len(STRESS_QUESTIONS):
         total = sess["score"]
-
-        if total <= 5:
-            level = "Стресс в норме"
-            rec_codes = ["OMEGA3", "T8_BLEND"]
-            ctx = "stress_ok"
-        elif total <= 10:
-            level = "Умеренный стресс"
-            rec_codes = ["MAG_B6", "OMEGA3"]
-            ctx = "stress_mid"
-        else:
-            level = "Высокий стресс"
-            rec_codes = ["MAG_B6", "OMEGA3", "T8_BLEND"]
-            ctx = "stress_high"
-
-        await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
+        level_key, level_label, ctx, rec_codes = _stress_outcome(total)
         lines = product_lines(rec_codes[:3], ctx)
 
         actions = [
@@ -100,7 +110,7 @@ async def quiz_stress_step(c: CallbackQuery):
             "title": "План: Стресс",
             "context": "stress",
             "context_name": "Стресс / нервная система",
-            "level": level,
+            "level": level_label,
             "products": rec_codes[:3],
             "lines": lines,
             "actions": actions,
@@ -115,25 +125,23 @@ async def quiz_stress_step(c: CallbackQuery):
                 session,
                 c.from_user.id,
                 "quiz_finish",
-                {"quiz": "stress", "score": total, "level": level},
+                {"quiz": "stress", "score": total, "level": level_label},
             )
             await session.commit()
 
-        msg = [
-            f"Итог: <b>{level}</b>\n",
-            "Что важно делать:",
-            "• Экран-детокс 60 мин перед сном, дыхание 4–7–8",
-            "• Дневной свет 10 мин, прогулка 30 мин",
-            "• Кофеин до 16:00; тёплый душ/растяжка вечером\n",
-            "Поддержка:\n" + "\n".join(lines),
-        ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:stress", rec_codes[:3]))
+        cards = pick_for_context("stress", level_key, rec_codes[:3])
+        await send_product_cards(
+            c,
+            f"Итог: {level_label}",
+            cards,
+        )
 
         SESSIONS.pop(c.from_user.id, None)
         return
 
     qtext, _ = STRESS_QUESTIONS[idx]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Вопрос {idx + 1}/{len(STRESS_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(idx),
+        kb_quiz_q(idx),
     )

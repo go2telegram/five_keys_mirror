@@ -1,14 +1,14 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
+from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_buylist_pdf
+from app.reco import product_lines
 from app.repo import events as events_repo
 from app.repo import users as users_repo
 from app.storage import SESSIONS, set_last_plan
-from app.utils_media import send_product_album
-from app.reco import product_lines
+from app.handlers.quiz_common import safe_edit, send_product_cards
 
 router = Router()
 
@@ -33,6 +33,29 @@ def kb_quiz_q(idx: int):
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
+
+def _gut_outcome(total: int) -> tuple[str, str, str, list[str]]:
+    if total <= 5:
+        return (
+            "mild",
+            "\u0411\u0430\u043b\u0430\u043d\u0441 \u0432 \u043f\u043e\u0440\u044f\u0434\u043a\u0435",
+            "gut_ok",
+            ["TEO_GREEN", "OMEGA3"],
+        )
+    if total <= 10:
+        return (
+            "moderate",
+            "\u041b\u0451\u0433\u043a\u0438\u0435 \u043d\u0430\u0440\u0443\u0448\u0435\u043d\u0438\u044f \u043c\u0438\u043a\u0440\u043e\u0431\u0438\u043e\u043c\u0430",
+            "gut_mild",
+            ["TEO_GREEN", "MOBIO"],
+        )
+    return (
+        "severe",
+        "\u0416\u041a\u0422 \u043f\u043e\u0434 \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u043e\u0439",
+        "gut_high",
+        ["MOBIO", "TEO_GREEN", "OMEGA3"],
+    )
+
 # ----------------------------
 # СТАРТ КВИЗА
 # ----------------------------
@@ -40,9 +63,10 @@ def kb_quiz_q(idx: int):
 async def quiz_gut_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "gut", "idx": 0, "score": 0}
     qtext, _ = GUT_QUESTIONS[0]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Тест ЖКТ / микробиом 🌿\n\nВопрос 1/{len(GUT_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(0),
+        kb_quiz_q(0),
     )
 
 # ----------------------------
@@ -62,21 +86,7 @@ async def quiz_gut_step(c: CallbackQuery):
 
     if idx >= len(GUT_QUESTIONS):
         total = sess["score"]
-
-        if total <= 5:
-            level = "Баланс в порядке"
-            rec_codes = ["TEO_GREEN", "OMEGA3"]; ctx = "gut_ok"
-        elif total <= 10:
-            level = "Лёгкие нарушения микробиома"
-            rec_codes = ["TEO_GREEN", "MOBIO"]; ctx = "gut_mild"
-        else:
-            level = "ЖКТ под нагрузкой"
-            rec_codes = ["MOBIO", "TEO_GREEN", "OMEGA3"]; ctx = "gut_high"
-
-        # 1) фото
-        await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
-
-        # 2) карточка
+        level_key, level_label, ctx, rec_codes = _gut_outcome(total)
         lines = product_lines(rec_codes[:3], ctx)
 
         # 3) план для PDF
@@ -91,7 +101,7 @@ async def quiz_gut_step(c: CallbackQuery):
             "title": "План: ЖКТ / микробиом",
             "context": "gut",
             "context_name": "ЖКТ / микробиом",
-            "level": level,
+            "level": level_label,
             "products": rec_codes[:3],
             "lines": lines,
             "actions": actions,
@@ -106,25 +116,23 @@ async def quiz_gut_step(c: CallbackQuery):
                 session,
                 c.from_user.id,
                 "quiz_finish",
-                {"quiz": "gut", "score": total, "level": level},
+                {"quiz": "gut", "score": total, "level": level_label},
             )
             await session.commit()
 
-        msg = [
-            f"Итог: <b>{level}</b>\n",
-            "Что важно делать уже сегодня:",
-            "• Регулярный режим питания, без «донышек» и частых перекусов",
-            "• Вода 30–35 мл/кг и прогулки 30 мин в день",
-            "• Добавить клетчатку и белок в основной приём пищи\n",
-            "Поддержка:\n" + "\n".join(lines),
-        ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:gut", rec_codes[:3]))
+        cards = pick_for_context("gut", level_key, rec_codes[:3])
+        await send_product_cards(
+            c,
+            f"Итог: {level_label}",
+            cards,
+        )
 
         SESSIONS.pop(c.from_user.id, None)
         return
 
     qtext, _ = GUT_QUESTIONS[idx]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Вопрос {idx + 1}/{len(GUT_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(idx),
+        kb_quiz_q(idx),
     )

@@ -1,14 +1,14 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
+from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_buylist_pdf
 from app.reco import product_lines
 from app.repo import events as events_repo
 from app.repo import users as users_repo
 from app.storage import SESSIONS, set_last_plan
-from app.utils_media import send_product_album
+from app.handlers.quiz_common import safe_edit, send_product_cards
 
 router = Router()
 
@@ -37,13 +37,37 @@ def kb_quiz_q(idx: int):
     return kb.as_markup()
 
 
+def _energy_outcome(total: int) -> tuple[str, str, str, list[str]]:
+    if total <= 5:
+        return (
+            "mild",
+            "\u042d\u043d\u0435\u0440\u0433\u0438\u044f \u0432 \u043d\u043e\u0440\u043c\u0435",
+            "energy_norm",
+            ["T8_BLEND", "OMEGA3", "VITEN"],
+        )
+    if total <= 10:
+        return (
+            "moderate",
+            "\u041b\u0451\u0433\u043a\u0430\u044f \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c",
+            "energy_light",
+            ["T8_BLEND", "VITEN", "TEO_GREEN"],
+        )
+    return (
+        "severe",
+        "\u0412\u044b\u0440\u0430\u0436\u0435\u043d\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c",
+        "energy_high",
+        ["T8_EXTRA", "VITEN", "MOBIO"],
+    )
+
+
 @router.callback_query(F.data == "quiz:energy")
 async def quiz_energy_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "energy", "idx": 0, "score": 0}
     qtext, _ = ENERGY_QUESTIONS[0]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Тест энергии ⚡\n\nВопрос 1/{len(ENERGY_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(0),
+        kb_quiz_q(0),
     )
 
 
@@ -61,21 +85,7 @@ async def quiz_energy_step(c: CallbackQuery):
 
     if idx >= len(ENERGY_QUESTIONS):
         total = sess["score"]
-
-        if total <= 5:
-            level = "Норма"
-            rec_codes = ["OMEGA3", "VITEN"]
-            ctx = "energy_norm"
-        elif total <= 10:
-            level = "Лёгкая усталость"
-            rec_codes = ["T8_BLEND", "VITEN", "TEO_GREEN"]
-            ctx = "energy_light"
-        else:
-            level = "Выраженная усталость"
-            rec_codes = ["T8_EXTRA", "VITEN", "MOBIO"]
-            ctx = "energy_high"
-
-        await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
+        level_key, level_label, ctx, rec_codes = _energy_outcome(total)
         lines = product_lines(rec_codes[:3], ctx)
 
         actions = [
@@ -89,7 +99,7 @@ async def quiz_energy_step(c: CallbackQuery):
             "title": "План: Энергия",
             "context": "energy",
             "context_name": "Энергия",
-            "level": level,
+            "level": level_label,
             "products": rec_codes[:3],
             "lines": lines,
             "actions": actions,
@@ -104,25 +114,23 @@ async def quiz_energy_step(c: CallbackQuery):
                 session,
                 c.from_user.id,
                 "quiz_finish",
-                {"quiz": "energy", "score": total, "level": level},
+                {"quiz": "energy", "score": total, "level": level_label},
             )
             await session.commit()
 
-        msg = [
-            f"Итог: <b>{level}</b>\n",
-            "Что можно сделать уже сегодня:",
-            "• Сон до 23:00, 7–9 ч",
-            "• 10 мин утреннего света",
-            "• 30 мин быстрой ходьбы\n",
-            "Поддержка:\n" + "\n".join(lines),
-        ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:energy", rec_codes[:3]))
+        cards = pick_for_context("energy", level_key, rec_codes[:3])
+        await send_product_cards(
+            c,
+            f"Итог: {level_label}",
+            cards,
+        )
 
         SESSIONS.pop(c.from_user.id, None)
         return
 
     qtext, _ = ENERGY_QUESTIONS[idx]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Вопрос {idx + 1}/{len(ENERGY_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(idx),
+        kb_quiz_q(idx),
     )
