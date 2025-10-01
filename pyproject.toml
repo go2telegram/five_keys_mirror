@@ -1,0 +1,14 @@
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+src = ["app", "tests", "scripts"]
+target-version = "py311"
+select = ["E", "F", "W", "I"]
+fix = false
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+force-single-line = false

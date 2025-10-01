@@ -1,14 +1,21 @@
-.PHONY: migrate upgrade db-check dev
+.PHONY: migrate upgrade db-check dev fmt lint
 
 migrate:
-@alembic revision -m "$(msg)" --autogenerate
+	@alembic revision -m "$(msg)" --autogenerate
 
 upgrade:
-@mkdir -p var
-@alembic upgrade head
+	@mkdir -p var
+	@alembic upgrade head
 
 db-check:
-@python scripts/db_check.py
+	@python scripts/db_check.py
 
 dev:
-@python -m app.main
+	@python -m app.main
+
+fmt:
+	@python -m black .
+	@ruff check . --fix
+
+lint:
+	@ruff check .

@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     RUN_TRIBUTE_WEBHOOK: bool = False
     TRIBUTE_PORT: int = 8080
 
+    DEBUG_COMMANDS: bool = False
+
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"
     SUB_PRO_MATCH: str = "pro"

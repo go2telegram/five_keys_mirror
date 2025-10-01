@@ -95,5 +95,7 @@ jobs:
           python scripts/db_check.py
           python - <<'PY'
           import aiogram, sqlalchemy, reportlab, apscheduler, httpx
+          import app.main  # noqa: F401
+
           print('smoke ok')
           PY
