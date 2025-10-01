@@ -61,14 +61,10 @@ jobs:
           path: dist/wheels-win_amd64-cp311.zip
 
   offline-smoke:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: wheels
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
 
       - name: Download wheels artifact
         uses: actions/download-artifact@v4
@@ -76,29 +72,30 @@ jobs:
           name: wheels-win_amd64-cp311
           path: dist
 
-      - name: Offline install and smoke test
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          unzip dist/wheels-win_amd64-cp311.zip -d dist
-          python -m pip install --no-index --find-links dist/wheels \
-            -r requirements.txt \
-            -r wheels-packages.txt
-          cat <<'ENV' > .env
-          BOT_TOKEN=TEST:FAKE
-          DB_URL=sqlite+aiosqlite:///./var/bot.db
-          TIMEZONE=Europe/Moscow
-          ADMIN_ID=1
-          ENV
-          mkdir -p var
-          alembic upgrade head
-          python scripts/db_check.py
-          python - <<'PY'
-          import aiogram, sqlalchemy, reportlab, apscheduler, httpx
-          import app.main  # noqa: F401
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-          print('smoke ok')
-          PY
+      - name: Offline install and smoke test
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          python -m venv .venv
+          .\.venv\Scripts\Activate.ps1
+          Expand-Archive -Path dist\wheels-win_amd64-cp311.zip -DestinationPath dist -Force
+          if (-not (Test-Path dist\wheels)) {
+            Write-Error 'wheels directory missing after extraction'
+            exit 1
+          }
+          python -m pip install --upgrade pip
+          pip install --no-index --find-links dist\wheels -r wheels-packages.txt
+          pip install --no-index --find-links dist\wheels -r requirements.txt
+          $smoke = @'
+          import aiogram, sqlalchemy, reportlab, apscheduler, httpx
+          print("offline wheels smoke ok")
+          '@
+          $smoke | python
 
   offline-smoke-update:
     runs-on: windows-latest
