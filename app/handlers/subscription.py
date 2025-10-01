@@ -4,8 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import session_scope
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import subscriptions as subscriptions_repo, users as users_repo
 
 router = Router()
 

@@ -1,6 +1,4 @@
 import asyncio
-import os
-import sys
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -8,11 +6,6 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alembic import context
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
 from app.config import settings
 from app.db.models import Base
 

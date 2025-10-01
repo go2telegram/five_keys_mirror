@@ -13,9 +13,7 @@ async def get_user(session: AsyncSession, user_id: int) -> Optional[User]:
     return await session.get(User, user_id)
 
 
-async def get_or_create_user(
-    session: AsyncSession, user_id: int, username: Optional[str] = None
-) -> User:
+async def get_or_create_user(session: AsyncSession, user_id: int, username: Optional[str] = None) -> User:
     user = await get_user(session, user_id)
     if user:
         if username is not None and user.username != username:
@@ -35,9 +33,7 @@ async def get_or_create_user(
     return user
 
 
-async def set_referrer(
-    session: AsyncSession, user_id: int, referrer_id: int
-) -> Optional[User]:
+async def set_referrer(session: AsyncSession, user_id: int, referrer_id: int) -> Optional[User]:
     if user_id == referrer_id:
         return await get_user(session, user_id)
     user = await get_user(session, user_id)
@@ -55,9 +51,7 @@ async def count(session: AsyncSession, q: Optional[str] = None) -> int:
     return result.scalar_one()
 
 
-async def find(
-    session: AsyncSession, q: Optional[str], limit: int, offset: int
-) -> list[User]:
+async def find(session: AsyncSession, q: Optional[str], limit: int, offset: int) -> list[User]:
     stmt = select(User).order_by(User.created.desc()).limit(limit).offset(offset)
     if q:
         stmt = stmt.where(_search_condition(q))

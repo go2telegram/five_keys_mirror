@@ -50,9 +50,7 @@ def _alembic_upgrade_head_sync(db_url: str) -> str | None:
     engine = create_engine(sync_url, future=True)
     try:
         with engine.connect() as connection:
-            return connection.execute(
-                text("SELECT version_num FROM alembic_version")
-            ).scalar_one_or_none()
+            return connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one_or_none()
     finally:
         engine.dispose()
 
@@ -66,7 +64,5 @@ async def init_db() -> str | None:
             db_path = Path(path)
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    current_rev = await asyncio.to_thread(
-        _alembic_upgrade_head_sync, settings.DB_URL
-    )
+    current_rev = await asyncio.to_thread(_alembic_upgrade_head_sync, settings.DB_URL)
     return current_rev

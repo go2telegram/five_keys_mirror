@@ -1,10 +1,3 @@
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
-
 from app.catalog.api import pick_for_context
 from app.handlers.quiz_common import _action_kb
 
@@ -20,13 +13,15 @@ def test_pick_for_context_fallback_when_level_missing():
 
 
 def test_action_keyboard_contains_core_buttons():
-    markup = _action_kb([
-        {
-            "code": "T8_BLEND",
-            "name": "T8 BLEND",
-            "order_url": "https://example.com/blend",
-        }
-    ])
+    markup = _action_kb(
+        [
+            {
+                "code": "T8_BLEND",
+                "name": "T8 BLEND",
+                "order_url": "https://example.com/blend",
+            }
+        ]
+    )
     flat = [btn for row in markup.inline_keyboard for btn in row]
     assert any(btn.url for btn in flat if "Купить" in btn.text)
     assert any(getattr(btn, "callback_data", None) == "report:last" for btn in flat)

@@ -1,16 +1,19 @@
-from aiogram import Router
-from aiogram.filters import Command
-from aiogram.types import BufferedInputFile, Message
 from datetime import datetime
 from io import StringIO
 
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.types import BufferedInputFile, Message
+
 from app.config import settings
 from app.db.session import session_scope
-from app.repo import events as events_repo
-from app.repo import leads as leads_repo
-from app.repo import referrals as referrals_repo
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import (
+    events as events_repo,
+    leads as leads_repo,
+    referrals as referrals_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 
 router = Router()
 

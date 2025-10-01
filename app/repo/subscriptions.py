@@ -31,9 +31,7 @@ async def set_plan(
         until = base + timedelta(days=days)
 
     if subscription is None:
-        subscription = Subscription(
-            user_id=user_id, plan=plan, since=now, until=until
-        )
+        subscription = Subscription(user_id=user_id, plan=plan, since=now, until=until)
         session.add(subscription)
     else:
         subscription.plan = plan
@@ -44,9 +42,7 @@ async def set_plan(
     return subscription
 
 
-async def is_active(
-    session: AsyncSession, user_id: int
-) -> Tuple[bool, Optional[Subscription]]:
+async def is_active(session: AsyncSession, user_id: int) -> Tuple[bool, Optional[Subscription]]:
     subscription = await get(session, user_id)
     if subscription is None:
         return False, None

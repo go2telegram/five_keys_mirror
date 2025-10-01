@@ -4,9 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import session_scope
-from app.repo import events as events_repo
-from app.repo import referrals as referrals_repo
-from app.repo import users as users_repo
+from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
 
 router = Router()
 

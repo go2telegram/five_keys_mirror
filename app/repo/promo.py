@@ -9,9 +9,7 @@ from app.db.models import PromoUsage
 
 
 async def was_used(session: AsyncSession, user_id: int, code: str) -> bool:
-    stmt = select(PromoUsage.id).where(
-        PromoUsage.user_id == user_id, PromoUsage.code == code
-    )
+    stmt = select(PromoUsage.id).where(PromoUsage.user_id == user_id, PromoUsage.code == code)
     result = await session.execute(stmt)
     return result.first() is not None
 

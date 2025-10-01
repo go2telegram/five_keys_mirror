@@ -9,9 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Referral
 
 
-async def create(
-    session: AsyncSession, referrer_id: int, invited_id: int
-) -> Referral:
+async def create(session: AsyncSession, referrer_id: int, invited_id: int) -> Referral:
     referral = Referral(
         referrer_id=referrer_id,
         invited_id=invited_id,
@@ -22,9 +20,7 @@ async def create(
     return referral
 
 
-async def convert(
-    session: AsyncSession, invited_id: int, bonus_days: int = 0
-) -> Optional[Referral]:
+async def convert(session: AsyncSession, invited_id: int, bonus_days: int = 0) -> Optional[Referral]:
     referral = await get_by_invited(session, invited_id)
     if referral is None:
         return None
@@ -35,9 +31,7 @@ async def convert(
     return referral
 
 
-async def get_by_invited(
-    session: AsyncSession, invited_id: int
-) -> Optional[Referral]:
+async def get_by_invited(session: AsyncSession, invited_id: int) -> Optional[Referral]:
     stmt = select(Referral).where(Referral.invited_id == invited_id)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -55,11 +49,7 @@ async def top_referrers(
             stmt = stmt.where(Referral.joined_at >= start)
         if end is not None:
             stmt = stmt.where(Referral.joined_at < end)
-    stmt = (
-        stmt.group_by(Referral.referrer_id)
-        .order_by(func.count(Referral.id).desc())
-        .limit(limit)
-    )
+    stmt = stmt.group_by(Referral.referrer_id).order_by(func.count(Referral.id).desc()).limit(limit)
     result = await session.execute(stmt)
     return [(row[0], row[1]) for row in result.all()]
 
@@ -70,12 +60,8 @@ async def converted_count(session: AsyncSession) -> int:
     return result.scalar_one()
 
 
-async def stats_for_referrer(
-    session: AsyncSession, referrer_id: int
-) -> tuple[int, int]:
-    invited_stmt = select(func.count(Referral.id)).where(
-        Referral.referrer_id == referrer_id
-    )
+async def stats_for_referrer(session: AsyncSession, referrer_id: int) -> tuple[int, int]:
+    invited_stmt = select(func.count(Referral.id)).where(Referral.referrer_id == referrer_id)
     converted_stmt = select(func.count(Referral.id)).where(
         Referral.referrer_id == referrer_id, Referral.converted_at.is_not(None)
     )

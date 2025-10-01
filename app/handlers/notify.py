@@ -1,10 +1,11 @@
 # app/handlers/notify.py
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
+
 from app.db.session import session_scope
-from app.repo import events as events_repo
 from app.keyboards import kb_back_home
+from app.repo import events as events_repo
 
 router = Router()
 
@@ -31,15 +32,9 @@ async def notify_help(m: Message):
         last_status = await events_repo.last_by(session, m.from_user.id, "notify_on")
         last_off = await events_repo.last_by(session, m.from_user.id, "notify_off")
 
-    if last_status and (not last_off or last_status.ts > last_off.ts):
-        status = "включены"
-    else:
-        status = "выключены"
+    status = "включены" if last_status and (not last_off or last_status.ts > last_off.ts) else "выключены"
     await m.answer(
-        f"Сейчас напоминания {status}.\n\n"
-        "Команды:\n"
-        "• /notify_on — включить\n"
-        "• /notify_off — выключить"
+        f"Сейчас напоминания {status}.\n\n" "Команды:\n" "• /notify_on — включить\n" "• /notify_off — выключить"
     )
 
 
@@ -49,15 +44,9 @@ async def notify_help_cb(c: CallbackQuery):
         last_status = await events_repo.last_by(session, c.from_user.id, "notify_on")
         last_off = await events_repo.last_by(session, c.from_user.id, "notify_off")
 
-    if last_status and (not last_off or last_status.ts > last_off.ts):
-        status = "включены"
-    else:
-        status = "выключены"
+    status = "включены" if last_status and (not last_off or last_status.ts > last_off.ts) else "выключены"
 
     await c.message.edit_text(
-        f"Сейчас напоминания {status}.\n\n"
-        "Команды:\n"
-        "• /notify_on — включить\n"
-        "• /notify_off — выключить",
+        f"Сейчас напоминания {status}.\n\n" "Команды:\n" "• /notify_on — включить\n" "• /notify_off — выключить",
         reply_markup=kb_back_home("home"),
     )

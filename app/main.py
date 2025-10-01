@@ -6,34 +6,36 @@ import asyncio
 import logging
 from typing import Optional
 
-from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiohttp import web
 
 from app.config import settings
 from app.db.session import init_db
-from app.handlers import admin as h_admin
-from app.handlers import admin_crud as h_admin_crud
-from app.handlers import assistant as h_assistant
-from app.handlers import calc as h_calc
-from app.handlers import lead as h_lead
-from app.handlers import navigator as h_navigator
-from app.handlers import notify as h_notify
-from app.handlers import picker as h_picker
-from app.handlers import premium as h_premium
-from app.handlers import profile as h_profile
-from app.handlers import quiz_energy as h_quiz_energy
-from app.handlers import quiz_gut as h_quiz_gut
-from app.handlers import quiz_immunity as h_quiz_immunity
-from app.handlers import quiz_menu as h_quiz_menu
-from app.handlers import quiz_sleep as h_quiz_sleep
-from app.handlers import quiz_stress as h_quiz_stress
-from app.handlers import referral as h_referral
-from app.handlers import reg as h_reg
-from app.handlers import report as h_report
-from app.handlers import start as h_start
-from app.handlers import subscription as h_subscription
-from app.handlers import tribute_webhook as h_tw
+from app.handlers import (
+    admin as h_admin,
+    admin_crud as h_admin_crud,
+    assistant as h_assistant,
+    calc as h_calc,
+    lead as h_lead,
+    navigator as h_navigator,
+    notify as h_notify,
+    picker as h_picker,
+    premium as h_premium,
+    profile as h_profile,
+    quiz_energy as h_quiz_energy,
+    quiz_gut as h_quiz_gut,
+    quiz_immunity as h_quiz_immunity,
+    quiz_menu as h_quiz_menu,
+    quiz_sleep as h_quiz_sleep,
+    quiz_stress as h_quiz_stress,
+    referral as h_referral,
+    reg as h_reg,
+    report as h_report,
+    start as h_start,
+    subscription as h_subscription,
+    tribute_webhook as h_tw,
+)
 from app.scheduler.service import start_scheduler
 
 try:
@@ -111,7 +113,7 @@ async def main() -> None:
 
     runner = await _setup_tribute_webhook()
 
-    logging.info(">>> Starting polling (aiogram)…")
+    logging.info(">>> Starting polling (aiogram)...")
     try:
         await dp.start_polling(
             bot,

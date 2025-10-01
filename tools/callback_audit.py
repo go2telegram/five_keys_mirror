@@ -58,7 +58,7 @@ def _handler_callbacks() -> tuple[set[str], list[str]]:
             for part in match.group(1).split(","):
                 part = part.strip()
                 if part and part not in {""}:
-                    equals.add(part.strip('"\''))
+                    equals.add(part.strip("\"'"))
         for match in pattern_pref.finditer(text):
             prefixes.append(match.group(2))
     return equals, prefixes

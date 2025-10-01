@@ -23,7 +23,9 @@ def _collect_metadata(connection) -> Tuple[Iterable[str], str | None]:
     tables = inspector.get_table_names()
     version = None
     if "alembic_version" in tables:
-        version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one_or_none()
+        version_query = text("SELECT version_num FROM alembic_version")
+        result = connection.execute(version_query)
+        version = result.scalar_one_or_none()
     return tables, version
 
 

@@ -5,11 +5,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_goal_menu, kb_buylist_pdf
-from app.products import PRODUCTS, GOAL_MAP
-from app.repo import events as events_repo
-from app.repo import users as users_repo
+from app.keyboards import kb_buylist_pdf, kb_goal_menu
+from app.products import GOAL_MAP, PRODUCTS
 from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
 
@@ -29,7 +28,7 @@ GOAL_META = {
         ],
         "notes": "Гидратация 30–35 мл/кг. Ужин — за 3 часа до сна.",
         "codes_basic": ["T8_BLEND", "OMEGA3"],
-        "codes_pro":   ["T8_EXTRA", "VITEN", "MOBIO"],
+        "codes_pro": ["T8_EXTRA", "VITEN", "MOBIO"],
     },
     "immunity": {
         "title": "План: Иммунитет",
@@ -43,7 +42,7 @@ GOAL_META = {
         ],
         "notes": "В сезон простуд: тёплые напитки, влажность 40–60%, промывание носа.",
         "codes_basic": ["VITEN", "T8_BLEND"],
-        "codes_pro":   ["VITEN", "T8_BLEND", "D3"],
+        "codes_pro": ["VITEN", "T8_BLEND", "D3"],
     },
     "gut": {
         "title": "План: ЖКТ / микробиом",
@@ -57,7 +56,7 @@ GOAL_META = {
         ],
         "notes": "Если были антибиотики — курс MOBIO поможет быстрее восстановиться.",
         "codes_basic": ["TEO_GREEN", "MOBIO"],
-        "codes_pro":   ["MOBIO", "TEO_GREEN", "OMEGA3"],
+        "codes_pro": ["MOBIO", "TEO_GREEN", "OMEGA3"],
     },
     "sleep": {
         "title": "План: Сон",
@@ -71,7 +70,7 @@ GOAL_META = {
         ],
         "notes": "Если сложно расслабиться — дыхание 4–7–8 или тёплый душ перед сном.",
         "codes_basic": ["MAG_B6", "OMEGA3"],
-        "codes_pro":   ["MAG_B6", "OMEGA3", "D3"],
+        "codes_pro": ["MAG_B6", "OMEGA3", "D3"],
     },
     "beauty_joint": {
         "title": "План: Кожа / суставы",
@@ -85,7 +84,7 @@ GOAL_META = {
         ],
         "notes": "Береги связки/сухожилия: растяжка, без резких стартов.",
         "codes_basic": ["ERA_MIT_UP", "OMEGA3"],
-        "codes_pro":   ["ERA_MIT_UP", "OMEGA3", "D3"],
+        "codes_pro": ["ERA_MIT_UP", "OMEGA3", "D3"],
     },
 }
 
@@ -97,12 +96,14 @@ def _back_home(back_cb: str = "pick:menu"):
     kb.adjust(2)
     return kb.as_markup()
 
+
 # --- ШАГ 0: меню целей ---
 
 
 @router.callback_query(F.data == "pick:menu")
 async def pick_menu(c: CallbackQuery):
     await c.message.edit_text("Выбери цель — подберу продукты:", reply_markup=kb_goal_menu())
+
 
 # --- ШАГ 1: цель → возраст ---
 
@@ -125,6 +126,7 @@ async def pick_goal(c: CallbackQuery):
     kb.adjust(3, 2)
     await c.message.edit_text("Возрастная группа:", reply_markup=kb.as_markup())
 
+
 # --- ШАГ 2: возраст → образ жизни ---
 
 
@@ -134,14 +136,13 @@ async def pick_age(c: CallbackQuery):
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["age"] = age
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="Офис/малоподвижный",
-              callback_data=f"pick:life:{goal_key}:{age}:office")
-    kb.button(text="Активный/спорт",
-              callback_data=f"pick:life:{goal_key}:{age}:active")
+    kb.button(text="Офис/малоподвижный", callback_data=f"pick:life:{goal_key}:{age}:office")
+    kb.button(text="Активный/спорт", callback_data=f"pick:life:{goal_key}:{age}:active")
     kb.button(text="⬅️ Назад", callback_data=f"pick:goal:{goal_key}")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(2, 2)
     await c.message.edit_text("Образ жизни:", reply_markup=kb.as_markup())
+
 
 # --- ШАГ 3: образ жизни → уровень ---
 
@@ -149,18 +150,16 @@ async def pick_age(c: CallbackQuery):
 @router.callback_query(F.data.regexp(r"^pick:life:[a-z_]+:(u30|30_50|50p):(office|active)$"))
 async def pick_life(c: CallbackQuery):
     _, _, goal_key, age, life = c.data.split(":")
-    SESSIONS.setdefault(c.from_user.id, {}).setdefault(
-        "pick", {})["life"] = life
+    SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["life"] = life
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="🟢 Новичок",
-              callback_data=f"pick:lvl:{goal_key}:{age}:{life}:basic")
-    kb.button(text="🔵 Продвинутый",
-              callback_data=f"pick:lvl:{goal_key}:{age}:{life}:pro")
+    kb.button(text="🟢 Новичок", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:basic")
+    kb.button(text="🔵 Продвинутый", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:pro")
     kb.button(text="⬅️ Назад", callback_data=f"pick:age:{goal_key}:{age}")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(2, 2)
     await c.message.edit_text("Уровень подхода:", reply_markup=kb.as_markup())
+
 
 # --- ШАГ 4: уровень → ограничения ---
 
@@ -168,73 +167,72 @@ async def pick_life(c: CallbackQuery):
 @router.callback_query(F.data.regexp(r"^pick:lvl:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro)$"))
 async def pick_level(c: CallbackQuery):
     _, _, goal_key, age, life, level = c.data.split(":")
-    SESSIONS.setdefault(c.from_user.id, {}).setdefault(
-        "pick", {})["level"] = level
+    SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["level"] = level
 
     kb = InlineKeyboardBuilder()
-    kb.button(
-        text="Нет", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:none")
-    kb.button(text="Аллергия на травы",
-              callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs")
-    kb.button(text="Веган",
-              callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:vegan")
-    kb.button(text="⬅️ Назад",
-              callback_data=f"pick:life:{goal_key}:{age}:{life}")
+    kb.button(text="Нет", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:none")
+    kb.button(text="Аллергия на травы", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs")
+    kb.button(text="Веган", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:vegan")
+    kb.button(text="⬅️ Назад", callback_data=f"pick:life:{goal_key}:{age}:{life}")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(2, 3)
     await c.message.edit_text("Аллергии/ограничения:", reply_markup=kb.as_markup())
 
+
 # --- ШАГ 5: ограничения → сезон ---
 
 
-@router.callback_query(F.data.regexp(r"^pick:all:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan)$"))
+@router.callback_query(
+    F.data.regexp(r"^pick:all:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan)$")
+)
 async def pick_allergies(c: CallbackQuery):
     _, _, goal_key, age, life, level, allerg = c.data.split(":")
-    SESSIONS.setdefault(c.from_user.id, {}).setdefault(
-        "pick", {})["allerg"] = allerg
+    SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["allerg"] = allerg
 
     kb = InlineKeyboardBuilder()
-    kb.button(
-        text="Лето", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:summer")
-    kb.button(
-        text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter")
-    kb.button(text="Другое",
-              callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other")
-    kb.button(text="⬅️ Назад",
-              callback_data=f"pick:lvl:{goal_key}:{age}:{life}:{level}")
+    kb.button(text="Лето", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:summer")
+    kb.button(text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter")
+    kb.button(text="Другое", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other")
+    kb.button(text="⬅️ Назад", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:{level}")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(3, 2)
     await c.message.edit_text("Сезон:", reply_markup=kb.as_markup())
 
+
 # --- ШАГ 6: сезон → бюджет ---
 
 
-@router.callback_query(F.data.regexp(r"^pick:season:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan):(summer|winter|other)$"))
+@router.callback_query(
+    F.data.regexp(
+        r"^pick:season:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan):(summer|winter|other)$"
+    )
+)
 async def pick_season(c: CallbackQuery):
     _, _, goal_key, age, life, level, allerg, season = c.data.split(":")
-    SESSIONS.setdefault(c.from_user.id, {}).setdefault(
-        "pick", {})["season"] = season
+    SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["season"] = season
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="💡 Лайт (1–2 поз.)",
-              callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:lite")
-    kb.button(text="⚖ Стандарт",
-              callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std")
-    kb.button(text="🚀 Про",
-              callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro")
-    kb.button(text="⬅️ Назад",
-              callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
+    kb.button(
+        text="💡 Лайт (1–2 поз.)", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:lite"
+    )
+    kb.button(text="⚖ Стандарт", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std")
+    kb.button(text="🚀 Про", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro")
+    kb.button(text="⬅️ Назад", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
     kb.button(text="🏠 Домой", callback_data="home")
     kb.adjust(3, 2)
     await c.message.edit_text("Бюджет:", reply_markup=kb.as_markup())
 
+
 # --- ШАГ 7: финальная выдача ---
 
 
-@router.callback_query(F.data.regexp(r"^pick:budget:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan):(summer|winter|other):(lite|std|pro)$"))
+@router.callback_query(
+    F.data.regexp(
+        r"^pick:budget:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan):(summer|winter|other):(lite|std|pro)$"
+    )
+)
 async def pick_finalize(c: CallbackQuery):
-    _, _, goal_key, age, life, level, allerg, season, budget = c.data.split(
-        ":")
+    _, _, goal_key, age, life, level, allerg, season, budget = c.data.split(":")
     meta = GOAL_META[goal_key]
 
     # Базовый набор по уровню
@@ -278,12 +276,17 @@ async def pick_finalize(c: CallbackQuery):
     # Карточка и PDF-план
     lines = product_lines(rec_codes[:3], ctx)
     level_label = "Новичок" if level == "basic" else "Продвинутый"
+    age_label = "50+" if age == "50p" else ("30–50" if age == "30_50" else "до 30")
+    life_label = "активный" if life == "active" else "офис"
+    allerg_label = "нет" if allerg == "none" else ("травы" if allerg == "herbs" else "веган")
+    season_label = "зима" if season == "winter" else ("лето" if season == "summer" else "другой")
+    budget_label = "лайт" if budget == "lite" else ("стандарт" if budget == "std" else "про")
     desc = (
-        f"возраст: {'50+' if age=='50p' else ('30–50' if age=='30_50' else 'до 30')}, "
-        f"образ жизни: {'активный' if life=='active' else 'офис'}, "
-        f"ограничения: {'нет' if allerg=='none' else ('травы' if allerg=='herbs' else 'веган')}, "
-        f"сезон: {'зима' if season=='winter' else ('лето' if season=='summer' else 'другой')}, "
-        f"бюджет: {'лайт' if budget=='lite' else ('стандарт' if budget=='std' else 'про')}"
+        f"возраст: {age_label}, "
+        f"образ жизни: {life_label}, "
+        f"ограничения: {allerg_label}, "
+        f"сезон: {season_label}, "
+        f"бюджет: {budget_label}"
     )
 
     msg = [
@@ -291,15 +294,16 @@ async def pick_finalize(c: CallbackQuery):
         desc + "\n",
         "Поддержка:\n" + "\n".join(lines),
     ]
-    await c.message.answer("".join(msg), reply_markup=kb_buylist_pdf("pick:menu", rec_codes[:3]))
+    reply_markup = kb_buylist_pdf("pick:menu", rec_codes[:3])
+    await c.message.answer("".join(msg), reply_markup=reply_markup)
 
     # Сохраняем план для PDF
     actions = meta["actions"]
     notes = meta["notes"]
     if allerg == "herbs":
-        notes += " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, избегай острых блюд и алкоголя."
+        notes += " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, " "избегай острых блюд и алкоголя."
     if age == "50p":
-        notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците по согласованию с врачом."
+        notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците " "по согласованию с врачом."
 
     plan_payload = {
         "title": meta["title"],

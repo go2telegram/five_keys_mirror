@@ -1,14 +1,13 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.reco import product_lines
-from app.repo import events as events_repo
-from app.repo import users as users_repo
-from app.storage import SESSIONS, set_last_plan
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
+from app.storage import SESSIONS, set_last_plan
 
 router = Router()
 
@@ -23,8 +22,10 @@ GUT_QUESTIONS = [
     ("Изжога/рефлюкс/дискомфорт в верхних отделах ЖКТ?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
 ]
 
+
 def kb_quiz_q(idx: int):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
+
     _, answers = GUT_QUESTIONS[idx]
     kb = InlineKeyboardBuilder()
     for label, score in answers:
@@ -45,7 +46,10 @@ def _gut_outcome(total: int) -> tuple[str, str, str, list[str]]:
     if total <= 10:
         return (
             "moderate",
-            "\u041b\u0451\u0433\u043a\u0438\u0435 \u043d\u0430\u0440\u0443\u0448\u0435\u043d\u0438\u044f \u043c\u0438\u043a\u0440\u043e\u0431\u0438\u043e\u043c\u0430",
+            (
+                "\u041b\u0451\u0433\u043a\u0438\u0435 \u043d\u0430\u0440\u0443\u0448\u0435\u043d\u0438\u044f "
+                "\u043c\u0438\u043a\u0440\u043e\u0431\u0438\u043e\u043c\u0430"
+            ),
             "gut_mild",
             ["TEO_GREEN", "MOBIO"],
         )
@@ -55,6 +59,7 @@ def _gut_outcome(total: int) -> tuple[str, str, str, list[str]]:
         "gut_high",
         ["MOBIO", "TEO_GREEN", "OMEGA3"],
     )
+
 
 # ----------------------------
 # СТАРТ КВИЗА
@@ -68,6 +73,7 @@ async def quiz_gut_start(c: CallbackQuery):
         f"Тест ЖКТ / микробиом 🌿\n\nВопрос 1/{len(GUT_QUESTIONS)}:\n{qtext}",
         kb_quiz_q(0),
     )
+
 
 # ----------------------------
 # ОБРАБОТКА ОТВЕТОВ

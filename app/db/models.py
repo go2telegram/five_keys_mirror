@@ -4,17 +4,17 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     SmallInteger,
     String,
     Text,
     UniqueConstraint,
-    Index,
     func,
-    JSON,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -37,28 +37,20 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(_bigint_pk, primary_key=True)
     username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    created: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    referred_by: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey("users.id"), nullable=True
-    )
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    referred_by: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
 
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    referrals: Mapped[list["Referral"]] = relationship(
-        back_populates="referrer", foreign_keys="Referral.referrer_id"
-    )
+    referrals: Mapped[list["Referral"]] = relationship(back_populates="referrer", foreign_keys="Referral.referrer_id")
 
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
     __table_args__ = (UniqueConstraint("user_id", name="uq_subscriptions_user"),)
 
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id"), primary_key=True
-    )
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
     plan: Mapped[str] = mapped_column(String(16), nullable=False)
     since: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -77,12 +69,8 @@ class Referral(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     referrer_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     invited_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    converted_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     bonus_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
     referrer: Mapped[Optional[User]] = relationship(
@@ -97,9 +85,7 @@ class PromoUsage(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
-    used_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class Event(Base):
@@ -114,9 +100,7 @@ class Event(Base):
     user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     meta: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
-    ts: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class Lead(Base):
@@ -129,6 +113,4 @@ class Lead(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    ts: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -2,18 +2,20 @@ import hashlib
 import hmac
 import json
 import os
-from aiohttp import web
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiohttp import web
 
 from app.config import settings
 from app.db.session import session_scope
-from app.repo import events as events_repo
-from app.repo import referrals as referrals_repo
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import (
+    events as events_repo,
+    referrals as referrals_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 
 LOG = os.getenv("TRIBUTE_WEBHOOK_LOG", "0") == "1"
 INSECURE = os.getenv("TRIBUTE_WEBHOOK_INSECURE", "0") == "1"
@@ -49,9 +51,7 @@ async def _notify_user(user_id: int, plan: str):
     try:
         bot = Bot(token=settings.BOT_TOKEN)
         kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]
-            ]
+            inline_keyboard=[[InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]]
         )
         text = (
             f"🎉 <b>Подписка активирована</b>\n\n"

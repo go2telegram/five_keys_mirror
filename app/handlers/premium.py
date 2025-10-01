@@ -3,8 +3,7 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import session_scope
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import subscriptions as subscriptions_repo, users as users_repo
 
 router = Router()
 
@@ -45,10 +44,6 @@ async def premium_menu(c: CallbackQuery):
         return
 
     if sub.plan == "basic":
-        await c.message.edit_text(
-            "💎 MITO Basic — доступ к разделам:", reply_markup=_kb_links(BASIC_LINKS)
-        )
+        await c.message.edit_text("💎 MITO Basic — доступ к разделам:", reply_markup=_kb_links(BASIC_LINKS))
     else:
-        await c.message.edit_text(
-            "💎 MITO Pro — полный доступ:", reply_markup=_kb_links(PRO_LINKS)
-        )
+        await c.message.edit_text("💎 MITO Pro — полный доступ:", reply_markup=_kb_links(PRO_LINKS))

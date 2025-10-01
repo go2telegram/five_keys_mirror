@@ -1,15 +1,18 @@
 # app/scheduler/service.py
+from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from aiogram import Bot
-from app.scheduler.jobs import send_nudges
+
 from app.config import settings
+from app.scheduler.jobs import send_nudges
+
 
 def _parse_weekdays(csv: str | None) -> set[str]:
     # Пример: "Mon,Thu" -> {"Mon","Thu"}
     if not csv:
         return set()
     return {x.strip().title()[:3] for x in csv.split(",") if x.strip()}
+
 
 def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     """

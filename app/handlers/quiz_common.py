@@ -15,7 +15,8 @@ LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
 ERROR_TEXT = (
     "\u041f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u0430 \u043e\u0448\u0438\u0431\u043a\u0430. "
-    "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u043f\u043e\u0437\u0436\u0435."
+    "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 "
+    "\u043f\u043e\u0437\u0436\u0435."
 )
 
 
@@ -25,11 +26,16 @@ def _action_kb(cards: List[dict]):
         url = item.get("order_url")
         name = item.get("name") or item.get("code")
         if url:
-            kb.button(text=f"\u041a\u0443\u043f\u0438\u0442\u044c {name}", url=url)
+            buy_text = f"\u041a\u0443\u043f\u0438\u0442\u044c {name}"
+            kb.button(text=buy_text, url=url)
     kb.button(text="PDF-\u043f\u043b\u0430\u043d", callback_data="report:last")
-    kb.button(text="\u0417\u0430\u043a\u0430\u0437\u0430\u0442\u044c \u0441\u043e \u0441\u043a\u0438\u0434\u043a\u043e\u0439", callback_data="reg:open")
+    kb.button(
+        text="\u0417\u0430\u043a\u0430\u0437\u0430\u0442\u044c \u0441\u043e \u0441\u043a\u0438\u0434\u043a\u043e\u0439",
+        callback_data="reg:open",
+    )
     kb.button(text="\u0414\u043e\u043c\u043e\u0439", callback_data="home:main")
-    rows = [1] * len([b for b in kb.buttons if getattr(b, "url", None)]) + [1, 1, 1]
+    url_button_count = len([button for button in kb.buttons if getattr(button, "url", None)])
+    rows = [1] * url_button_count + [1, 1, 1]
     kb.adjust(*rows)
     return kb.as_markup()
 
@@ -44,8 +50,12 @@ async def safe_edit(c: CallbackQuery, text: str, reply_markup):
 
 async def send_product_cards(c: CallbackQuery, title: str, cards: List[dict]) -> None:
     if not cards:
+        unavailable_text = (
+            "\u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e "
+            "\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d."
+        )
         await c.message.answer(
-            "\u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d.",
+            unavailable_text,
             reply_markup=kb_back_home(home_cb="home:main"),
         )
         return
@@ -60,12 +70,20 @@ async def send_product_cards(c: CallbackQuery, title: str, cards: List[dict]) ->
         except Exception:  # noqa: BLE001
             LOG.exception("send_media_group failed")
 
+    baseline_intro = (
+        "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c "
+        "\u0443\u0436\u0435 "
+        "\u0441\u0435\u0433\u043e\u0434\u043d\u044f:"
+    )
     lines: List[str] = [
         f"<b>{title}</b>",
         "",
-        "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c \u0443\u0436\u0435 \u0441\u0435\u0433\u043e\u0434\u043d\u044f:",
+        baseline_intro,
         "\u2022 \u0421\u043e\u043d \u0434\u043e 23:00, 7–9 \u0447",
-        "\u2022 10 \u043c\u0438\u043d \u0443\u0442\u0440\u0435\u043d\u043d\u0435\u0433\u043e \u0441\u0432\u0435\u0442\u0430",
+        (
+            "\u2022 10 \u043c\u0438\u043d \u0443\u0442\u0440\u0435\u043d\u043d\u0435\u0433\u043e "
+            "\u0441\u0432\u0435\u0442\u0430"
+        ),
         "\u2022 30 \u043c\u0438\u043d \u0431\u044b\u0441\u0442\u0440\u043e\u0439 \u0445\u043e\u0434\u044c\u0431\u044b",
         "",
     ]
@@ -76,7 +94,10 @@ async def send_product_cards(c: CallbackQuery, title: str, cards: List[dict]) ->
             lines.append(f"  · {prop}")
         helps_text = item.get("helps_text")
         if helps_text:
-            lines.append(f"<i>\u041a\u0430\u043a \u043f\u043e\u043c\u043e\u0436\u0435\u0442 \u0441\u0435\u0439\u0447\u0430\u0441:</i> {helps_text}")
+            lines.append(
+                "<i>\u041a\u0430\u043a \u043f\u043e\u043c\u043e\u0436\u0435\u0442 "
+                f"\u0441\u0435\u0439\u0447\u0430\u0441:</i> {helps_text}"
+            )
         lines.append("")
 
     text = "\n".join(lines)

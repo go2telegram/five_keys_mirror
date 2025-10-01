@@ -5,12 +5,11 @@ from aiogram.types import CallbackQuery, Message
 
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_calc_menu, kb_back_home, kb_buylist_pdf
-from app.repo import events as events_repo
-from app.repo import users as users_repo
+from app.keyboards import kb_back_home, kb_buylist_pdf, kb_calc_menu
+from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
-from app.reco import product_lines
 
 router = Router()
 
@@ -37,12 +36,14 @@ def bmi_recommendations(bmi: float):
     else:
         return ["T8_EXTRA", "TEO_GREEN"], "bmi_obese"
 
+
 # --- Меню ---
 
 
 @router.callback_query(F.data == "calc:menu")
 async def calc_menu(c: CallbackQuery):
     await c.message.edit_text("Выбери калькулятор:", reply_markup=kb_calc_menu())
+
 
 # --- MSD (идеальный вес по росту) ---
 
@@ -51,8 +52,7 @@ async def calc_menu(c: CallbackQuery):
 async def calc_msd(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "msd"}
     await c.message.edit_text(
-        "Введи рост в сантиметрах и пол (М/Ж), например: <code>165 Ж</code>",
-        reply_markup=kb_back_home("calc:menu")
+        "Введи рост в сантиметрах и пол (М/Ж), например: <code>165 Ж</code>", reply_markup=kb_back_home("calc:menu")
     )
 
 
@@ -65,7 +65,7 @@ async def handle_msd(m: Message):
     h_cm, sex = re.findall(r"(\d{2,3})\s*([МмЖж])", m.text.strip())[0]
     h = int(h_cm) / 100.0
     k = 23.0 if sex.lower().startswith("м") else 21.5
-    ideal = round(h*h*k, 1)
+    ideal = round(h * h * k, 1)
 
     # рекомендации + фото
     rec_codes = msd_recommendations()
@@ -114,16 +114,14 @@ async def handle_msd(m: Message):
     await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
     SESSIONS.pop(m.from_user.id, None)
 
+
 # --- ИМТ (индекс массы тела) ---
 
 
 @router.callback_query(F.data == "calc:bmi")
 async def calc_bmi(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "bmi"}
-    await c.message.edit_text(
-        "Введи рост и вес, например: <code>183 95</code>",
-        reply_markup=kb_back_home("calc:menu")
-    )
+    await c.message.edit_text("Введи рост и вес, например: <code>183 95</code>", reply_markup=kb_back_home("calc:menu"))
 
 
 @router.message(F.text.regexp(r"^\s*\d{2,3}\s+\d{2,3}(\.\d+)?\s*$"))
@@ -136,7 +134,7 @@ async def handle_bmi(m: Message):
     h_cm = float(nums[0])
     w = float(nums[1])
     h = h_cm / 100.0
-    bmi = round(w / (h*h), 1)
+    bmi = round(w / (h * h), 1)
 
     # категория
     if bmi < 18.5:

@@ -4,27 +4,24 @@ from aiogram.types import CallbackQuery
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.reco import product_lines
-from app.repo import events as events_repo
-from app.repo import users as users_repo
-from app.storage import SESSIONS, set_last_plan
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
+from app.storage import SESSIONS, set_last_plan
 
 router = Router()
 
 IMMUNITY_QUESTIONS = [
-    ("Простужаетесь чаще 3 раз в год?", [
-     ("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
-    ("Болезни затягиваются дольше недели?", [
-     ("Нет", 0), ("Иногда", 2), ("Да", 4)]),
-    ("Есть постоянный стресс или недосып?", [
-     ("Нет", 0), ("Иногда", 2), ("Да", 4)]),
+    ("Простужаетесь чаще 3 раз в год?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
+    ("Болезни затягиваются дольше недели?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
+    ("Есть постоянный стресс или недосып?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
     ("Бывают аллергии или высыпания?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
 ]
 
 
 def kb_quiz_q(idx: int):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
+
     _, answers = IMMUNITY_QUESTIONS[idx]
     kb = InlineKeyboardBuilder()
     for label, score in answers:
@@ -45,13 +42,16 @@ def _immunity_outcome(total: int) -> tuple[str, str, str, list[str]]:
     if total <= 8:
         return (
             "moderate",
-            "\u0421\u0440\u0435\u0434\u043d\u0438\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c \u0438\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442\u0430",
+            (
+                "\u0421\u0440\u0435\u0434\u043d\u0438\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c "
+                "\u0438\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442\u0430"
+            ),
             "immunity_mid",
             ["VITEN", "T8_BLEND"],
         )
     return (
         "severe",
-        "\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 \u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d",
+        ("\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 " "\u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"),
         "immunity_low",
         ["VITEN", "T8_BLEND", "D3"],
     )

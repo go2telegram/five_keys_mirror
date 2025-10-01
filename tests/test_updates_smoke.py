@@ -8,8 +8,8 @@ from importlib.util import find_spec
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from aiogram import Dispatcher
 import pytest
+from aiogram import Dispatcher
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:

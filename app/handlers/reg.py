@@ -1,11 +1,12 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.texts import REG_TEXT
 from app.config import settings
+from app.texts import REG_TEXT
 
 router = Router()
+
 
 @router.callback_query(F.data == "reg:open")
 async def reg_open(c: CallbackQuery):

@@ -1,6 +1,7 @@
 # app/scheduler/jobs.py
 import datetime as dt
 from zoneinfo import ZoneInfo
+
 from aiogram import Bot
 
 from app.db.session import session_scope
@@ -24,12 +25,7 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     )
     text = await ai_generate(prompt)
     if not text or text.startswith("⚠️"):
-        text = (
-            "Микро-челлендж дня:\n"
-            "☑️ Сон 7–9 часов\n"
-            "☑️ 10 мин утреннего света\n"
-            "☑️ 30 мин быстрой ходьбы"
-        )
+        text = "Микро-челлендж дня:\n" "☑️ Сон 7–9 часов\n" "☑️ 10 мин утреннего света\n" "☑️ 30 мин быстрой ходьбы"
 
     async with session_scope() as session:
         user_ids = await events_repo.notify_recipients(session)

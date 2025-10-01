@@ -4,30 +4,25 @@ from aiogram.types import CallbackQuery
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import session_scope
-from app.reco import product_lines
-from app.repo import events as events_repo
-from app.repo import users as users_repo
-from app.storage import SESSIONS, set_last_plan
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
+from app.storage import SESSIONS, set_last_plan
 
 router = Router()
 
 ENERGY_QUESTIONS = [
-    ("Сколько часов ты спишь обычно?", [
-     ("8+ ч", 0), ("6–7 ч", 2), ("< 6 ч", 4)]),
-    ("Есть «туман в голове» и сложно фокусироваться?",
-     [("Редко", 0), ("Иногда", 2), ("Часто", 4)]),
-    ("Тяга к сладкому/быстрым перекусам?",
-     [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
-    ("Холодные руки/ноги без причины?",
-     [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
-    ("Долго восстанавливаешься после нагрузок/болезни?",
-     [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
+    ("Сколько часов ты спишь обычно?", [("8+ ч", 0), ("6–7 ч", 2), ("< 6 ч", 4)]),
+    ("Есть «туман в голове» и сложно фокусироваться?", [("Редко", 0), ("Иногда", 2), ("Часто", 4)]),
+    ("Тяга к сладкому/быстрым перекусам?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
+    ("Холодные руки/ноги без причины?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
+    ("Долго восстанавливаешься после нагрузок/болезни?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
 ]
 
 
 def kb_quiz_q(idx: int):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
+
     _, answers = ENERGY_QUESTIONS[idx]
     kb = InlineKeyboardBuilder()
     for label, score in answers:
@@ -54,7 +49,10 @@ def _energy_outcome(total: int) -> tuple[str, str, str, list[str]]:
         )
     return (
         "severe",
-        "\u0412\u044b\u0440\u0430\u0436\u0435\u043d\u043d\u0430\u044f \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c",
+        (
+            "\u0412\u044b\u0440\u0430\u0436\u0435\u043d\u043d\u0430\u044f "
+            "\u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c"
+        ),
         "energy_high",
         ["T8_EXTRA", "VITEN", "MOBIO"],
     )

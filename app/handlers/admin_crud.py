@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import math
+from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import quote_plus, unquote_plus
 
@@ -13,9 +13,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.db.session import session_scope
 from app.keyboards import kb_back_home
-from app.repo import referrals as referrals_repo
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import referrals as referrals_repo, subscriptions as subscriptions_repo, users as users_repo
 
 router = Router(name="admin_crud")
 
@@ -139,14 +137,10 @@ async def _render_users(page: int, query: str):
     else:
         for item in users:
             username = f"@{item.username}" if item.username else "-"
-            lines.append(
-                f"{item.id} | {username} | {_format_dt(item.created)}"
-            )
+            lines.append(f"{item.id} | {username} | {_format_dt(item.created)}")
     text = "\n".join(lines)
     encoded_query = _encode_query(query)
-    markup = _build_pagination_markup(
-        "crud:users:page", page, total_pages, encoded_query
-    )
+    markup = _build_pagination_markup("crud:users:page", page, total_pages, encoded_query)
     return text, markup
 
 
@@ -221,9 +215,7 @@ async def user_card(message: Message) -> None:
     username = f"@{user.username}" if user.username else "-"
     referred = str(user.referred_by) if user.referred_by else "-"
     if subscription:
-        sub_text = (
-            f"Plan {subscription.plan} until {_format_dt(subscription.until)}"
-        )
+        sub_text = f"Plan {subscription.plan} until {_format_dt(subscription.until)}"
     else:
         sub_text = "No active subscription"
     text = (
@@ -279,9 +271,7 @@ async def sub_set(message: Message) -> None:
     try:
         async with session_scope() as session:
             await users_repo.get_or_create_user(session, user_id)
-            subscription = await subscriptions_repo.set_plan(
-                session, user_id, plan, days=days
-            )
+            subscription = await subscriptions_repo.set_plan(session, user_id, plan, days=days)
             await session.commit()
         text = f"Plan {subscription.plan} until {_format_date(subscription.until)}"
         await message.answer(text, reply_markup=kb_back_home("home"))
@@ -349,14 +339,13 @@ async def _render_referrals(user_id: int, page: int, period: str):
     else:
         for ref in items:
             converted = _format_dt(ref.converted_at) if ref.converted_at else "-"
-            lines.append(
-                f"{ref.invited_id} | {_format_dt(ref.joined_at)} | converted: {converted} | bonus: {ref.bonus_days}"
+            line = (
+                f"{ref.invited_id} | {_format_dt(ref.joined_at)} | " f"converted: {converted} | bonus: {ref.bonus_days}"
             )
+            lines.append(line)
     text = "\n".join(lines)
     encoded_period = _encode_query(period)
-    markup = _build_pagination_markup(
-        "crud:refs:page", page, total_pages, f"{user_id}:{encoded_period}"
-    )
+    markup = _build_pagination_markup("crud:refs:page", page, total_pages, f"{user_id}:{encoded_period}")
     return text, markup
 
 
@@ -382,8 +371,6 @@ async def ref_convert(message: Message) -> None:
             current_sub = await subscriptions_repo.get(session, referral.referrer_id)
             plan = current_sub.plan if current_sub else "trial"
             await users_repo.get_or_create_user(session, referral.referrer_id)
-            await subscriptions_repo.set_plan(
-                session, referral.referrer_id, plan, days=bonus_days
-            )
+            await subscriptions_repo.set_plan(session, referral.referrer_id, plan, days=bonus_days)
         await session.commit()
     await message.answer("Referral updated", reply_markup=kb_back_home("home"))

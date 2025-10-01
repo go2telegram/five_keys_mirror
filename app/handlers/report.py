@@ -1,12 +1,13 @@
 # app/handlers/report.py
-from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, BufferedInputFile
-from aiogram.filters import Command
 from datetime import datetime
 
+from aiogram import F, Router
+from aiogram.filters import Command
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
+
 from app.db.session import session_scope
-from app.storage import get_last_plan
 from app.pdf_report import build_pdf
+from app.storage import get_last_plan
 
 router = Router()
 
@@ -14,9 +15,7 @@ router = Router()
 def _clean_lines(lines: list[str]) -> list[str]:
     out = []
     for s in lines:
-        s = (s.replace("<b>", "").replace("</b>", "")
-             .replace("<i>", "").replace("</i>", "")
-             .replace("&nbsp;", " "))
+        s = s.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("&nbsp;", " ")
         out.append(s)
     return out
 
@@ -34,8 +33,10 @@ def _compose_pdf(plan: dict) -> bytes:
     intake_rows = plan.get("intake", [])
     order_url = plan.get("order_url")
 
-    footer = ("Отчёт носит образовательный характер и не заменяет консультацию врача. "
-              "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание.")
+    footer = (
+        "Отчёт носит образовательный характер и не заменяет консультацию врача. "
+        "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание."
+    )
 
     return build_pdf(
         title=title,
@@ -44,8 +45,8 @@ def _compose_pdf(plan: dict) -> bytes:
         products=products,
         notes=notes,
         footer=footer,
-        intake_rows=intake_rows,   # <— прокидываем
-        order_url=order_url
+        intake_rows=intake_rows,  # <— прокидываем
+        order_url=order_url,
     )
 
 

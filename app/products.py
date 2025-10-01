@@ -80,14 +80,14 @@ PRODUCTS = {
 
 # Прямые ссылки на покупку (кнопки «Купить …»)
 BUY_URLS = {
-    "T8_EXTRA":   "https://shop.vilavi.com/Item/47086?ref=735861",  # T8 EXTRA
-    "T8_BLEND":   "https://shop.vilavi.com/Item/79666?ref=735861",  # T8 BLEND
-    "VITEN":      "https://shop.vilavi.com/Item/28146?ref=735861",  # NASH ViTEN
-    "TEO_GREEN":  "https://shop.vilavi.com/Item/56176?ref=735861",  # T8 TEO GREEN
-    "MOBIO":      "https://shop.vilavi.com/Item/53056?ref=735861",  # MOBIO+
-    "OMEGA3":     "https://shop.vilavi.com/Item/49596?ref=735861",  # NASH Омега-3
-    "MAG_B6":     "https://shop.vilavi.com/Item/49576?ref=735861",  # Magnesium + B6
-    "D3":         "https://shop.vilavi.com/Item/49586?ref=735861",  # Vitamin D3
+    "T8_EXTRA": "https://shop.vilavi.com/Item/47086?ref=735861",  # T8 EXTRA
+    "T8_BLEND": "https://shop.vilavi.com/Item/79666?ref=735861",  # T8 BLEND
+    "VITEN": "https://shop.vilavi.com/Item/28146?ref=735861",  # NASH ViTEN
+    "TEO_GREEN": "https://shop.vilavi.com/Item/56176?ref=735861",  # T8 TEO GREEN
+    "MOBIO": "https://shop.vilavi.com/Item/53056?ref=735861",  # MOBIO+
+    "OMEGA3": "https://shop.vilavi.com/Item/49596?ref=735861",  # NASH Омега-3
+    "MAG_B6": "https://shop.vilavi.com/Item/49576?ref=735861",  # Magnesium + B6
+    "D3": "https://shop.vilavi.com/Item/49586?ref=735861",  # Vitamin D3
     "ERA_MIT_UP": "https://shop.vilavi.com/Item/39176?ref=735861",  # T8 ERA MIT UP
 }
 

@@ -31,11 +31,7 @@ async def add(
 
 
 async def list_last(session: AsyncSession, limit: int = 10) -> Sequence[Lead]:
-    stmt = (
-        select(Lead)
-        .order_by(Lead.ts.desc(), Lead.id.desc())
-        .limit(limit)
-    )
+    stmt = select(Lead).order_by(Lead.ts.desc(), Lead.id.desc()).limit(limit)
     result = await session.execute(stmt)
     return result.scalars().all()
 
