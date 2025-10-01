@@ -132,22 +132,23 @@ jobs:
           $resolvedWheels = (Resolve-Path dist\wheels).Path
           & .\scripts\offline_install.ps1 -WheelsDir $resolvedWheels
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $envContent = @"
-BOT_TOKEN=TEST:FAKE
-DB_URL=sqlite+aiosqlite:///./var/bot.db
-TIMEZONE=Europe/Moscow
-ADMIN_ID=1
-"@
-          Set-Content -Path .env -Value $envContent -Encoding UTF8
+          $envLines = @(
+            'BOT_TOKEN=TEST:FAKE'
+            'DB_URL=sqlite+aiosqlite:///./var/bot.db'
+            'TIMEZONE=Europe/Moscow'
+            'ADMIN_ID=1'
+          )
+          Set-Content -Path .env -Value ($envLines -join "`n") -Encoding UTF8
           New-Item -ItemType Directory -Path var -Force | Out-Null
           alembic upgrade head
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts\db_check.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $smoke = @'
-import aiogram, sqlalchemy, reportlab, apscheduler, httpx
-import app.main  # noqa: F401
-print("smoke ok")
-'@
-          $smoke | python
+          $smokeLines = @(
+            'import aiogram, sqlalchemy, reportlab, apscheduler, httpx'
+            'import app.main  # noqa: F401'
+            'print("smoke ok")'
+          )
+          $smokeContent = ($smokeLines -join "`n") + "`n"
+          $smokeContent | python
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
