@@ -30,6 +30,7 @@ six==1.17.0
 
 # pdf report
 reportlab==4.2.2
+pillow==10.4.0
 
 # http client
 httpx==0.27.2
