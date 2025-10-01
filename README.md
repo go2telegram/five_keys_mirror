@@ -51,7 +51,7 @@ cp .env.example .env
 
 ## Обновление локальной копии (Windows)
 
-Скрипт `scripts/update_local.cmd` запускает PowerShell-обновление двойным кликом и не закрывает окно при ошибках. Логи сохраняются в `./logs/update_*.log`.
+Скрипт `scripts/update_local.cmd` запускает PowerShell-обновление двойным кликом и не закрывает окно при ошибках. Логи сохраняются в `./scripts/logs/update_*.log`.
 
 Альтернативно можно выполнить PowerShell-скрипт напрямую:
 
@@ -63,21 +63,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update_local.ps1 -Branch main
 
 - `-Branch` — ветка, которую нужно подтянуть (по умолчанию текущая).
 - `-WheelsDir` — путь к каталогу с распакованными колёсами (по умолчанию `./wheels`, можно задать через `WHEELS_DIR`).
-- `-UseArtifact` — скачать последний артефакт с офлайн-колёсами (нужен GitHub CLI и доступ к Actions).
+- `-NoRunBot` — выполнить обновление без старта `python -m app.main` (удобно для smoke-прогонов).
 
-Скрипт создаёт/активирует `.venv`, подтягивает выбранную ветку (не трогая `wheels/`, `var/`, `logs/`, `dist/`), выполняет офлайн-установку, прогоняет миграции, проверяет БД, снимает вебхук и запускает бота. Перед стартом выводится сообщение:
-
-```
-Bot is running… (Ctrl+C to stop)
-Log: .\logs\update_YYYYMMDD_HHMMSS.log
-```
+Скрипт создаёт/активирует `.venv`, подтягивает выбранную ветку (не трогая `wheels/`, `var/`, `logs/`, `dist/`), выполняет офлайн-установку, прогоняет миграции, проверяет БД, снимает вебхук и (если не передан `-NoRunBot`) запускает бота. В конце печатается путь к логу `Log: .\scripts\logs\update_YYYYMMDD_HHMMSS.log`.
 
 ## Типовые ошибки апдейтера
 
 - `Offline wheels directory not found` — распакуйте `wheels-win_amd64-cp311.zip` в указанный каталог или передайте `-WheelsDir`.
 - `No wheel files detected` — проверьте, что в каталоге действительно лежат `.whl` из артефакта.
 - `Package ... is missing after offline install` / `aiosqlite missing` — офлайн-набор пустой или устаревший; скачайте свежий артефакт и распакуйте заново.
-- `db_check.py` сообщает `ok: false` — миграции не применились; повторите запуск или выполните `alembic upgrade head` вручную и изучите лог в `./logs`.
+- `db_check.py` сообщает `ok: false` — миграции не применились; повторите запуск или выполните `alembic upgrade head` вручную и изучите лог в `./scripts/logs`.
 
 ## База данных и миграции
 
