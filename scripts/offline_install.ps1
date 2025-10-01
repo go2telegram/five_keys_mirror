@@ -1,53 +1,24 @@
-param(
-  [string]$WheelsDir
-)
+param([string]$WheelsDir=".\wheels")
+$ErrorActionPreference = 'Stop'
+function Fail([string]$m){ Write-Host ("ERROR: {0}" -f $m); exit 1 }
+Write-Host ("Offline install from: {0}" -f $WheelsDir)
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+if (-not (Test-Path $WheelsDir)) { Fail ("No wheels dir: " + $WheelsDir) }
+$whl = Get-ChildItem $WheelsDir -Filter *.whl -ErrorAction SilentlyContinue
+if (-not $whl -or $whl.Count -lt 1) { Fail ("No .whl files in " + $WheelsDir) }
 
-if (-not $WheelsDir -or [string]::IsNullOrWhiteSpace($WheelsDir)) {
-  if ($env:WHEELS_DIR) {
-    $WheelsDir = $env:WHEELS_DIR
-  } else {
-    $WheelsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "wheels"
-  }
+if (Test-Path ".\wheels-packages.txt") {
+  pip install --isolated --no-index --find-links "$WheelsDir" -r .\wheels-packages.txt
+}
+if (Test-Path ".\requirements.txt") {
+  pip install --isolated --no-index --find-links "$WheelsDir" -r .\requirements.txt
 }
 
-if (-not (Get-Command pip -ErrorAction SilentlyContinue)) {
-  throw "Activate your venv first (.\\.venv\\Scripts\\Activate.ps1)"
+$need = @('SQLAlchemy','alembic','aiosqlite','aiogram','python-dotenv')
+foreach ($p in $need) {
+  if (-not (pip show $p 2>$null)) { pip install --isolated --no-index --find-links "$WheelsDir" $p }
 }
-
-if (-not (Test-Path $WheelsDir -PathType Container)) {
-  throw "Offline wheels directory not found: $WheelsDir`nРаспакуйте артефакт wheels-win_amd64-cp311.zip в $WheelsDir или передайте -WheelsDir."
+foreach ($p in $need) {
+  if (-not (pip show $p 2>$null)) { Fail ("Missing package: " + $p) }
 }
-
-$wheelFiles = Get-ChildItem -Path $WheelsDir -Filter '*.whl' -File -Recurse -ErrorAction SilentlyContinue
-if (-not $wheelFiles) {
-  throw "В каталоге $WheelsDir не найдено файлов .whl`nРаспакуйте wheels-win_amd64-cp311.zip и повторите установку."
-}
-
-$resolvedWheels = (Resolve-Path $WheelsDir).Path
-Write-Host "Using wheels from: $resolvedWheels"
-
-$requirementsPath = Join-Path (Split-Path -Parent $PSScriptRoot) "requirements.txt"
-$manifestPath = Join-Path (Split-Path -Parent $PSScriptRoot) "wheels-packages.txt"
-
-Write-Host "Installing project requirements from offline bundle..."
-& pip install --isolated --no-index --find-links $resolvedWheels `
-  -r $requirementsPath `
-  -r $manifestPath
-
-$requiredPackages = @("SQLAlchemy", "alembic", "aiosqlite", "aiogram", "python-dotenv")
-$missing = @()
-foreach ($pkg in $requiredPackages) {
-  & pip show $pkg > $null 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    $missing += $pkg
-  }
-}
-
-if ($missing.Count -gt 0) {
-  throw "Package(s) missing after offline install: $($missing -join ', ')`nПроверьте содержимое каталога $resolvedWheels."
-}
-
-Write-Host "Offline install: done ($($requiredPackages.Count) packages verified)."
+Write-Host "Offline install: done."

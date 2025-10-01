@@ -70,9 +70,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update_local.ps1 -Branch main
 ## Типовые ошибки апдейтера
 
 - `Offline wheels directory not found` — распакуйте `wheels-win_amd64-cp311.zip` в указанный каталог или передайте `-WheelsDir`.
-- `No wheel files detected` — проверьте, что в каталоге действительно лежат `.whl` из артефакта.
-- `Package ... is missing after offline install` / `aiosqlite missing` — офлайн-набор пустой или устаревший; скачайте свежий артефакт и распакуйте заново.
+- `No wheel files detected in ...` — проверьте, что в каталоге действительно лежат `.whl` из артефакта.
+- `Missing package: <имя>` — соответствующего `.whl` нет в каталоге; добавьте его и повторите запуск.
 - `db_check.py` сообщает `ok: false` — миграции не применились; повторите запуск или выполните `alembic upgrade head` вручную и изучите лог в `./scripts/logs`.
+- `ParserError at offline_install.ps1` — файл был испорчен (не-ASCII или неверная кодировка). Апдейтер восстановит рабочую версию автоматически; при необходимости удалите файл и повторите `update_local.ps1`.
 
 ## База данных и миграции
 
