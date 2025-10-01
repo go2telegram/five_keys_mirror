@@ -1,24 +1,43 @@
 #!/usr/bin/env python3
-"""Verify that all PowerShell scripts contain ASCII-only text."""
+"""Verify PowerShell scripts are ASCII-only and use CRLF with a single trailing newline."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "scripts"
+SCRIPTS_DIR = ROOT / "scripts"
 
 failures: list[str] = []
 
-for path in sorted(SCRIPTS.glob("*.ps1")):
+for path in sorted(SCRIPTS_DIR.glob("*.ps1")):
     data = path.read_bytes()
-    if any(b > 127 for b in data):
+
+    # ASCII discipline
+    try:
+        text = data.decode("ascii")
+    except UnicodeDecodeError:
         failures.append(f"{path.relative_to(ROOT)} contains non-ASCII bytes")
+        continue
+
+    # Ensure all newlines are CRLF
+    without_crlf = text.replace("\r\n", "")
+    if "\r" in without_crlf or "\n" in without_crlf:
+        failures.append(f"{path.relative_to(ROOT)} must use CRLF line endings only")
+        continue
+
+    # Require exactly one trailing CRLF
+    if not text.endswith("\r\n"):
+        failures.append(f"{path.relative_to(ROOT)} must end with CRLF newline")
+        continue
+    if text.endswith("\r\n\r\n"):
+        failures.append(f"{path.relative_to(ROOT)} must have exactly one trailing blank line")
+        continue
 
 if failures:
     for item in failures:
         print(f"::error ::{item}")
-    print("PowerShell 5.1 requires ASCII-only scripts in scripts/*.ps1", file=sys.stderr)
+    print("PowerShell scripts in scripts/ must be ASCII with CRLF and a single trailing newline", file=sys.stderr)
     sys.exit(1)
 
-print("ASCII check passed for scripts/*.ps1")
+print("PowerShell scripts passed ASCII/CRLF checks")
