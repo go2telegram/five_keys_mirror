@@ -1,4 +1,4 @@
-.PHONY: migrate upgrade db-check dev fmt lint
+.PHONY: migrate upgrade db-check dev fmt lint hooks
 
 migrate:
 	@alembic revision -m "$(msg)" --autogenerate
@@ -19,3 +19,10 @@ fmt:
 
 lint:
 	@ruff check .
+
+
+hooks:
+	@python -m pip install --upgrade pip
+	@python -m pip install pre-commit
+	@pre-commit install
+	@pre-commit run --all-files

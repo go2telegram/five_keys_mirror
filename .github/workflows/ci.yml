@@ -59,3 +59,28 @@ jobs:
       - run: alembic upgrade head
       - run: python scripts/db_check.py
       - run: pytest -q || true
+
+  lint-autofix:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff black pre-commit
+      - run: ruff check . --fix
+      - run: black .
+      - run: pre-commit run --all-files || true
+      - run: python tools/check_ascii_ps1.py
+      - name: Commit lint autofixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: apply lint autofixes'
+          branch: ${{ github.head_ref }}
