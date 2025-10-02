@@ -98,8 +98,8 @@ async def notify_no(c: CallbackQuery):
 
 @router.callback_query(F.data == "home:main")
 async def back_home(c: CallbackQuery):
-    await c.answer()
     try:
         await c.message.edit_text(GREETING, reply_markup=kb_main())
     except Exception:  # noqa: BLE001 - fallback to a fresh message
         await c.message.answer(GREETING, reply_markup=kb_main())
+    await c.answer()
