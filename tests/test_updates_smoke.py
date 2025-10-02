@@ -101,3 +101,28 @@ def test_resolve_used_update_types_contains_message_and_callback() -> None:
 
     assert "message" in updates
     assert "callback_query" in updates
+
+
+def test_start_safe_sends_greeting_even_if_full_logic_fails() -> None:
+    """The /start safe handler must reply even when the heavy logic errors out."""
+
+    class FailingScope:
+        async def __aenter__(self):  # pragma: no cover - exercised in test runtime
+            raise RuntimeError("db down")
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    async def _run() -> None:
+        message = MagicMock()
+        message.answer = AsyncMock()
+        message.from_user = MagicMock(id=123, username="tester")
+        message.text = "/start"
+
+        with patch("app.handlers.start.session_scope", return_value=FailingScope()):
+            await h_start.start_safe(message)
+            await asyncio.sleep(0)
+
+        message.answer.assert_called()
+
+    asyncio.run(_run())
