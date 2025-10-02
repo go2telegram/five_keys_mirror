@@ -29,6 +29,7 @@ class LeadForm(StatesGroup):
 
 @router.callback_query(F.data == "lead:start")
 async def lead_start(c: CallbackQuery, state: FSMContext):
+    await c.answer()
     await state.set_state(LeadForm.name)
     await c.message.answer("Как к вам обращаться? (имя)", reply_markup=kb_cancel_home())
 
@@ -41,6 +42,7 @@ async def lead_cmd(m: Message, state: FSMContext):
 
 @router.callback_query(F.data == "lead:cancel")
 async def lead_cancel_cb(c: CallbackQuery, state: FSMContext):
+    await c.answer()
     await state.clear()
     cancel_text = "Заявка отменена. Если понадобится — нажмите 📝 Консультация."
     await c.message.answer(cancel_text, reply_markup=kb_main())

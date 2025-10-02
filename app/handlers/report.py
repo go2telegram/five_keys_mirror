@@ -62,6 +62,7 @@ async def pdf_last_cb(c: CallbackQuery):
             reply_markup=kb_back_home(),
         )
         return
+    await c.answer()
     pdf_bytes = _compose_pdf(plan)
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     await c.message.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")

@@ -2,8 +2,10 @@ import pytest
 
 pytest.importorskip("aiosqlite")
 
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from app.config import settings
-from app.handlers import notify, premium, referral, subscription
+from app.handlers import notify, picker, premium, referral, subscription
 from app.keyboards import kb_back_home, kb_card_actions
 from app.pdf_report import build_pdf
 
@@ -54,6 +56,16 @@ def test_card_actions_uses_discount_url_when_available(monkeypatch):
     markup = kb_card_actions(cards, back_cb="calc:menu")
     urls = [btn.url for btn in _flatten(markup) if btn.url]
     assert "https://velavie.example/offer" in urls
+
+
+def test_picker_helper_appends_navigation_buttons():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Опция", callback_data="pick:test")
+    picker._extend_with_back_home(builder, "pick:menu")
+    markup = builder.as_markup()
+    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    assert "pick:menu" in callbacks
+    assert "home:main" in callbacks
 
 
 def test_build_pdf_returns_non_empty_bytes():

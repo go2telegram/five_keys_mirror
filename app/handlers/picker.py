@@ -1,16 +1,20 @@
 # app/handlers/picker.py
+import logging
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import session_scope
-from app.keyboards import kb_buylist_pdf, kb_goal_menu
+from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
 from app.products import GOAL_MAP, PRODUCTS
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
+
+LOG = logging.getLogger(__name__)
 
 router = Router()
 
@@ -89,12 +93,18 @@ GOAL_META = {
 }
 
 
-def _back_home(back_cb: str = "pick:menu"):
-    kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Назад", callback_data=back_cb)
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(2)
-    return kb.as_markup()
+def _extend_with_back_home(builder: InlineKeyboardBuilder, back_cb: str) -> InlineKeyboardBuilder:
+    for row in kb_back_home(back_cb).inline_keyboard:
+        builder.row(*row)
+    return builder
+
+
+async def _safe_edit(c: CallbackQuery, text: str, markup):
+    try:
+        await c.message.edit_text(text, reply_markup=markup)
+    except Exception:  # noqa: BLE001 - fallback to a fresh message
+        LOG.exception("picker edit failed")
+        await c.message.answer(text, reply_markup=markup)
 
 
 # --- ШАГ 0: меню целей ---
@@ -102,7 +112,8 @@ def _back_home(back_cb: str = "pick:menu"):
 
 @router.callback_query(F.data == "pick:menu")
 async def pick_menu(c: CallbackQuery):
-    await c.message.edit_text("Выбери цель — подберу продукты:", reply_markup=kb_goal_menu())
+    await c.answer()
+    await _safe_edit(c, "Выбери цель — подберу продукты:", kb_goal_menu())
 
 
 # --- ШАГ 1: цель → возраст ---
@@ -110,9 +121,10 @@ async def pick_menu(c: CallbackQuery):
 
 @router.callback_query(F.data.startswith("pick:goal:"))
 async def pick_goal(c: CallbackQuery):
+    await c.answer()
     goal_key = c.data.split(":")[-1]
     if goal_key not in GOAL_META:
-        await c.message.edit_text("Пока нет рекомендаций по этой цели.")
+        await _safe_edit(c, "Пока нет рекомендаций по этой цели.", kb_back_home())
         return
 
     SESSIONS.setdefault(c.from_user.id, {})["pick"] = {"goal": goal_key}
@@ -121,10 +133,9 @@ async def pick_goal(c: CallbackQuery):
     kb.button(text="До 30", callback_data=f"pick:age:{goal_key}:u30")
     kb.button(text="30–50", callback_data=f"pick:age:{goal_key}:30_50")
     kb.button(text="50+", callback_data=f"pick:age:{goal_key}:50p")
-    kb.button(text="⬅️ Назад", callback_data="pick:menu")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    _extend_with_back_home(kb, "pick:menu")
     kb.adjust(3, 2)
-    await c.message.edit_text("Возрастная группа:", reply_markup=kb.as_markup())
+    await _safe_edit(c, "Возрастная группа:", kb.as_markup())
 
 
 # --- ШАГ 2: возраст → образ жизни ---
@@ -132,16 +143,16 @@ async def pick_goal(c: CallbackQuery):
 
 @router.callback_query(F.data.regexp(r"^pick:age:[a-z_]+:(u30|30_50|50p)$"))
 async def pick_age(c: CallbackQuery):
+    await c.answer()
     _, _, goal_key, age = c.data.split(":")
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["age"] = age
 
     kb = InlineKeyboardBuilder()
     kb.button(text="Офис/малоподвижный", callback_data=f"pick:life:{goal_key}:{age}:office")
     kb.button(text="Активный/спорт", callback_data=f"pick:life:{goal_key}:{age}:active")
-    kb.button(text="⬅️ Назад", callback_data=f"pick:goal:{goal_key}")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    _extend_with_back_home(kb, f"pick:goal:{goal_key}")
     kb.adjust(2, 2)
-    await c.message.edit_text("Образ жизни:", reply_markup=kb.as_markup())
+    await _safe_edit(c, "Образ жизни:", kb.as_markup())
 
 
 # --- ШАГ 3: образ жизни → уровень ---
@@ -149,16 +160,16 @@ async def pick_age(c: CallbackQuery):
 
 @router.callback_query(F.data.regexp(r"^pick:life:[a-z_]+:(u30|30_50|50p):(office|active)$"))
 async def pick_life(c: CallbackQuery):
+    await c.answer()
     _, _, goal_key, age, life = c.data.split(":")
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["life"] = life
 
     kb = InlineKeyboardBuilder()
     kb.button(text="🟢 Новичок", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:basic")
     kb.button(text="🔵 Продвинутый", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:pro")
-    kb.button(text="⬅️ Назад", callback_data=f"pick:age:{goal_key}:{age}")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    _extend_with_back_home(kb, f"pick:age:{goal_key}:{age}")
     kb.adjust(2, 2)
-    await c.message.edit_text("Уровень подхода:", reply_markup=kb.as_markup())
+    await _safe_edit(c, "Уровень подхода:", kb.as_markup())
 
 
 # --- ШАГ 4: уровень → ограничения ---
@@ -166,6 +177,7 @@ async def pick_life(c: CallbackQuery):
 
 @router.callback_query(F.data.regexp(r"^pick:lvl:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro)$"))
 async def pick_level(c: CallbackQuery):
+    await c.answer()
     _, _, goal_key, age, life, level = c.data.split(":")
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["level"] = level
 
@@ -173,10 +185,9 @@ async def pick_level(c: CallbackQuery):
     kb.button(text="Нет", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:none")
     kb.button(text="Аллергия на травы", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs")
     kb.button(text="Веган", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:vegan")
-    kb.button(text="⬅️ Назад", callback_data=f"pick:life:{goal_key}:{age}:{life}")
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(2, 3)
-    await c.message.edit_text("Аллергии/ограничения:", reply_markup=kb.as_markup())
+    _extend_with_back_home(kb, f"pick:life:{goal_key}:{age}:{life}")
+    kb.adjust(3, 2)
+    await _safe_edit(c, "Аллергии/ограничения:", kb.as_markup())
 
 
 # --- ШАГ 5: ограничения → сезон ---
@@ -186,6 +197,7 @@ async def pick_level(c: CallbackQuery):
     F.data.regexp(r"^pick:all:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan)$")
 )
 async def pick_allergies(c: CallbackQuery):
+    await c.answer()
     _, _, goal_key, age, life, level, allerg = c.data.split(":")
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["allerg"] = allerg
 
@@ -193,10 +205,9 @@ async def pick_allergies(c: CallbackQuery):
     kb.button(text="Лето", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:summer")
     kb.button(text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter")
     kb.button(text="Другое", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other")
-    kb.button(text="⬅️ Назад", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:{level}")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    _extend_with_back_home(kb, f"pick:lvl:{goal_key}:{age}:{life}:{level}")
     kb.adjust(3, 2)
-    await c.message.edit_text("Сезон:", reply_markup=kb.as_markup())
+    await _safe_edit(c, "Сезон:", kb.as_markup())
 
 
 # --- ШАГ 6: сезон → бюджет ---
@@ -208,6 +219,7 @@ async def pick_allergies(c: CallbackQuery):
     )
 )
 async def pick_season(c: CallbackQuery):
+    await c.answer()
     _, _, goal_key, age, life, level, allerg, season = c.data.split(":")
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["season"] = season
 
@@ -217,10 +229,9 @@ async def pick_season(c: CallbackQuery):
     )
     kb.button(text="⚖ Стандарт", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std")
     kb.button(text="🚀 Про", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro")
-    kb.button(text="⬅️ Назад", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    _extend_with_back_home(kb, f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
     kb.adjust(3, 2)
-    await c.message.edit_text("Бюджет:", reply_markup=kb.as_markup())
+    await _safe_edit(c, "Бюджет:", kb.as_markup())
 
 
 # --- ШАГ 7: финальная выдача ---
@@ -232,6 +243,8 @@ async def pick_season(c: CallbackQuery):
     )
 )
 async def pick_finalize(c: CallbackQuery):
+    await c.answer()
+
     _, _, goal_key, age, life, level, allerg, season, budget = c.data.split(":")
     meta = GOAL_META[goal_key]
 

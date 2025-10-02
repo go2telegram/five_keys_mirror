@@ -1,5 +1,7 @@
 """Notification preferences handlers."""
 
+import logging
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
@@ -10,6 +12,7 @@ from app.keyboards import kb_back_home
 from app.repo import events as events_repo
 
 router = Router(name="notify")
+LOG = logging.getLogger(__name__)
 
 
 def _status_keyboard(enabled: bool):
@@ -41,9 +44,14 @@ async def _render(message: Message | CallbackQuery, enabled: bool) -> None:
     text = f"Сейчас напоминания {status}.\n\n" "Используйте кнопки ниже, чтобы переключить статус."
     markup = _status_keyboard(enabled)
     if isinstance(message, CallbackQuery):
-        await message.message.edit_text(text, reply_markup=markup)
-    else:
-        await message.answer(text, reply_markup=markup)
+        try:
+            await message.message.edit_text(text, reply_markup=markup)
+        except Exception:  # noqa: BLE001 - graceful fallback with navigation buttons
+            LOG.exception("notify edit failed")
+            await message.message.answer(text, reply_markup=markup)
+        return
+
+    await message.answer(text, reply_markup=markup)
 
 
 @router.message(Command("notify_on"))
