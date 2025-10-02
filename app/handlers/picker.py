@@ -92,7 +92,7 @@ GOAL_META = {
 def _back_home(back_cb: str = "pick:menu"):
     kb = InlineKeyboardBuilder()
     kb.button(text="⬅️ Назад", callback_data=back_cb)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2)
     return kb.as_markup()
 
@@ -122,7 +122,7 @@ async def pick_goal(c: CallbackQuery):
     kb.button(text="30–50", callback_data=f"pick:age:{goal_key}:30_50")
     kb.button(text="50+", callback_data=f"pick:age:{goal_key}:50p")
     kb.button(text="⬅️ Назад", callback_data="pick:menu")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(3, 2)
     await c.message.edit_text("Возрастная группа:", reply_markup=kb.as_markup())
 
@@ -139,7 +139,7 @@ async def pick_age(c: CallbackQuery):
     kb.button(text="Офис/малоподвижный", callback_data=f"pick:life:{goal_key}:{age}:office")
     kb.button(text="Активный/спорт", callback_data=f"pick:life:{goal_key}:{age}:active")
     kb.button(text="⬅️ Назад", callback_data=f"pick:goal:{goal_key}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2)
     await c.message.edit_text("Образ жизни:", reply_markup=kb.as_markup())
 
@@ -156,7 +156,7 @@ async def pick_life(c: CallbackQuery):
     kb.button(text="🟢 Новичок", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:basic")
     kb.button(text="🔵 Продвинутый", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:pro")
     kb.button(text="⬅️ Назад", callback_data=f"pick:age:{goal_key}:{age}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2)
     await c.message.edit_text("Уровень подхода:", reply_markup=kb.as_markup())
 
@@ -174,7 +174,7 @@ async def pick_level(c: CallbackQuery):
     kb.button(text="Аллергия на травы", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs")
     kb.button(text="Веган", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:vegan")
     kb.button(text="⬅️ Назад", callback_data=f"pick:life:{goal_key}:{age}:{life}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 3)
     await c.message.edit_text("Аллергии/ограничения:", reply_markup=kb.as_markup())
 
@@ -194,7 +194,7 @@ async def pick_allergies(c: CallbackQuery):
     kb.button(text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter")
     kb.button(text="Другое", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other")
     kb.button(text="⬅️ Назад", callback_data=f"pick:lvl:{goal_key}:{age}:{life}:{level}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(3, 2)
     await c.message.edit_text("Сезон:", reply_markup=kb.as_markup())
 
@@ -218,7 +218,7 @@ async def pick_season(c: CallbackQuery):
     kb.button(text="⚖ Стандарт", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std")
     kb.button(text="🚀 Про", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro")
     kb.button(text="⬅️ Назад", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(3, 2)
     await c.message.edit_text("Бюджет:", reply_markup=kb.as_markup())
 

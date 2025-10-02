@@ -3,9 +3,10 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.repo import subscriptions as subscriptions_repo, users as users_repo
 
-router = Router()
+router = Router(name="premium")
 
 BASIC_LINKS = [
     ("МИТОlife (новости)", "https://t.me/c/1858905974/3331"),
@@ -27,7 +28,7 @@ def _kb_links(pairs):
     kb = InlineKeyboardBuilder()
     for title, url in pairs:
         kb.button(text=f"🔗 {title}", url=url)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     layout = [2] * (len(pairs) // 2) + ([1] if len(pairs) % 2 else []) + [1]
     kb.adjust(*layout)
     return kb.as_markup()
@@ -39,8 +40,12 @@ async def premium_menu(c: CallbackQuery):
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
 
+    await c.answer()
     if not is_active or sub is None:
-        await c.message.edit_text("🔒 Premium недоступен. Оформите подписку в разделе «Подписка».")
+        await c.message.edit_text(
+            "🔒 Premium доступен только с активной подпиской.",
+            reply_markup=kb_back_home("sub:menu"),
+        )
         return
 
     if sub.plan == "basic":

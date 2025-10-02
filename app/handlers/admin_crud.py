@@ -73,7 +73,7 @@ def _build_pagination_markup(callback: str, page: int, total_pages: int, extra: 
         builder.button(text="Next", callback_data=f"{callback}:{page + 1}:{extra}")
     if builder.buttons:
         builder.adjust(len(builder.buttons))
-    back_markup = kb_back_home("home")
+    back_markup = kb_back_home("home:main")
     for row in back_markup.inline_keyboard:
         builder.row(*row)
     return builder.as_markup()
@@ -100,7 +100,7 @@ async def admin_help(message: Message) -> None:
         "/refs <id> [period] - list referrals (7d|30d|all)\n"
         "/ref_convert <invited_id> [bonus_days] - mark referral conversion"
     )
-    await message.answer(text, reply_markup=kb_back_home("home"))
+    await message.answer(text, reply_markup=kb_back_home("home:main"))
 
 
 @router.message(Command("users"))
@@ -208,7 +208,7 @@ async def user_card(message: Message) -> None:
     async with session_scope() as session:
         user = await users_repo.get_by_id(session, user_id)
         if user is None:
-            await message.answer("User not found", reply_markup=kb_back_home("home"))
+            await message.answer("User not found", reply_markup=kb_back_home("home:main"))
             return
         subscription = await subscriptions_repo.get(session, user_id)
         referrals_count = await referrals_repo.count_for(session, user_id)
@@ -226,7 +226,7 @@ async def user_card(message: Message) -> None:
         f"{sub_text}\n"
         f"Referrals: {referrals_count}"
     )
-    await message.answer(text, reply_markup=kb_back_home("home"))
+    await message.answer(text, reply_markup=kb_back_home("home:main"))
 
 
 @router.message(Command("sub_get"))
@@ -251,7 +251,7 @@ async def sub_get(message: Message) -> None:
             f"Since {_format_dt(subscription.since)}\n"
             f"Until {_format_dt(subscription.until)}"
         )
-    await message.answer(text, reply_markup=kb_back_home("home"))
+    await message.answer(text, reply_markup=kb_back_home("home:main"))
 
 
 @router.message(Command("sub_set"))
@@ -274,7 +274,7 @@ async def sub_set(message: Message) -> None:
             subscription = await subscriptions_repo.set_plan(session, user_id, plan, days=days)
             await session.commit()
         text = f"Plan {subscription.plan} until {_format_date(subscription.until)}"
-        await message.answer(text, reply_markup=kb_back_home("home"))
+        await message.answer(text, reply_markup=kb_back_home("home:main"))
     except Exception as exc:  # pragma: no cover
         await message.answer(f"Error: {exc}")
 
@@ -294,7 +294,7 @@ async def sub_del(message: Message) -> None:
     async with session_scope() as session:
         await subscriptions_repo.delete(session, user_id)
         await session.commit()
-    await message.answer("Subscription removed", reply_markup=kb_back_home("home"))
+    await message.answer("Subscription removed", reply_markup=kb_back_home("home:main"))
 
 
 @router.message(Command("refs"))
@@ -365,7 +365,7 @@ async def ref_convert(message: Message) -> None:
     async with session_scope() as session:
         referral = await referrals_repo.convert(session, invited_id, bonus_days)
         if referral is None:
-            await message.answer("User not found", reply_markup=kb_back_home("home"))
+            await message.answer("User not found", reply_markup=kb_back_home("home:main"))
             return
         if bonus_days > 0:
             current_sub = await subscriptions_repo.get(session, referral.referrer_id)
@@ -373,4 +373,4 @@ async def ref_convert(message: Message) -> None:
             await users_repo.get_or_create_user(session, referral.referrer_id)
             await subscriptions_repo.set_plan(session, referral.referrer_id, plan, days=bonus_days)
         await session.commit()
-    await message.answer("Referral updated", reply_markup=kb_back_home("home"))
+    await message.answer("Referral updated", reply_markup=kb_back_home("home:main"))

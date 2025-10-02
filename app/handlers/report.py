@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.pdf_report import build_pdf
 from app.storage import get_last_plan
 
@@ -56,6 +57,10 @@ async def pdf_last_cb(c: CallbackQuery):
         plan = await get_last_plan(session, c.from_user.id)
     if not plan:
         await c.answer("Нет данных для отчёта. Пройдите тест или калькулятор.", show_alert=True)
+        await c.message.answer(
+            "Сначала пройдите квиз или калькулятор, чтобы я собрал персональный план.",
+            reply_markup=kb_back_home(),
+        )
         return
     pdf_bytes = _compose_pdf(plan)
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"

@@ -83,7 +83,7 @@ def kb_nav_root():
     kb.button(text="💊 Продукты", callback_data="nav:cat:products")
     kb.button(text="🥤 Функциональное питание", callback_data="nav:cat:functional")
     kb.button(text="🌿 Образ жизни", callback_data="nav:cat:lifestyle")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 1, 1, 1, 1)
     return kb.as_markup()
 
@@ -95,7 +95,7 @@ def kb_nav_category(cat_key: str):
     for title, url in data["items"]:
         kb.button(text=title, url=url)
     kb.button(text="⬅️ Назад", callback_data="nav:root")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2)  # 2 в ряд; последняя строка — две кнопки
     return kb.as_markup()
 
@@ -105,6 +105,7 @@ def kb_nav_category(cat_key: str):
 
 @router.callback_query(F.data == "nav:root")
 async def nav_root(c: CallbackQuery):
+    await c.answer()
     await c.message.edit_text("🧭 Навигатор по каналу — выбери раздел:", reply_markup=kb_nav_root())
 
 
@@ -116,4 +117,5 @@ async def nav_category(c: CallbackQuery):
         return
     title = NAV[cat_key]["title"]
     body = f"{title}\nВыбери, что открыть:"
+    await c.answer()
     await c.message.edit_text(body, reply_markup=kb_nav_category(cat_key))

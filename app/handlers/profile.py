@@ -14,6 +14,7 @@ _PROFILE_PLACEHOLDER = (
 
 @router.callback_query(F.data == "profile:open")
 async def profile_open(c: CallbackQuery) -> None:
+    await c.answer()
     await c.message.edit_text(
         _PROFILE_PLACEHOLDER,
         reply_markup=kb_back_home(),

@@ -13,6 +13,7 @@ async def reg_open(c: CallbackQuery):
     kb = InlineKeyboardBuilder()
     if settings.VILAVI_REF_LINK_DISCOUNT:
         kb.button(text="🎁 Перейти к регистрации", url=settings.VILAVI_REF_LINK_DISCOUNT)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1)
+    await c.answer()
     await c.message.edit_text(REG_TEXT, reply_markup=kb.as_markup())

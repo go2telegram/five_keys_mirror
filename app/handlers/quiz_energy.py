@@ -27,7 +27,7 @@ def kb_quiz_q(idx: int):
     kb = InlineKeyboardBuilder()
     for label, score in answers:
         kb.button(text=label, callback_data=f"q:energy:{idx}:{score}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
@@ -121,6 +121,9 @@ async def quiz_energy_step(c: CallbackQuery):
             c,
             f"Итог: {level_label}",
             cards,
+            bullets=actions,
+            headline=notes,
+            back_cb="quiz:menu",
         )
 
         SESSIONS.pop(c.from_user.id, None)

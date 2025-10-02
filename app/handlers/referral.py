@@ -12,8 +12,9 @@ router = Router()
 def _kb_ref(link: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔗 Поделиться ссылкой", url=link)
-    kb.button(text="🏠 Домой", callback_data="home")
-    kb.adjust(1, 1)
+    kb.button(text="📋 Скопировать", callback_data="ref:copy")
+    kb.button(text="🏠 Домой", callback_data="home:main")
+    kb.adjust(1, 1, 1)
     return kb.as_markup()
 
 
@@ -41,6 +42,7 @@ async def ref_menu_cb(c: CallbackQuery):
         f"Оплат (конверсий): <b>{converted}</b>\n\n"
         "Поделитесь ссылкой — когда друг оформит подписку, я засчитаю конверсию."
     )
+    await c.answer()
     await c.message.edit_text(text, reply_markup=_kb_ref(link))
 
 
@@ -62,3 +64,14 @@ async def ref_menu_msg(m: Message):
         f"Оплат (конверсий): <b>{converted}</b>\n"
     )
     await m.answer(text, reply_markup=_kb_ref(link))
+
+
+@router.callback_query(F.data == "ref:copy")
+async def ref_copy(c: CallbackQuery):
+    await c.answer("Скопируйте ссылку из сообщения")
+    link = await _ref_link(c.bot, c.from_user.id)
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data="ref:menu")
+    kb.button(text="🏠 Домой", callback_data="home:main")
+    kb.adjust(2)
+    await c.message.answer(f"Ваша ссылка: {link}", reply_markup=kb.as_markup())

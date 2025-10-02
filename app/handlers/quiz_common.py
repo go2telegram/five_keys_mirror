@@ -1,15 +1,14 @@
-"""Shared helpers for quiz result rendering."""
+"""Shared helpers for quiz and calculator result rendering."""
 
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import Iterable, Sequence
 
-from aiogram.types import CallbackQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
-from app.keyboards import kb_back_home
+from app.keyboards import kb_back_home, kb_card_actions
 
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
@@ -20,95 +19,100 @@ ERROR_TEXT = (
 )
 
 
-def _action_kb(cards: List[dict]):
-    kb = InlineKeyboardBuilder()
-    for item in cards:
-        url = item.get("order_url")
-        name = item.get("name") or item.get("code")
-        if url:
-            buy_text = f"\u041a\u0443\u043f\u0438\u0442\u044c {name}"
-            kb.button(text=buy_text, url=url)
-    kb.button(text="PDF-\u043f\u043b\u0430\u043d", callback_data="report:last")
-    kb.button(
-        text="\u0417\u0430\u043a\u0430\u0437\u0430\u0442\u044c \u0441\u043e \u0441\u043a\u0438\u0434\u043a\u043e\u0439",
-        callback_data="reg:open",
-    )
-    kb.button(text="\u0414\u043e\u043c\u043e\u0439", callback_data="home:main")
-    url_button_count = len([button for button in kb.buttons if getattr(button, "url", None)])
-    rows = [1] * url_button_count + [1, 1, 1]
-    kb.adjust(*rows)
-    return kb.as_markup()
-
-
-async def safe_edit(c: CallbackQuery, text: str, reply_markup):
+async def safe_edit(c: CallbackQuery, text: str, reply_markup) -> None:
     try:
         await c.message.edit_text(text, reply_markup=reply_markup)
-    except Exception:  # noqa: BLE001 - we deliberately show fallback to the user
+    except Exception:  # noqa: BLE001 - deliberate fall back to a safe message
         LOG.exception("edit_text failed")
-        await c.message.answer(ERROR_TEXT, reply_markup=kb_back_home(home_cb="home:main"))
+        await c.message.answer(ERROR_TEXT, reply_markup=kb_back_home())
 
 
-async def send_product_cards(c: CallbackQuery, title: str, cards: List[dict]) -> None:
-    if not cards:
-        unavailable_text = (
-            "\u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e "
-            "\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d."
-        )
-        await c.message.answer(
-            unavailable_text,
-            reply_markup=kb_back_home(home_cb="home:main"),
-        )
-        return
+def _collect_images(cards: Iterable[dict]) -> list[str]:
+    images: list[str] = []
+    for card in cards:
+        for img in card.get("images") or []:
+            images.append(img)
+            if len(images) >= 3:
+                return images
+    return images
 
-    media = MediaGroupBuilder(caption=None)
-    for img in (cards[0].get("images") or [])[:3]:
-        media.add_photo(media=img)
-    built_media = media.build()
-    if built_media:
-        try:
-            await c.message.answer_media_group(built_media)
-        except Exception:  # noqa: BLE001
-            LOG.exception("send_media_group failed")
 
-    baseline_intro = (
-        "\u0427\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c "
-        "\u0443\u0436\u0435 "
-        "\u0441\u0435\u0433\u043e\u0434\u043d\u044f:"
-    )
-    lines: List[str] = [
-        f"<b>{title}</b>",
-        "",
-        baseline_intro,
-        "\u2022 \u0421\u043e\u043d \u0434\u043e 23:00, 7–9 \u0447",
-        (
-            "\u2022 10 \u043c\u0438\u043d \u0443\u0442\u0440\u0435\u043d\u043d\u0435\u0433\u043e "
-            "\u0441\u0432\u0435\u0442\u0430"
-        ),
-        "\u2022 30 \u043c\u0438\u043d \u0431\u044b\u0441\u0442\u0440\u043e\u0439 \u0445\u043e\u0434\u044c\u0431\u044b",
-        "",
-    ]
+def _build_lines(
+    title: str,
+    cards: Iterable[dict],
+    headline: str | None,
+    bullets: Sequence[str] | None,
+) -> list[str]:
+    lines: list[str] = [f"<b>{title}</b>"]
+    if headline:
+        lines.extend(["", headline])
+
+    if bullets:
+        lines.extend(["", "Что можно сделать уже сегодня:"])
+        lines.extend([f"• {item}" for item in bullets])
+
+    lines.append("")
+    lines.append("Поддержка:")
+
     for item in cards:
-        name = item.get("name") or item.get("code")
+        name = item.get("name") or item.get("code") or "Product"
         lines.append(f"<b>— {name}</b>: {item.get('short', '')}")
         for prop in (item.get("props") or [])[:5]:
             lines.append(f"  · {prop}")
         helps_text = item.get("helps_text")
         if helps_text:
-            lines.append(
-                "<i>\u041a\u0430\u043a \u043f\u043e\u043c\u043e\u0436\u0435\u0442 "
-                f"\u0441\u0435\u0439\u0447\u0430\u0441:</i> {helps_text}"
-            )
+            lines.append("<i>Как поможет сейчас:</i> {0}".format(helps_text))
         lines.append("")
 
-    text = "\n".join(lines)
-    markup = _action_kb(cards)
-    if len(text) > MAX_TEXT:
-        midpoint = len(lines) // 2
-        await c.message.answer("\n".join(lines[:midpoint]))
-        await c.message.answer("\n".join(lines[midpoint:]), reply_markup=markup)
+    return lines
+
+
+async def send_product_cards(
+    target: CallbackQuery | Message,
+    title: str,
+    cards: list[dict],
+    *,
+    headline: str | None = None,
+    bullets: Sequence[str] | None = None,
+    back_cb: str | None = None,
+) -> None:
+    if not cards:
+        unavailable_text = "Каталог временно недоступен. " "Попробуйте позже или свяжитесь с консультантом."
+        message = target.message if isinstance(target, CallbackQuery) else target
+        await message.answer(unavailable_text, reply_markup=kb_back_home(back_cb=back_cb))
+        if isinstance(target, CallbackQuery):
+            await target.answer()
         return
 
-    await c.message.answer(text, reply_markup=markup)
+    message = target.message if isinstance(target, CallbackQuery) else target
+    if isinstance(target, CallbackQuery):
+        await target.answer()
+
+    media = MediaGroupBuilder(caption=None)
+    for img in _collect_images(cards):
+        media.add_photo(media=img)
+    built_media = media.build()
+    if built_media:
+        try:
+            await message.answer_media_group(built_media)
+        except Exception:  # noqa: BLE001 - swallow and continue with text fallback
+            LOG.exception("send_media_group failed")
+
+    lines = _build_lines(title, cards, headline, bullets)
+    text = "\n".join(lines).strip()
+    markup = kb_card_actions(cards, back_cb=back_cb)
+
+    if len(text) > MAX_TEXT:
+        midpoint = len(lines) // 2
+        first = "\n".join(lines[:midpoint]).strip()
+        second = "\n".join(lines[midpoint:]).strip()
+        if first:
+            await message.answer(first)
+        if second:
+            await message.answer(second, reply_markup=markup)
+        return
+
+    await message.answer(text, reply_markup=markup)
 
 
 __all__ = ["send_product_cards", "safe_edit"]

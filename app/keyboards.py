@@ -1,3 +1,5 @@
+from typing import Iterable, Mapping
+
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -36,7 +38,7 @@ def kb_quiz_menu() -> InlineKeyboardMarkup:
     kb.button(text="🌿 ЖКТ", callback_data="quiz:gut")
     kb.button(text="😴 Сон", callback_data="quiz:sleep")
     kb.button(text="🧠 Стресс", callback_data="quiz:stress")
-    kb.button(text="⬅️ Назад", callback_data="home")
+    kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.adjust(2, 2, 1, 1)
     return kb.as_markup()
 
@@ -55,7 +57,7 @@ def kb_yes_no(cb_yes: str, cb_no: str) -> InlineKeyboardMarkup:
 # ---------- Назад + Домой ----------
 
 
-def kb_back_home(back_cb: str | None = None, home_cb: str = "home") -> InlineKeyboardMarkup:
+def kb_back_home(back_cb: str | None = None, home_cb: str = "home:main") -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
     kb.button(text="🏠 Домой", callback_data=home_cb)
@@ -70,8 +72,8 @@ def kb_calc_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="MSD идеальный вес", callback_data="calc:msd")
     kb.button(text="ИМТ", callback_data="calc:bmi")
-    kb.button(text="⬅️ Назад", callback_data="home")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="⬅️ Назад", callback_data="home:main")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 2)
     return kb.as_markup()
 
@@ -86,8 +88,8 @@ def kb_goal_menu() -> InlineKeyboardMarkup:
     kb.button(text="🌿 ЖКТ", callback_data="pick:goal:gut")
     kb.button(text="😴 Сон", callback_data="pick:goal:sleep")
     kb.button(text="✨ Кожа/суставы", callback_data="pick:goal:beauty_joint")
-    kb.button(text="⬅️ Назад", callback_data="home")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="⬅️ Назад", callback_data="home:main")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2, 2)
     return kb.as_markup()
 
@@ -100,7 +102,7 @@ def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
     if settings.VILAVI_REF_LINK_DISCOUNT:
         kb.button(text="🔗 Заказать со скидкой", url=settings.VILAVI_REF_LINK_DISCOUNT)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 2)
     return kb.as_markup()
 
@@ -115,7 +117,7 @@ def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
     kb.button(text="📄 PDF-план", callback_data="report:last")
     kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="⬅️ Назад", callback_data=back_cb)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 2)
     return kb.as_markup()
 
@@ -126,7 +128,7 @@ def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
 def kb_cancel_home() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="❌ Отмена", callback_data="lead:cancel")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2)
     return kb.as_markup()
 
@@ -148,8 +150,33 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
     if settings.VILAVI_REF_LINK_DISCOUNT:
         kb.button(text="🔗 Заказать со скидкой", url=settings.VILAVI_REF_LINK_DISCOUNT)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
 
     rows = [1] * len(codes)
     kb.adjust(*(rows + [1, 1, 2]))
+    return kb.as_markup()
+
+
+def kb_card_actions(
+    cards: Iterable[Mapping[str, object]],
+    back_cb: str | None = None,
+    home_cb: str = "home:main",
+) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    buy_buttons = 0
+    for card in cards:
+        url = card.get("order_url")
+        if not url:
+            continue
+        name = card.get("name") or card.get("code") or "Product"
+        kb.button(text=f"🛒 Купить {name}", url=str(url))
+        buy_buttons += 1
+
+    kb.button(text="📄 PDF-план", callback_data="report:last")
+    kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
+    kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
+    kb.button(text="🏠 Домой", callback_data=home_cb)
+
+    layout = [1] * buy_buttons + [1, 1, 2]
+    kb.adjust(*layout)
     return kb.as_markup()
