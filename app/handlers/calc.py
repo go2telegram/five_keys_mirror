@@ -112,7 +112,7 @@ async def handle_msd(m: Message):
         "lines": lines,
         "actions": bullets,
         "notes": notes,
-        "order_url": settings.VILAVI_ORDER_NO_REG,
+        "order_url": settings.velavie_url,
     }
 
     async with session_scope() as session:
@@ -195,7 +195,7 @@ async def handle_bmi(m: Message):
         "lines": lines,
         "actions": bullets,
         "notes": notes,
-        "order_url": settings.VILAVI_ORDER_NO_REG,
+        "order_url": settings.velavie_url,
     }
 
     async with session_scope() as session:

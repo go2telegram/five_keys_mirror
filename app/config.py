@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
+    VELAVIE_URL: str = ""
 
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9
@@ -69,6 +70,12 @@ class Settings(BaseSettings):
             return [int(item) for item in v]
         parts = [part.strip() for part in str(v).split(",") if part.strip()]
         return [int(part) for part in parts]
+
+    @property
+    def velavie_url(self) -> str:
+        """Return the primary Velavie landing URL used across menus."""
+
+        return self.VELAVIE_URL or self.VILAVI_REF_LINK_DISCOUNT or self.VILAVI_ORDER_NO_REG
 
 
 settings = Settings()

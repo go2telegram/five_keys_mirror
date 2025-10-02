@@ -24,6 +24,8 @@ def test_card_actions_keyboard_contains_core_buttons():
     flat = [btn for row in markup.inline_keyboard for btn in row]
     assert any(btn.url for btn in flat if "Купить" in btn.text)
     assert any(getattr(btn, "callback_data", None) == "report:last" for btn in flat)
-    assert any(getattr(btn, "callback_data", None) == "reg:open" for btn in flat)
+    discount_buttons = [btn for btn in flat if "Заказать" in btn.text]
+    assert discount_buttons
+    assert any(btn.url or getattr(btn, "callback_data", None) == "reg:open" for btn in discount_buttons)
     assert any(getattr(btn, "callback_data", None) == "calc:menu" for btn in flat)
     assert any(getattr(btn, "callback_data", None) == "home:main" for btn in flat)

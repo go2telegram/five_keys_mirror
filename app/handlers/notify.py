@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.repo import events as events_repo
 
 router = Router(name="notify")
@@ -17,8 +18,8 @@ def _status_keyboard(enabled: bool):
         kb.button(text="🔕 Выключить", callback_data="notify:off")
     else:
         kb.button(text="🔔 Включить", callback_data="notify:on")
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(1, 1)
+    for row in kb_back_home("notify:help").inline_keyboard:
+        kb.row(*row)
     return kb.as_markup()
 
 

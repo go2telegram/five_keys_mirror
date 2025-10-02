@@ -99,8 +99,8 @@ def kb_goal_menu() -> InlineKeyboardMarkup:
 
 def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.VILAVI_REF_LINK_DISCOUNT:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.VILAVI_REF_LINK_DISCOUNT)
+    if settings.velavie_url:
+        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 2)
@@ -112,8 +112,8 @@ def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
 
 def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.VILAVI_REF_LINK_DISCOUNT:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.VILAVI_REF_LINK_DISCOUNT)
+    if settings.velavie_url:
+        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
     kb.button(text="📄 PDF-план", callback_data="report:last")
     kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="⬅️ Назад", callback_data=back_cb)
@@ -147,8 +147,8 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
         kb.button(text=f"🛒 Купить {title}", url=url)
 
     kb.button(text="📄 PDF-план", callback_data="report:last")
-    if settings.VILAVI_REF_LINK_DISCOUNT:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.VILAVI_REF_LINK_DISCOUNT)
+    if settings.velavie_url:
+        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
 
@@ -173,7 +173,10 @@ def kb_card_actions(
         buy_buttons += 1
 
     kb.button(text="📄 PDF-план", callback_data="report:last")
-    kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
+    if settings.velavie_url:
+        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    else:
+        kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
     kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
     kb.button(text="🏠 Домой", callback_data=home_cb)
 

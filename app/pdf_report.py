@@ -232,7 +232,7 @@ def build_pdf(
         story.append(Spacer(1, 0.5 * cm))
 
     # QR + подпись канала
-    q_url = order_url or settings.VILAVI_ORDER_NO_REG or settings.VILAVI_REF_LINK_DISCOUNT
+    q_url = order_url or settings.velavie_url
     if q_url:
         story.append(_hline())
         story.append(Spacer(1, 0.3 * cm))

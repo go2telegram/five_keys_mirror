@@ -28,8 +28,12 @@ def _kb_links(pairs):
     kb = InlineKeyboardBuilder()
     for title, url in pairs:
         kb.button(text=f"🔗 {title}", url=url)
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    layout = [2] * (len(pairs) // 2) + ([1] if len(pairs) % 2 else []) + [1]
+    for row in kb_back_home("sub:menu").inline_keyboard:
+        kb.row(*row)
+    layout = [2] * (len(pairs) // 2)
+    if len(pairs) % 2:
+        layout.append(1)
+    layout.extend([2])
     kb.adjust(*layout)
     return kb.as_markup()
 

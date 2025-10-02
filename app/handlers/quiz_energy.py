@@ -102,7 +102,7 @@ async def quiz_energy_step(c: CallbackQuery):
             "lines": lines,
             "actions": actions,
             "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG,
+            "order_url": settings.velavie_url,
         }
 
         async with session_scope() as session:

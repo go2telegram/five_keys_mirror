@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
 
 router = Router()
@@ -13,8 +14,9 @@ def _kb_ref(link: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔗 Поделиться ссылкой", url=link)
     kb.button(text="📋 Скопировать", callback_data="ref:copy")
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(1, 1, 1)
+    for row in kb_back_home().inline_keyboard:
+        kb.row(*row)
+    kb.adjust(1, 1, 2)
     return kb.as_markup()
 
 
@@ -71,7 +73,7 @@ async def ref_copy(c: CallbackQuery):
     await c.answer("Скопируйте ссылку из сообщения")
     link = await _ref_link(c.bot, c.from_user.id)
     kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Назад", callback_data="ref:menu")
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    for row in kb_back_home("ref:menu").inline_keyboard:
+        kb.row(*row)
     kb.adjust(2)
     await c.message.answer(f"Ваша ссылка: {link}", reply_markup=kb.as_markup())

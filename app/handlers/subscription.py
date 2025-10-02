@@ -2,17 +2,18 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.repo import subscriptions as subscriptions_repo, users as users_repo
 
 router = Router(name="subscription")
 
 
-def _kb_sub_menu() -> InlineKeyboardBuilder:
+def _kb_sub_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🔁 Проверить статус", callback_data="sub:check")
     if settings.TRIBUTE_LINK_BASIC:
@@ -26,9 +27,9 @@ def _kb_sub_menu() -> InlineKeyboardBuilder:
             url=settings.TRIBUTE_LINK_PRO,
         )
     kb.button(text="ℹ️ Как продлить", callback_data="sub:renew")
-    kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(1, 1, 1, 1)
-    return kb
+    markup = kb.as_markup()
+    markup.inline_keyboard.extend(kb_back_home().inline_keyboard)
+    return markup
 
 
 def _format_until(until: datetime) -> str:
@@ -42,10 +43,10 @@ def _format_until(until: datetime) -> str:
 @router.callback_query(F.data == "sub:menu")
 async def sub_menu(c: CallbackQuery):
     await c.answer()
-    kb = _kb_sub_menu()
+    markup = _kb_sub_menu()
     await c.message.edit_text(
         "💎 <b>Подписка</b>\nПолучите доступ к Premium и закрытым материалам.",
-        reply_markup=kb.as_markup(),
+        reply_markup=markup,
     )
 
 
@@ -59,24 +60,22 @@ async def sub_check(c: CallbackQuery):
     if is_active and sub:
         until = _format_until(sub.until)
         text = "✅ Подписка активна.\n" f"План: <b>{sub.plan.upper()}</b>\n" f"Оплачено до: <b>{until}</b>."
-        kb = InlineKeyboardBuilder()
-        kb.button(text="🔁 Проверить снова", callback_data="sub:check")
-        kb.button(text="🏠 Домой", callback_data="home:main")
-        kb.adjust(1, 1)
-        await c.message.edit_text(text, reply_markup=kb.as_markup())
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🔁 Проверить снова", callback_data="sub:check")
+        for row in kb_back_home("sub:menu").inline_keyboard:
+            builder.row(*row)
+        await c.message.edit_text(text, reply_markup=builder.as_markup())
     else:
-        kb = _kb_sub_menu()
         await c.message.edit_text(
             "Подписка пока не найдена. Завершите оплату в Tribute и дождитесь подтверждения.",
-            reply_markup=kb.as_markup(),
+            reply_markup=_kb_sub_menu(),
         )
 
 
 @router.callback_query(F.data == "sub:renew")
 async def sub_renew(c: CallbackQuery):
     await c.answer()
-    kb = _kb_sub_menu()
     await c.message.edit_text(
         "Чтобы продлить доступ, оплатите тариф MITO в Tribute или обратитесь к куратору.",
-        reply_markup=kb.as_markup(),
+        reply_markup=_kb_sub_menu(),
     )
