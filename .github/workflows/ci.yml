@@ -6,13 +6,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install ruff black pre-commit
+      - name: Pre-commit autofix (PR only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        run: |
+          pre-commit run --all-files || true
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(lint): apply pre-commit autofixes"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - run: ruff check .
       - run: black --check .
-      - run: pre-commit run --all-files
+      - name: Verify pre-commit
+        run: pre-commit run --all-files
       - run: python tools/check_ascii_ps1.py
 
   sqlite:
@@ -60,27 +74,3 @@ jobs:
       - run: python scripts/db_check.py
       - run: pytest -q || true
 
-  lint-autofix:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install ruff black pre-commit
-      - run: ruff check . --fix
-      - run: black .
-      - run: pre-commit run --all-files || true
-      - run: python tools/check_ascii_ps1.py
-      - name: Commit lint autofixes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'chore: apply lint autofixes'
-          branch: ${{ github.head_ref }}
