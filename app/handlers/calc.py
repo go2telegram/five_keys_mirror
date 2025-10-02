@@ -14,6 +14,14 @@ from app.storage import SESSIONS, set_last_plan
 
 router = Router()
 
+MSD_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s*(?P<sex>[МмЖж])\s*$")
+BMI_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s+(?P<weight>\d{2,3}(?:\.\d+)?)\s*$")
+
+MSD_PROMPT = "Не удалось распознать ввод. Пример: <code>165 Ж</code>." "\nУкажи рост в сантиметрах и пол (М/Ж)."
+BMI_PROMPT = (
+    "Не удалось распознать ввод. Пример: <code>183 95</code>." "\nУкажи рост в сантиметрах и вес в килограммах."
+)
+
 # --- Наборы рекомендаций под калькуляторы ---
 
 
@@ -81,16 +89,18 @@ async def calc_msd(c: CallbackQuery):
     )
 
 
-@router.message(F.text.regexp(r"^\s*\d{2,3}\s*[МмЖж]\s*$"))
-async def handle_msd(m: Message):
-    sess = SESSIONS.get(m.from_user.id, {})
-    if sess.get("calc") != "msd":
+async def _process_msd(message: Message) -> None:
+    text = (message.text or "").strip()
+    match = MSD_INPUT_RE.fullmatch(text)
+    if not match:
+        await message.answer(MSD_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
-    h_cm, sex = re.findall(r"(\d{2,3})\s*([МмЖж])", m.text.strip())[0]
-    h = int(h_cm) / 100.0
-    k = 23.0 if sex.lower().startswith("м") else 21.5
-    ideal = round(h * h * k, 1)
+    height_cm = int(match.group("height"))
+    sex = match.group("sex")
+    height_m = height_cm / 100.0
+    coeff = 23.0 if sex.lower().startswith("м") else 21.5
+    ideal = round(height_m * height_m * coeff, 1)
 
     rec_codes = msd_recommendations()
     cards = _cards_with_overrides(rec_codes, "msd")
@@ -102,7 +112,6 @@ async def handle_msd(m: Message):
     ]
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
-    # для PDF
     plan_payload = {
         "title": "План: Идеальный вес (MSD)",
         "context": "msd",
@@ -116,11 +125,11 @@ async def handle_msd(m: Message):
     }
 
     async with session_scope() as session:
-        await users_repo.get_or_create_user(session, m.from_user.id, m.from_user.username)
-        await set_last_plan(session, m.from_user.id, plan_payload)
+        await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        await set_last_plan(session, message.from_user.id, plan_payload)
         await events_repo.log(
             session,
-            m.from_user.id,
+            message.from_user.id,
             "calc_finish",
             {"calc": "msd", "ideal_weight": ideal},
         )
@@ -130,14 +139,14 @@ async def handle_msd(m: Message):
         f"Ориентир по формуле MSD: <b>{ideal} кг</b>." "\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     )
     await send_product_cards(
-        m,
+        message,
         "Итог: идеальный вес по MSD",
         cards,
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
     )
-    SESSIONS.pop(m.from_user.id, None)
+    SESSIONS.pop(message.from_user.id, None)
 
 
 # --- ИМТ (индекс массы тела) ---
@@ -153,19 +162,18 @@ async def calc_bmi(c: CallbackQuery):
     )
 
 
-@router.message(F.text.regexp(r"^\s*\d{2,3}\s+\d{2,3}(\.\d+)?\s*$"))
-async def handle_bmi(m: Message):
-    sess = SESSIONS.get(m.from_user.id, {})
-    if sess.get("calc") != "bmi":
+async def _process_bmi(message: Message) -> None:
+    text = (message.text or "").strip()
+    match = BMI_INPUT_RE.fullmatch(text)
+    if not match:
+        await message.answer(BMI_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
-    nums = re.findall(r"\d+(?:\.\d+)?", m.text)
-    h_cm = float(nums[0])
-    w = float(nums[1])
-    h = h_cm / 100.0
-    bmi = round(w / (h * h), 1)
+    height_cm = float(match.group("height"))
+    weight = float(match.group("weight"))
+    height_m = height_cm / 100.0
+    bmi = round(weight / (height_m * height_m), 1)
 
-    # категория
     if bmi < 18.5:
         cat, hint = "дефицит", "Набираем «правильный» вес: белок, клетчатка, мягкая коррекция ЖКТ."
     elif bmi < 25:
@@ -177,7 +185,6 @@ async def handle_bmi(m: Message):
 
     rec_codes, ctx = bmi_recommendations(bmi)
     cards = _cards_with_overrides(rec_codes, ctx)
-
     lines = product_lines(rec_codes, ctx)
     bullets = [
         "Сон 7–9 часов, ужин за 3 часа до сна.",
@@ -199,11 +206,11 @@ async def handle_bmi(m: Message):
     }
 
     async with session_scope() as session:
-        await users_repo.get_or_create_user(session, m.from_user.id, m.from_user.username)
-        await set_last_plan(session, m.from_user.id, plan_payload)
+        await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        await set_last_plan(session, message.from_user.id, plan_payload)
         await events_repo.log(
             session,
-            m.from_user.id,
+            message.from_user.id,
             "calc_finish",
             {"calc": "bmi", "bmi": bmi, "category": cat},
         )
@@ -215,11 +222,24 @@ async def handle_bmi(m: Message):
         f"\n{hint}"
     )
     await send_product_cards(
-        m,
+        message,
         "Итог: индекс массы тела",
         cards,
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
     )
-    SESSIONS.pop(m.from_user.id, None)
+    SESSIONS.pop(message.from_user.id, None)
+
+
+@router.message(F.text)
+async def handle_calc_message(message: Message):
+    sess = SESSIONS.get(message.from_user.id)
+    if not sess:
+        return
+
+    calc_kind = sess.get("calc")
+    if calc_kind == "msd":
+        await _process_msd(message)
+    elif calc_kind == "bmi":
+        await _process_bmi(message)
