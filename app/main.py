@@ -17,6 +17,9 @@ from app.handlers import (
     admin_crud as h_admin_crud,
     assistant as h_assistant,
     calc as h_calc,
+    calc_kcal as h_calc_kcal,
+    calc_macros as h_calc_macros,
+    calc_water as h_calc_water,
     lead as h_lead,
     navigator as h_navigator,
     notify as h_notify,
@@ -83,6 +86,9 @@ async def main() -> None:
 
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
+    dp.include_router(h_calc_water.router)
+    dp.include_router(h_calc_kcal.router)
+    dp.include_router(h_calc_macros.router)
 
     dp.include_router(h_quiz_menu.router)
     dp.include_router(h_quiz_energy.router)

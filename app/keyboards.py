@@ -72,9 +72,12 @@ def kb_calc_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="MSD идеальный вес", callback_data="calc:msd")
     kb.button(text="ИМТ", callback_data="calc:bmi")
+    kb.button(text="Водный баланс", callback_data="calc:water")
+    kb.button(text="Калории (BMR/TDEE)", callback_data="calc:kcal")
+    kb.button(text="БЖУ", callback_data="calc:macros")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(1, 1, 2)
+    kb.adjust(2, 2, 1, 2)
     return kb.as_markup()
 
 

@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from app.catalog.api import product_meta
 from app.config import settings
 from app.db.session import session_scope
+from app.handlers import calc_kcal, calc_macros, calc_water
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
 from app.reco import CTX, product_lines
@@ -243,3 +244,9 @@ async def handle_calc_message(message: Message):
         await _process_msd(message)
     elif calc_kind == "bmi":
         await _process_bmi(message)
+    elif calc_kind == "water":
+        await calc_water.handle_message(message)
+    elif calc_kind == "kcal":
+        await calc_kcal.handle_message(message)
+    elif calc_kind == "macros":
+        await calc_macros.handle_message(message)
