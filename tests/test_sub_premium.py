@@ -45,6 +45,7 @@ async def test_subscription_check_shows_active_plan(monkeypatch):
     assert "Подписка активна" in args[0]
     callbacks = [btn.callback_data for btn in _flatten(kwargs["reply_markup"]) if btn.callback_data]
     assert "sub:check" in callbacks
+    assert "premium:menu" in callbacks
     assert "home:main" in callbacks
 
 

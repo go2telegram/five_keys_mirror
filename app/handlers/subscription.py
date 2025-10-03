@@ -27,9 +27,28 @@ def _kb_sub_menu() -> InlineKeyboardMarkup:
             url=settings.TRIBUTE_LINK_PRO,
         )
     kb.button(text="ℹ️ Как продлить", callback_data="sub:renew")
+    kb.adjust(1)
     markup = kb.as_markup()
-    markup.inline_keyboard.extend(kb_back_home().inline_keyboard)
+    markup.inline_keyboard.extend(kb_back_home("home:main").inline_keyboard)
     return markup
+
+
+def _kb_sub_renew() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    if settings.TRIBUTE_LINK_BASIC:
+        kb.button(
+            text=f"💎 MITO Basic — {settings.SUB_BASIC_PRICE}",
+            url=settings.TRIBUTE_LINK_BASIC,
+        )
+    if settings.TRIBUTE_LINK_PRO:
+        kb.button(
+            text=f"💎 MITO Pro — {settings.SUB_PRO_PRICE}",
+            url=settings.TRIBUTE_LINK_PRO,
+        )
+    kb.adjust(1)
+    for row in kb_back_home("sub:menu").inline_keyboard:
+        kb.row(*row)
+    return kb.as_markup()
 
 
 def _format_until(until: datetime) -> str:
@@ -59,15 +78,16 @@ async def sub_check(c: CallbackQuery):
     await c.answer()
     if is_active and sub:
         until = _format_until(sub.until)
-        text = "✅ Подписка активна.\n" f"План: <b>{sub.plan.upper()}</b>\n" f"Оплачено до: <b>{until}</b>."
+        text = "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until}</b>."
         builder = InlineKeyboardBuilder()
         builder.button(text="🔁 Проверить снова", callback_data="sub:check")
+        builder.button(text="Открыть Premium", callback_data="premium:menu")
         for row in kb_back_home("sub:menu").inline_keyboard:
             builder.row(*row)
         await c.message.edit_text(text, reply_markup=builder.as_markup())
     else:
         await c.message.edit_text(
-            "Подписка пока не найдена. Завершите оплату в Tribute и дождитесь подтверждения.",
+            "Подписка не найдена. Оплатите MITO в Tribute и дождитесь подтверждения вебхука.",
             reply_markup=_kb_sub_menu(),
         )
 
@@ -76,6 +96,6 @@ async def sub_check(c: CallbackQuery):
 async def sub_renew(c: CallbackQuery):
     await c.answer()
     await c.message.edit_text(
-        "Чтобы продлить доступ, оплатите тариф MITO в Tribute или обратитесь к куратору.",
-        reply_markup=_kb_sub_menu(),
+        "Выберите тариф MITO для продления доступа.",
+        reply_markup=_kb_sub_renew(),
     )

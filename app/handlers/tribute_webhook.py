@@ -54,9 +54,9 @@ async def _notify_user(user_id: int, plan: str):
             inline_keyboard=[[InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]]
         )
         text = (
-            f"🎉 <b>Подписка активирована</b>\n\n"
+            "🎉 <b>Подписка активирована</b>\n\n"
             f"Тариф: <b>MITO {plan.title()}</b>\n"
-            f"Доступ открыт. Нажмите кнопку ниже, чтобы перейти к премиум-разделам."
+            "Доступ открыт. Нажмите кнопку ниже, чтобы перейти к премиум-разделам."
         )
         await bot.send_message(user_id, text, reply_markup=kb)
         await bot.session.close()
@@ -65,10 +65,26 @@ async def _notify_user(user_id: int, plan: str):
             print(f"[TRIBUTE] notify failed for user={user_id}: {exc}")
 
 
+async def _notify_cancel(user_id: int, until: datetime):
+    try:
+        bot = Bot(token=settings.BOT_TOKEN)
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="Продлить доступ", callback_data="sub:menu")]]
+        )
+        text = "⚠️ <b>Подписка будет отключена</b>\n\n" f"Доступ сохранится до <b>{until.date().isoformat()}</b>."
+        await bot.send_message(user_id, text, reply_markup=kb)
+        await bot.session.close()
+    except Exception as exc:
+        if LOG:
+            print(f"[TRIBUTE] cancel notify failed for user={user_id}: {exc}")
+
+
 async def tribute_webhook(request: web.Request) -> web.Response:
     raw = await request.read()
 
-    signature = request.headers.get("trbt-signature") or ""
+    signature_header = request.headers.get("trbt-signature") or ""
+    signature = signature_header.split("=", 1)[1] if signature_header.startswith("sha256=") else signature_header
+
     mac = hmac.new(settings.TRIBUTE_API_KEY.encode("utf-8"), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, signature):
         if INSECURE:
@@ -147,6 +163,9 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                     {"until": until.isoformat()},
                 )
                 await session.commit()
+
+        if NOTIFY:
+            await _notify_cancel(tg_id_int, until)
 
         return web.json_response({"ok": True})
 
