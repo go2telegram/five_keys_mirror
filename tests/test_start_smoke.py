@@ -6,6 +6,7 @@ import sys
 from contextlib import ExitStack
 from importlib import import_module
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiogram import Dispatcher
@@ -42,6 +43,81 @@ def _load_start_module():
 
 
 h_start = _load_start_module()
+
+
+def _reportlab_stubs() -> dict[str, ModuleType]:
+    modules: dict[str, ModuleType] = {}
+
+    # Base packages
+    modules["reportlab"] = ModuleType("reportlab")
+    modules["reportlab.graphics"] = ModuleType("reportlab.graphics")
+    modules["reportlab.lib"] = ModuleType("reportlab.lib")
+    modules["reportlab.pdfbase"] = ModuleType("reportlab.pdfbase")
+
+    barcode = ModuleType("reportlab.graphics.barcode")
+    barcode.qr = MagicMock(name="qr")
+    modules["reportlab.graphics.barcode"] = barcode
+
+    shapes = ModuleType("reportlab.graphics.shapes")
+    shapes.Drawing = MagicMock(name="Drawing")
+    modules["reportlab.graphics.shapes"] = shapes
+
+    colors = ModuleType("reportlab.lib.colors")
+
+    def _hex(color: str):  # pragma: no cover - trivial lambda
+        return color
+
+    colors.HexColor = _hex
+    modules["reportlab.lib.colors"] = colors
+
+    pagesizes = ModuleType("reportlab.lib.pagesizes")
+    pagesizes.A4 = (595, 842)
+    modules["reportlab.lib.pagesizes"] = pagesizes
+
+    styles = ModuleType("reportlab.lib.styles")
+    styles.ParagraphStyle = MagicMock(return_value=MagicMock(name="ParagraphStyle"))
+
+    def _sample_styles():  # pragma: no cover - deterministic return
+        return {
+            "Title": MagicMock(name="TitleStyle"),
+            "Heading2": MagicMock(name="Heading2Style"),
+            "BodyText": MagicMock(name="BodyTextStyle"),
+        }
+
+    styles.getSampleStyleSheet = _sample_styles
+    modules["reportlab.lib.styles"] = styles
+
+    units = ModuleType("reportlab.lib.units")
+    units.cm = 28.3
+    modules["reportlab.lib.units"] = units
+
+    pdfmetrics = ModuleType("reportlab.pdfbase.pdfmetrics")
+    pdfmetrics.registerFont = MagicMock(name="registerFont")
+    modules["reportlab.pdfbase.pdfmetrics"] = pdfmetrics
+
+    ttfonts = ModuleType("reportlab.pdfbase.ttfonts")
+    ttfonts.TTFont = MagicMock(name="TTFont")
+    modules["reportlab.pdfbase.ttfonts"] = ttfonts
+
+    platypus = ModuleType("reportlab.platypus")
+    for name in [
+        "HRFlowable",
+        "ListFlowable",
+        "ListItem",
+        "Paragraph",
+        "SimpleDocTemplate",
+        "Spacer",
+        "Table",
+        "TableStyle",
+    ]:
+        setattr(platypus, name, MagicMock(name=name))
+    modules["reportlab.platypus"] = platypus
+
+    return modules
+
+
+with patch.dict(sys.modules, _reportlab_stubs(), clear=False):
+    main_module = import_module("app.main")
 
 
 def test_resolve_used_update_types_contains_message_and_callback() -> None:
@@ -87,13 +163,14 @@ def test_home_callback_edits_message() -> None:
     async def _run() -> None:
         callback = MagicMock()
         callback.answer = AsyncMock()
+        callback.from_user = MagicMock(id=777, username="tester")
         callback.message = MagicMock()
         callback.message.edit_text = AsyncMock()
         callback.message.answer = AsyncMock()
 
-        await h_start.back_home(callback)
+        await main_module.home_main(callback)
 
-        callback.message.edit_text.assert_called()
+        callback.message.edit_text.assert_awaited()
         callback.answer.assert_awaited()
 
     asyncio.run(_run())

@@ -6,8 +6,9 @@ import asyncio
 import logging
 from typing import Optional
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
+from aiogram.types import CallbackQuery
 from aiohttp import web
 
 from app.config import settings
@@ -42,12 +43,54 @@ from app.handlers import (
     subscription as h_subscription,
     tribute_webhook as h_tw,
 )
+from app.logging_config import setup_logging
+from app.middlewares import AuditMiddleware
 from app.scheduler.service import start_scheduler
 
 try:
     from app.handlers import health as h_health
 except ImportError:  # pragma: no cover - optional router
     h_health = None
+
+
+log_home = logging.getLogger("home")
+
+
+def _resolve_log_level(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        level = getattr(logging, str(value).upper(), logging.INFO)
+        if isinstance(level, int):
+            return level
+    except TypeError:
+        pass
+    return logging.INFO
+
+
+async def home_main(c: CallbackQuery) -> None:
+    log_home.info(
+        "HOME pressed uid=%s uname=%s",
+        getattr(c.from_user, "id", None),
+        getattr(c.from_user, "username", None),
+    )
+    try:
+        from app.handlers.start import GREETING  # local import to avoid cycles
+        from app.keyboards import kb_main
+
+        if c.message is None:
+            log_home.warning("home:main called without message")
+            return
+
+        try:
+            await c.message.edit_text(GREETING, reply_markup=kb_main())
+        except Exception:
+            log_home.warning("home:main edit failed; sending fresh message", exc_info=True)
+            await c.message.answer(GREETING, reply_markup=kb_main())
+    except Exception:
+        log_home.exception("home:main failed")
+    finally:
+        await c.answer()
 
 
 async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
@@ -76,7 +119,10 @@ async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    setup_logging(
+        log_dir=settings.LOG_DIR,
+        level=_resolve_log_level(settings.LOG_LEVEL),
+    )
 
     revision = await init_db()
     logging.info("current alembic version: %s", revision or "unknown")
@@ -86,6 +132,10 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode="HTML"),
     )
     dp = Dispatcher()
+
+    audit_middleware = AuditMiddleware()
+    dp.message.middleware(audit_middleware)
+    dp.callback_query.middleware(audit_middleware)
 
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
@@ -120,6 +170,8 @@ async def main() -> None:
 
     if settings.DEBUG_COMMANDS and h_health is not None:
         dp.include_router(h_health.router)
+
+    dp.callback_query.register(home_main, F.data == "home:main")
 
     start_scheduler(bot)
 

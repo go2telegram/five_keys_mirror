@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     TIMEZONE: str = "Europe/Moscow"
 
+    # Логи
+    LOG_LEVEL: str = "INFO"
+    LOG_DIR: str = "logs"
+
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
