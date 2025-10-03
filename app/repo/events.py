@@ -27,6 +27,17 @@ async def last_by(session: AsyncSession, user_id: int, name: str) -> Optional[Ev
     return result.scalar_one_or_none()
 
 
+async def recent_plans(session: AsyncSession, user_id: int, limit: int = 3) -> Sequence[Event]:
+    stmt = (
+        select(Event)
+        .where(Event.user_id == user_id, Event.name == "plan_generated")
+        .order_by(Event.ts.desc())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
 async def stats(
     session: AsyncSession,
     name: Optional[str] = None,
