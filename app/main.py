@@ -26,12 +26,15 @@ from app.handlers import (
     picker as h_picker,
     premium as h_premium,
     profile as h_profile,
+    quiz_deficits as h_quiz_deficits,
     quiz_energy as h_quiz_energy,
     quiz_gut as h_quiz_gut,
     quiz_immunity as h_quiz_immunity,
     quiz_menu as h_quiz_menu,
+    quiz_skin_joint as h_quiz_skin_joint,
     quiz_sleep as h_quiz_sleep,
     quiz_stress as h_quiz_stress,
+    quiz_stress2 as h_quiz_stress2,
     referral as h_referral,
     reg as h_reg,
     report as h_report,
@@ -92,10 +95,13 @@ async def main() -> None:
 
     dp.include_router(h_quiz_menu.router)
     dp.include_router(h_quiz_energy.router)
+    dp.include_router(h_quiz_deficits.router)
     dp.include_router(h_quiz_immunity.router)
     dp.include_router(h_quiz_gut.router)
     dp.include_router(h_quiz_sleep.router)
     dp.include_router(h_quiz_stress.router)
+    dp.include_router(h_quiz_stress2.router)
+    dp.include_router(h_quiz_skin_joint.router)
 
     dp.include_router(h_picker.router)
     dp.include_router(h_reg.router)

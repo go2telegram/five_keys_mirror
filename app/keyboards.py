@@ -38,8 +38,11 @@ def kb_quiz_menu() -> InlineKeyboardMarkup:
     kb.button(text="🌿 ЖКТ", callback_data="quiz:gut")
     kb.button(text="😴 Сон", callback_data="quiz:sleep")
     kb.button(text="🧠 Стресс", callback_data="quiz:stress")
+    kb.button(text="🩸 Дефициты", callback_data="quiz:deficits")
+    kb.button(text="🧘 Стресс 2.0", callback_data="quiz:stress2")
+    kb.button(text="✨ Кожа и суставы", callback_data="quiz:skin_joint")
     kb.button(text="⬅️ Назад", callback_data="home:main")
-    kb.adjust(2, 2, 1, 1)
+    kb.adjust(2, 2, 2, 2, 1)
     return kb.as_markup()
 
 
