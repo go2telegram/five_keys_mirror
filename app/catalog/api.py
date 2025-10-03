@@ -1,37 +1,42 @@
-"""Product catalog access helpers for quiz results."""
+"""Legacy helpers that expose prepared card metadata."""
 
 from __future__ import annotations
 
-import json
-import os
-from functools import lru_cache
 from typing import Iterable
 
-CAT_PATH = os.path.join(os.path.dirname(__file__), "products.json")
+from .loader import load_catalog, product_by_alias, product_by_id
 
 
-@lru_cache(maxsize=1)
-def load_catalog() -> dict:
-    """Load the product catalog from disk once."""
-    with open(CAT_PATH, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+def _resolve_product(code: str) -> dict | None:
+    product = product_by_id(code)
+    if product:
+        return product
+    return product_by_alias(code)
+
+
+def load_catalog_map() -> dict:
+    data = load_catalog()
+    return data["products"].copy()
 
 
 def product_meta(code: str) -> dict | None:
-    """Return raw metadata for the given product code."""
-    catalog = load_catalog()
-    data = catalog.get(code)
-    if not data:
+    product = _resolve_product(code)
+    if not product:
         return None
 
+    order = product.get("order") or {}
+    helps = product.get("how_it_helps") or {}
+    images = product.get("images") or []
+    benefits = product.get("benefits") or []
+
     return {
-        "code": code,
-        "name": data.get("name", code),
-        "short": data.get("short", ""),
-        "props": list(data.get("props", []) or []),
-        "images": list(data.get("images", []) or []),
-        "order_url": data.get("order_url"),
-        "helps": data.get("helps") or {},
+        "code": product.get("id", code),
+        "name": product.get("title") or product.get("name") or code,
+        "short": product.get("short", ""),
+        "props": [str(item) for item in benefits[:5]],
+        "images": [str(img) for img in images[:5]],
+        "order_url": order.get("velavie_link"),
+        "helps": helps,
     }
 
 
@@ -59,7 +64,6 @@ def _select_help(raw: dict | str | None, context: str, level: str | None) -> str
 
 
 def pick_for_context(context: str, level: str | None, codes: Iterable[str]) -> list[dict]:
-    """Return prepared product cards for the given quiz or calculator context."""
     cards: list[dict] = []
     for code in codes:
         meta = product_meta(code)
@@ -80,4 +84,4 @@ def pick_for_context(context: str, level: str | None, codes: Iterable[str]) -> l
     return cards
 
 
-__all__ = ["load_catalog", "pick_for_context", "product_meta"]
+__all__ = ["load_catalog_map", "pick_for_context", "product_meta"]
