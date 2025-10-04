@@ -65,6 +65,8 @@ foreach ($file in $requiredFiles) {
 $mainContent = Get-Content 'app/main.py' -Encoding UTF8 -ErrorAction SilentlyContinue
 Write-Check 'outer middleware registered' ($mainContent -match 'outer_middleware\(AuditMiddleware\(\)\)') 'call _register_audit_middleware in main.py'
 Write-Check 'audit marker logged' ($mainContent -match 'Audit middleware registered') 'ensure startup logger prints the marker'
+Write-Check 'allowed updates fixed list' ($mainContent -match "allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'
+Write-Check 'startup marker present' ($mainContent -match 'startup event fired') 'include startup router logging'
 
 $psFiles = Get-ChildItem 'scripts' -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue
 foreach ($ps in $psFiles) {

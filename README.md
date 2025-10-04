@@ -91,7 +91,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\doctor.ps1
 Скрипт выводит состояние venv, ветки Git, наличие audit-middleware, корректность CRLF в PowerShell-скриптах и статус Telegram вебхука.
 ```
 
-В файле `bot.log` фиксируются все сообщения и колбэки (префиксы `MSG` и `CB`), а также отметка `logging initialized...` при старте. Аудит подключён как `dp.update.outer_middleware`, поэтому в журнал попадают любые типы апдейтов. В `errors.log` собираются предупреждения и ошибки. Если нужно временно повысить детализацию, установите `LOG_LEVEL=DEBUG` и перезапустите бота.
+В файле `bot.log` фиксируются все сообщения и колбэки (префиксы `MSG` и `CB`), а также служебные маркеры:
+
+- `logging initialized...` — запуск конфигурации логов и пути к файлам;
+- `build: branch=... commit=...` / `aiogram=...` / `allowed_updates=['message', 'callback_query']` — бот стартует с ожидаемыми параметрами;
+- `Audit middleware registered` и `startup event fired` — аудит точно подключён и сработал хук старта;
+- каждые ~60 секунд heartbeat: `heartbeat alive tz=... pending_tasks=...`;
+- префикс `UPD kind=Update ...` появляется даже до разбора сообщения, затем идут `MSG ... msg_id=...` и `CB ... cb_id=...`.
+
+Аудит подключён как `dp.update.outer_middleware`, поэтому в журнал попадают любые типы апдейтов. В `errors.log` собираются предупреждения и ошибки. Если нужно временно повысить детализацию, установите `LOG_LEVEL=DEBUG` и перезапустите бота.
 
 ## Типовые ошибки апдейтера
 

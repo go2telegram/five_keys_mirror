@@ -1,7 +1,11 @@
 # app/scheduler/service.py
+import asyncio
+import logging
+
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
 from app.scheduler.jobs import send_nudges
@@ -32,5 +36,21 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    scheduler.add_job(
+        _log_heartbeat,
+        trigger=IntervalTrigger(seconds=60),
+        name="heartbeat",
+        misfire_grace_time=30,
+        coalesce=True,
+        max_instances=1,
+    )
     scheduler.start()
     return scheduler
+
+
+async def _log_heartbeat() -> None:
+    """Periodically log a heartbeat message to confirm the loop is alive."""
+
+    loop = asyncio.get_running_loop()
+    pending = sum(1 for task in asyncio.all_tasks(loop) if not task.done())
+    logging.getLogger("heartbeat").info("heartbeat alive tz=%s pending_tasks=%s", settings.TIMEZONE, pending)

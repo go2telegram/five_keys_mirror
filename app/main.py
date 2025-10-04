@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Optional
 
-from aiogram import Bot, Dispatcher, F, __version__ as aiogram_version
+from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
@@ -142,14 +142,45 @@ def _log_startup_metadata() -> None:
     startup_log.info("aiogram version: %s", aiogram_version)
 
 
-def _log_router_overview(dp: Dispatcher, routers: list) -> None:
+def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterable[str]) -> None:
     startup_log = logging.getLogger("startup")
     router_names = [router.name or router.__class__.__name__ for router in routers]
     startup_log.info("routers=%s count=%s", router_names, len(router_names))
-    allowed_updates = list(ALLOWED_UPDATES)
-    startup_log.info("allowed_updates=%s", allowed_updates)
+    allowed_list = list(allowed_updates)
+    startup_log.info("allowed_updates=%s", allowed_list)
     resolved_updates = sorted(dp.resolve_used_update_types())
     startup_log.info("resolve_used_update_types=%s", resolved_updates)
+
+
+def _gather_admin_ids() -> set[int]:
+    admins: set[int] = set()
+    if settings.ADMIN_ID:
+        admins.add(int(settings.ADMIN_ID))
+    admins.update(int(item) for item in settings.ADMIN_USER_IDS or [])
+    return {admin for admin in admins if admin}
+
+
+async def _notify_admin_startup(bot: Bot, allowed_updates: Iterable[str]) -> None:
+    admins = _gather_admin_ids()
+    startup_log = logging.getLogger("startup")
+    if not admins:
+        startup_log.info("admin notification skipped: no admin ids configured")
+        return
+
+    message = (
+        "\u2705 \u0411\u043e\u0442 \u0437\u0430\u043f\u0443\u0449\u0435\u043d: "
+        f"branch={getattr(build_info, 'GIT_BRANCH', 'unknown')} "
+        f"commit={getattr(build_info, 'GIT_COMMIT', 'unknown')} "
+        f"aiogram={aiogram_version} "
+        f"allowed_updates={list(allowed_updates)}"
+    )
+
+    for admin_id in sorted(admins):
+        try:
+            await bot.send_message(admin_id, message)
+            startup_log.info("admin notified uid=%s", admin_id)
+        except Exception as exc:  # pragma: no cover - network/Telegram errors
+            startup_log.warning("failed to notify admin uid=%s: %s", admin_id, exc)
 
 
 async def main() -> None:
@@ -169,6 +200,8 @@ async def main() -> None:
 
     _register_audit_middleware(dp)
     _log_startup_metadata()
+
+    allowed_updates = list(ALLOWED_UPDATES)
 
     routers = [
         h_start.router,
@@ -203,12 +236,22 @@ async def main() -> None:
     if settings.DEBUG_COMMANDS and h_health is not None:
         routers.append(h_health.router)
 
+    startup_router = Router(name="startup")
+
+    @startup_router.startup()
+    async def on_startup(event: object, bot: Bot) -> None:  # noqa: ANN001
+        startup_log = logging.getLogger("startup")
+        startup_log.info("startup event fired")
+        await _notify_admin_startup(bot, allowed_updates)
+
+    routers.insert(0, startup_router)
+
     for router in routers:
         dp.include_router(router)
 
     dp.callback_query.register(home_main, F.data == "home:main")
 
-    _log_router_overview(dp, routers)
+    _log_router_overview(dp, routers, allowed_updates)
 
     start_scheduler(bot)
 
@@ -217,7 +260,7 @@ async def main() -> None:
     try:
         await dp.start_polling(
             bot,
-            allowed_updates=list(ALLOWED_UPDATES),
+            allowed_updates=allowed_updates,
         )
     finally:
         logging.info(">>> Polling stopped")

@@ -62,7 +62,8 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
     logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.INFO)
 
-    root.info("logging initialized, level=%s", logging.getLevelName(level))
+    resolved_level = logging.getLevelName(level)
+    root.info("logging initialized, level=%s", resolved_level)
     root.info("cwd=%s", Path.cwd())
     root.info(
         "log_paths dir=%s bot=%s errors=%s",
@@ -70,7 +71,7 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
         (log_path / "bot.log").resolve(),
         (log_path / "errors.log").resolve(),
     )
-    root.info("log_args dir_param=%s level_param=%s", log_dir, level)
+    root.info("log_config dir_param=%s resolved_dir=%s level_param=%s", log_dir, log_path.resolve(), resolved_level)
     try:
         aiogram_version = __import__("aiogram").__version__
     except Exception:  # pragma: no cover - aiogram should always be importable

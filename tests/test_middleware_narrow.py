@@ -55,4 +55,4 @@ async def test_audit_logs_callback_direct(caplog: pytest.LogCaptureFixture) -> N
         await middleware(handler, callback, {})
 
     handler.assert_awaited()
-    assert any("CB  update=None msg_id=20" in record.message for record in caplog.records)
+    assert any("CB  update=None msg_id=20 cb_id=cb-1" in record.message for record in caplog.records)

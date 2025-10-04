@@ -64,6 +64,7 @@ def test_audit_logs_callback_and_errors(caplog) -> None:
     handler = AsyncMock(return_value=None)
     asyncio.run(middleware(handler, callback, {}))
     assert "CB  update=None" in caplog.text
+    assert "cb_id=abc" in caplog.text
 
     failing = AsyncMock(side_effect=RuntimeError("boom"))
     caplog.clear()

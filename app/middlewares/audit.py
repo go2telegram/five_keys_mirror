@@ -65,7 +65,7 @@ class AuditMiddleware(BaseMiddleware):
         try:
             if isinstance(event, Update):
                 log.info(
-                    "UPD update=%s has_message=%s has_callback=%s",
+                    "UPD kind=Update update_id=%s has_msg=%s has_cb=%s",
                     event.update_id,
                     bool(event.message),
                     bool(event.callback_query),
