@@ -33,7 +33,7 @@ async def ref_menu_cb(c: CallbackQuery):
     async with session_scope() as session:
         await users_repo.get_or_create_user(session, uid, username)
         invited, converted = await referrals_repo.stats_for_referrer(session, uid)
-        await events_repo.log(session, uid, "ref_menu", {})
+        await events_repo.log(session, uid, "ref_link_open", {})
         await session.commit()
 
     link = await _ref_link(c.bot, uid)
@@ -55,7 +55,7 @@ async def ref_menu_msg(m: Message):
     async with session_scope() as session:
         await users_repo.get_or_create_user(session, uid, username)
         invited, converted = await referrals_repo.stats_for_referrer(session, uid)
-        await events_repo.log(session, uid, "ref_menu", {})
+        await events_repo.log(session, uid, "ref_link_open", {})
         await session.commit()
 
     link = await _ref_link(m.bot, uid)
@@ -71,6 +71,9 @@ async def ref_menu_msg(m: Message):
 @router.callback_query(F.data == "ref:copy")
 async def ref_copy(c: CallbackQuery):
     await c.answer("Скопируйте ссылку из сообщения")
+    async with session_scope() as session:
+        await events_repo.log(session, c.from_user.id, "ref_link_click", {})
+        await session.commit()
     link = await _ref_link(c.bot, c.from_user.id)
     kb = InlineKeyboardBuilder()
     for row in kb_back_home("ref:menu").inline_keyboard:

@@ -16,13 +16,15 @@ def _flatten(markup):
 
 @asynccontextmanager
 def _dummy_scope():
-    yield object()
+    dummy = SimpleNamespace(commit=AsyncMock())
+    yield dummy
 
 
 @pytest.mark.asyncio
 async def test_subscription_check_shows_active_plan(monkeypatch):
     monkeypatch.setattr(subscription, "session_scope", _dummy_scope)
     monkeypatch.setattr(subscription.users_repo, "get_or_create_user", AsyncMock())
+    monkeypatch.setattr(subscription.events_repo, "log", AsyncMock())
     until = datetime.now(timezone.utc) + timedelta(days=3)
     sub = SimpleNamespace(plan="basic", until=until)
     monkeypatch.setattr(
@@ -53,6 +55,7 @@ async def test_subscription_check_shows_active_plan(monkeypatch):
 async def test_subscription_check_handles_missing_plan(monkeypatch):
     monkeypatch.setattr(subscription, "session_scope", _dummy_scope)
     monkeypatch.setattr(subscription.users_repo, "get_or_create_user", AsyncMock())
+    monkeypatch.setattr(subscription.events_repo, "log", AsyncMock())
     monkeypatch.setattr(
         subscription.subscriptions_repo,
         "is_active",
@@ -78,6 +81,7 @@ async def test_subscription_check_handles_missing_plan(monkeypatch):
 async def test_premium_menu_requires_subscription(monkeypatch):
     monkeypatch.setattr(premium, "session_scope", _dummy_scope)
     monkeypatch.setattr(premium.users_repo, "get_or_create_user", AsyncMock())
+    monkeypatch.setattr(premium.events_repo, "log", AsyncMock())
     monkeypatch.setattr(
         premium.subscriptions_repo,
         "is_active",
@@ -104,6 +108,7 @@ async def test_premium_menu_requires_subscription(monkeypatch):
 async def test_premium_menu_shows_links_for_active_user(monkeypatch):
     monkeypatch.setattr(premium, "session_scope", _dummy_scope)
     monkeypatch.setattr(premium.users_repo, "get_or_create_user", AsyncMock())
+    monkeypatch.setattr(premium.events_repo, "log", AsyncMock())
     sub = SimpleNamespace(plan="pro", until=datetime.now(timezone.utc) + timedelta(days=30))
     monkeypatch.setattr(
         premium.subscriptions_repo,

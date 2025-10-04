@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.db.session import session_scope
 from app.keyboards import kb_back_home
-from app.repo import subscriptions as subscriptions_repo, users as users_repo
+from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
 router = Router(name="subscription")
 
@@ -61,6 +61,10 @@ def _format_until(until: datetime) -> str:
 
 @router.callback_query(F.data == "sub:menu")
 async def sub_menu(c: CallbackQuery):
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        await events_repo.log(session, c.from_user.id, "subscription_menu", {})
+        await session.commit()
     await c.answer()
     markup = _kb_sub_menu()
     await c.message.edit_text(
@@ -74,11 +78,22 @@ async def sub_check(c: CallbackQuery):
     async with session_scope() as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
+        plan = sub.plan if sub else None
+        until = sub.until.isoformat() if sub else None
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "subscription_check",
+            {"active": is_active, "plan": plan, "until": until},
+        )
+        await session.commit()
 
     await c.answer()
     if is_active and sub:
-        until = _format_until(sub.until)
-        text = "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until}</b>."
+        until_text = _format_until(sub.until)
+        text = (
+            "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until_text}</b>."
+        )
         builder = InlineKeyboardBuilder()
         builder.button(text="🔁 Проверить снова", callback_data="sub:check")
         builder.button(text="Открыть Premium", callback_data="premium:menu")
