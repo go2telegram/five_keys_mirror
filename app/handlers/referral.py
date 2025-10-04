@@ -14,7 +14,7 @@ def _kb_ref(link: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔗 Поделиться ссылкой", url=link)
     kb.button(text="📋 Скопировать", callback_data="ref:copy")
-    for row in kb_back_home().inline_keyboard:
+    for row in kb_back_home("ref:menu").inline_keyboard:
         kb.row(*row)
     kb.adjust(1, 1, 2)
     return kb.as_markup()

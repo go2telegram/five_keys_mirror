@@ -12,7 +12,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
 
-from app import build_info
+from app import ALLOWED_UPDATES, build_info
 from app.config import settings
 from app.db.session import init_db
 from app.handlers import (
@@ -142,6 +142,16 @@ def _log_startup_metadata() -> None:
     startup_log.info("aiogram version: %s", aiogram_version)
 
 
+def _log_router_overview(dp: Dispatcher, routers: list) -> None:
+    startup_log = logging.getLogger("startup")
+    router_names = [router.name or router.__class__.__name__ for router in routers]
+    startup_log.info("routers=%s count=%s", router_names, len(router_names))
+    allowed_updates = list(ALLOWED_UPDATES)
+    startup_log.info("allowed_updates=%s", allowed_updates)
+    resolved_updates = sorted(dp.resolve_used_update_types())
+    startup_log.info("resolve_used_update_types=%s", resolved_updates)
+
+
 async def main() -> None:
     setup_logging(
         log_dir=settings.LOG_DIR,
@@ -160,53 +170,54 @@ async def main() -> None:
     _register_audit_middleware(dp)
     _log_startup_metadata()
 
-    dp.include_router(h_start.router)
-    dp.include_router(h_calc.router)
-    dp.include_router(h_calc_water.router)
-    dp.include_router(h_calc_kcal.router)
-    dp.include_router(h_calc_macros.router)
-
-    dp.include_router(h_quiz_menu.router)
-    dp.include_router(h_quiz_energy.router)
-    dp.include_router(h_quiz_deficits.router)
-    dp.include_router(h_quiz_immunity.router)
-    dp.include_router(h_quiz_gut.router)
-    dp.include_router(h_quiz_sleep.router)
-    dp.include_router(h_quiz_stress.router)
-    dp.include_router(h_quiz_stress2.router)
-    dp.include_router(h_quiz_skin_joint.router)
-
-    dp.include_router(h_picker.router)
-    dp.include_router(h_reg.router)
-    dp.include_router(h_premium.router)
-    dp.include_router(h_profile.router)
-    dp.include_router(h_referral.router)
-    dp.include_router(h_subscription.router)
-    dp.include_router(h_navigator.router)
-    dp.include_router(h_report.router)
-    dp.include_router(h_notify.router)
-
-    dp.include_router(h_admin.router)
-    dp.include_router(h_admin_crud.router)
-    dp.include_router(h_assistant.router)
-    dp.include_router(h_lead.router)
+    routers = [
+        h_start.router,
+        h_calc.router,
+        h_calc_water.router,
+        h_calc_kcal.router,
+        h_calc_macros.router,
+        h_quiz_menu.router,
+        h_quiz_energy.router,
+        h_quiz_deficits.router,
+        h_quiz_immunity.router,
+        h_quiz_gut.router,
+        h_quiz_sleep.router,
+        h_quiz_stress.router,
+        h_quiz_stress2.router,
+        h_quiz_skin_joint.router,
+        h_picker.router,
+        h_reg.router,
+        h_premium.router,
+        h_profile.router,
+        h_referral.router,
+        h_subscription.router,
+        h_navigator.router,
+        h_report.router,
+        h_notify.router,
+        h_admin.router,
+        h_admin_crud.router,
+        h_assistant.router,
+        h_lead.router,
+    ]
 
     if settings.DEBUG_COMMANDS and h_health is not None:
-        dp.include_router(h_health.router)
+        routers.append(h_health.router)
+
+    for router in routers:
+        dp.include_router(router)
 
     dp.callback_query.register(home_main, F.data == "home:main")
+
+    _log_router_overview(dp, routers)
 
     start_scheduler(bot)
 
     runner = await _setup_tribute_webhook()
-
-    allowed_updates = dp.resolve_used_update_types()
-    logging.getLogger("startup").info("allowed updates: %s", sorted(allowed_updates))
     logging.info(">>> Starting polling (aiogram)...")
     try:
         await dp.start_polling(
             bot,
-            allowed_updates=allowed_updates,
+            allowed_updates=list(ALLOWED_UPDATES),
         )
     finally:
         logging.info(">>> Polling stopped")

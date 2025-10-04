@@ -38,6 +38,12 @@ async def recent_plans(session: AsyncSession, user_id: int, limit: int = 3) -> S
     return list(result.scalars())
 
 
+async def recent_events(session: AsyncSession, limit: int = 5) -> Sequence[Event]:
+    stmt = select(Event).order_by(Event.ts.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
 async def stats(
     session: AsyncSession,
     name: Optional[str] = None,

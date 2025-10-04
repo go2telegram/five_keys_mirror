@@ -22,7 +22,7 @@ def _log_msg(
     """Emit a consistent message log entry."""
 
     log.info(
-        "MSG update=%s message=%s uid=%s uname=%s chat=%s text=%r",
+        "MSG update=%s msg_id=%s uid=%s uname=%s chat=%s text=%r",
         update_id,
         message_id,
         getattr(user, "id", None),
@@ -41,9 +41,10 @@ def _log_cb(
 
     user = callback.from_user if callback else None
     log.info(
-        "CB  update=%s message=%s uid=%s uname=%s chat=%s data=%r",
+        "CB  update=%s msg_id=%s cb_id=%s uid=%s uname=%s chat=%s data=%r",
         update_id,
         getattr(callback.message, "message_id", None) if callback else None,
+        getattr(callback, "id", None) if callback else None,
         getattr(user, "id", None),
         getattr(user, "username", None),
         chat_id,
@@ -63,6 +64,12 @@ class AuditMiddleware(BaseMiddleware):
         started = time.perf_counter()
         try:
             if isinstance(event, Update):
+                log.info(
+                    "UPD update=%s has_message=%s has_callback=%s",
+                    event.update_id,
+                    bool(event.message),
+                    bool(event.callback_query),
+                )
                 if event.message:
                     _log_msg(
                         event.update_id,

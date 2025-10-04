@@ -63,3 +63,16 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
     logging.getLogger("asyncio").setLevel(logging.INFO)
 
     root.info("logging initialized, level=%s", logging.getLevelName(level))
+    root.info("cwd=%s", Path.cwd())
+    root.info(
+        "log_paths dir=%s bot=%s errors=%s",
+        log_path.resolve(),
+        (log_path / "bot.log").resolve(),
+        (log_path / "errors.log").resolve(),
+    )
+    root.info("log_args dir_param=%s level_param=%s", log_dir, level)
+    try:
+        aiogram_version = __import__("aiogram").__version__
+    except Exception:  # pragma: no cover - aiogram should always be importable
+        aiogram_version = "unknown"
+    root.info("aiogram=%s", aiogram_version)

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from aiogram import Dispatcher
+from aiogram import Dispatcher, Router
 
 from app import build_info
-from app.main import _log_startup_metadata, _register_audit_middleware
+from app.main import _log_router_overview, _log_startup_metadata, _register_audit_middleware
 from app.middlewares import AuditMiddleware
 
 
@@ -46,3 +46,10 @@ def test_register_audit_logs_marker(monkeypatch) -> None:  # noqa: ANN001
 
     assert any("build: branch=" in msg for msg in dummy.messages)
     assert any(build_info.GIT_COMMIT in msg for msg in dummy.messages)
+
+    dummy.messages.clear()
+    router = Router(name="test")
+    _log_router_overview(dp, [router])
+    assert any("routers=['test']" in msg for msg in dummy.messages)
+    assert any("allowed_updates=['message', 'callback_query']" in msg for msg in dummy.messages)
+    assert any("resolve_used_update_types=" in msg for msg in dummy.messages)

@@ -13,26 +13,46 @@ from app.config import settings
 _DB_PATH_PREFIX = "sqlite"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-async_engine = create_async_engine(
-    settings.DB_URL,
-    echo=False,
-    pool_pre_ping=True,
-)
+_ENGINE_IMPORT_ERROR: Exception | None = None
 
-async_session_factory = async_sessionmaker(
-    async_engine,
-    expire_on_commit=False,
-    class_=AsyncSession,
-)
+try:
+    async_engine = create_async_engine(
+        settings.DB_URL,
+        echo=False,
+        pool_pre_ping=True,
+    )
+except ModuleNotFoundError as exc:
+    if "aiosqlite" in str(exc):
+        async_engine = None  # type: ignore[assignment]
+        _ENGINE_IMPORT_ERROR = exc
+    else:  # pragma: no cover - re-raise unrelated import errors
+        raise
+
+if async_engine is not None:
+    async_session_factory = async_sessionmaker(
+        async_engine,
+        expire_on_commit=False,
+        class_=AsyncSession,
+    )
+else:  # pragma: no cover - triggered only when driver missing
+    async_session_factory = None
 
 
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
+    if async_session_factory is None:
+        raise RuntimeError(
+            "aiosqlite driver is not installed; install aiosqlite to use database features",
+        ) from _ENGINE_IMPORT_ERROR
     async with async_session_factory() as session:
         yield session
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
+    if async_session_factory is None:
+        raise RuntimeError(
+            "aiosqlite driver is not installed; install aiosqlite to use database features",
+        ) from _ENGINE_IMPORT_ERROR
     async with async_session_factory() as session:
         yield session
 
