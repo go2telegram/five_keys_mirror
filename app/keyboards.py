@@ -163,10 +163,14 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def kb_card_actions(
+def kb_actions(
     cards: Iterable[Mapping[str, object]],
     back_cb: str | None = None,
+    *,
     home_cb: str = "home:main",
+    with_pdf: bool = True,
+    with_discount: bool = True,
+    with_consult: bool = True,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buy_buttons = 0
@@ -178,14 +182,31 @@ def kb_card_actions(
         kb.button(text=f"🛒 Купить {name}", url=str(url))
         buy_buttons += 1
 
-    kb.button(text="📄 PDF-план", callback_data="report:last")
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
-    else:
-        kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
+    if with_pdf:
+        kb.button(text="📄 PDF-план", callback_data="report:last")
+    if with_discount:
+        if settings.velavie_url:
+            kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+        else:
+            kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
+    if with_consult:
+        kb.button(text="📝 Консультация", callback_data="lead:start")
+
     kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
     kb.button(text="🏠 Домой", callback_data=home_cb)
 
-    layout = [1] * buy_buttons + [1, 1, 2]
-    kb.adjust(*layout)
+    layout = [1] * buy_buttons
+    tail = []
+    if with_pdf:
+        tail.append(1)
+    if with_discount:
+        tail.append(1)
+    if with_consult:
+        tail.append(1)
+    tail.extend([2])
+    kb.adjust(*(layout + tail))
     return kb.as_markup()
+
+
+# Backwards compatibility for older imports
+kb_card_actions = kb_actions

@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.handlers import notify, picker, premium, referral, subscription
-from app.keyboards import kb_back_home, kb_card_actions
+from app.keyboards import kb_actions, kb_back_home
 from app.main import home_main
 from app.pdf_report import build_pdf
 
@@ -77,7 +77,7 @@ def test_referral_keyboard_has_navigation():
 def test_card_actions_uses_discount_url_when_available(monkeypatch):
     monkeypatch.setattr(settings, "VELAVIE_URL", "https://velavie.example/offer")
     cards = [{"code": "T8_BLEND", "name": "Blend", "order_url": "https://shop/blend"}]
-    markup = kb_card_actions(cards, back_cb="calc:menu")
+    markup = kb_actions(cards, back_cb="calc:menu")
     urls = [btn.url for btn in _flatten(markup) if btn.url]
     assert "https://velavie.example/offer" in urls
 

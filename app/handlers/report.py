@@ -48,6 +48,8 @@ def _compose_pdf(plan: dict) -> bytes:
         footer=footer,
         intake_rows=intake_rows,  # <— прокидываем
         order_url=order_url,
+        recommended_products=list(plan.get("products", [])),
+        context=plan.get("context"),
     )
 
 

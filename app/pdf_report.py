@@ -21,6 +21,7 @@ from reportlab.platypus import (
 )
 
 from app.config import settings
+from app.utils.cards import prepare_cards, render_product_text
 
 FONTS_DIR = Path(__file__).parent / "fonts"
 FONT_CANDIDATES = [
@@ -151,11 +152,14 @@ def build_pdf(
     subtitle: str,
     actions: list[str] | None,
     products: list[str],
+    *,
     notes: str | None = "",
     footer: str = "",
     intake_rows: list[dict] | None = None,
     order_url: str | None = None,
     channel_note: str = "telegram-канал «Пять ключей здоровья»",
+    recommended_products: list[str] | None = None,
+    context: str | None = None,
 ) -> bytes:
     reg_font, bold_font = _pick_fonts()
 
@@ -205,15 +209,34 @@ def build_pdf(
         story.append(_hline())
         story.append(Spacer(1, 0.5 * cm))
 
-    # Продукты
-    story.append(Paragraph("Рекомендованные продукты", h_s))
-    story.append(Spacer(1, 0.2 * cm))
-    pr_items = [ListItem(Paragraph(s, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for s in products]
-    story.append(ListFlowable(pr_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
-    story.append(Spacer(1, 0.5 * cm))
+    products_block_for_intake = list(products)
+    recommended_cards = prepare_cards(recommended_products or [], context)
+    if recommended_cards:
+        story.append(Paragraph("Рекомендуемые продукты", h_s))
+        story.append(Spacer(1, 0.2 * cm))
+        for card in recommended_cards:
+            header, card_bullets = render_product_text(card, context)
+            story.append(Paragraph(header, p_s))
+            if card_bullets:
+                items = [
+                    ListItem(Paragraph(line, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for line in card_bullets
+                ]
+                story.append(ListFlowable(items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
+            story.append(Spacer(1, 0.3 * cm))
+        story.append(_hline())
+        story.append(Spacer(1, 0.5 * cm))
+        products_block_for_intake = [
+            render_product_text(card, context)[0].replace("<b>", "").replace("</b>", "") for card in recommended_cards
+        ]
+    elif products:
+        story.append(Paragraph("Рекомендованные продукты", h_s))
+        story.append(Spacer(1, 0.2 * cm))
+        pr_items = [ListItem(Paragraph(s, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for s in products]
+        story.append(ListFlowable(pr_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
+        story.append(Spacer(1, 0.5 * cm))
 
     # Таблица приёмов
-    rows = _build_intake_rows(products, intake_rows)
+    rows = _build_intake_rows(products_block_for_intake, intake_rows)
     if rows:
         story.append(_hline())
         story.append(Spacer(1, 0.4 * cm))
