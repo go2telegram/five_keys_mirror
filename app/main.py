@@ -138,8 +138,15 @@ def _log_startup_metadata() -> None:
         getattr(build_info, "BUILD_TIME", "unknown"),
     )
     startup_log.info("cwd: %s", Path.cwd())
-    startup_log.info("log_dir=%s log_level=%s", settings.LOG_DIR, settings.LOG_LEVEL)
-    startup_log.info("aiogram version: %s", aiogram_version)
+    log_dir_path = Path(settings.LOG_DIR).resolve()
+    startup_log.info(
+        "log_paths dir=%s bot=%s errors=%s",
+        log_dir_path,
+        (log_dir_path / "bot.log").resolve(),
+        (log_dir_path / "errors.log").resolve(),
+    )
+    startup_log.info("log_config dir_param=%s level_param=%s", settings.LOG_DIR, settings.LOG_LEVEL)
+    startup_log.info("aiogram=%s", aiogram_version)
 
 
 def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterable[str]) -> None:
@@ -147,9 +154,21 @@ def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterabl
     router_names = [router.name or router.__class__.__name__ for router in routers]
     startup_log.info("routers=%s count=%s", router_names, len(router_names))
     allowed_list = list(allowed_updates)
-    startup_log.info("allowed_updates=%s", allowed_list)
+    startup_log.info("allowed_updates=%s", [*allowed_list])
     resolved_updates = sorted(dp.resolve_used_update_types())
     startup_log.info("resolve_used_update_types=%s", resolved_updates)
+
+
+def _create_startup_router(allowed_updates: Iterable[str]) -> Router:
+    startup_router = Router(name="startup")
+
+    @startup_router.startup()
+    async def on_startup(bot: Bot) -> None:  # pragma: no cover - covered via unit test
+        startup_log = logging.getLogger("startup")
+        startup_log.info("startup event fired")
+        await _notify_admin_startup(bot, allowed_updates)
+
+    return startup_router
 
 
 def _gather_admin_ids() -> set[int]:
@@ -236,14 +255,7 @@ async def main() -> None:
     if settings.DEBUG_COMMANDS and h_health is not None:
         routers.append(h_health.router)
 
-    startup_router = Router(name="startup")
-
-    @startup_router.startup()
-    async def on_startup(event: object, bot: Bot) -> None:  # noqa: ANN001
-        startup_log = logging.getLogger("startup")
-        startup_log.info("startup event fired")
-        await _notify_admin_startup(bot, allowed_updates)
-
+    startup_router = _create_startup_router(allowed_updates)
     routers.insert(0, startup_router)
 
     for router in routers:

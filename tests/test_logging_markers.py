@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import logging
 
 from aiogram import Dispatcher, Router
@@ -46,6 +45,8 @@ def test_register_audit_logs_marker(monkeypatch) -> None:  # noqa: ANN001
 
     assert any("build: branch=" in msg for msg in dummy.messages)
     assert any(build_info.GIT_COMMIT in msg for msg in dummy.messages)
+    assert any("log_paths dir=" in msg for msg in dummy.messages)
+    assert any("aiogram=" in msg for msg in dummy.messages)
 
     dummy.messages.clear()
     router = Router(name="test")
