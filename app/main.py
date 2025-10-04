@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
@@ -118,6 +118,15 @@ async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
     return runner
 
 
+def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
+    audit_middleware = AuditMiddleware()
+    dp.update.outer_middleware(audit_middleware)
+    dp.message.middleware(audit_middleware)
+    dp.callback_query.middleware(audit_middleware)
+    logging.getLogger("startup").info("Audit middleware registered")
+    return audit_middleware
+
+
 async def main() -> None:
     setup_logging(
         log_dir=settings.LOG_DIR,
@@ -133,11 +142,8 @@ async def main() -> None:
     )
     dp = Dispatcher()
 
-    audit_middleware = AuditMiddleware()
-    dp.update.outer_middleware(audit_middleware)
-    dp.message.middleware(audit_middleware)
-    dp.callback_query.middleware(audit_middleware)
-    logging.getLogger("startup").info("Audit middleware registered")
+    _register_audit_middleware(dp)
+    logging.getLogger("startup").info("aiogram version: %s", aiogram_version)
 
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)
@@ -179,11 +185,13 @@ async def main() -> None:
 
     runner = await _setup_tribute_webhook()
 
+    allowed_updates = dp.resolve_used_update_types()
+    logging.getLogger("startup").info("allowed updates: %s", sorted(allowed_updates))
     logging.info(">>> Starting polling (aiogram)...")
     try:
         await dp.start_polling(
             bot,
-            allowed_updates=dp.resolve_used_update_types(),
+            allowed_updates=allowed_updates,
         )
     finally:
         logging.info(">>> Polling stopped")
