@@ -15,6 +15,7 @@ from app.repo import events as events_repo, referrals as referrals_repo, users a
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON
 
 logger = logging.getLogger(__name__)
+log_start = logging.getLogger("start")
 
 router = Router(name="start")
 
@@ -33,6 +34,12 @@ async def start_safe(message: Message) -> None:
 
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
+
+    log_start.info(
+        "START uid=%s uname=%s",
+        getattr(message.from_user, "id", None),
+        getattr(message.from_user, "username", None),
+    )
 
     await message.answer(GREETING, reply_markup=kb_main())
 

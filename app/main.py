@@ -134,6 +134,7 @@ async def main() -> None:
     dp = Dispatcher()
 
     audit_middleware = AuditMiddleware()
+    dp.update.outer_middleware(audit_middleware)
     dp.message.middleware(audit_middleware)
     dp.callback_query.middleware(audit_middleware)
 
