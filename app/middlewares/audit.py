@@ -12,6 +12,33 @@ from aiogram.types import CallbackQuery, Message, Update
 log = logging.getLogger("audit")
 
 
+def _log_msg(update_id: int | None, user: types.User | None, chat_id: int | None, text: str | None) -> None:
+    """Emit a consistent message log entry."""
+
+    log.info(
+        "MSG update=%s uid=%s uname=%s chat=%s text=%r",
+        update_id,
+        getattr(user, "id", None),
+        getattr(user, "username", None),
+        chat_id,
+        text,
+    )
+
+
+def _log_cb(update_id: int | None, callback: CallbackQuery, chat_id: int | None) -> None:
+    """Emit a consistent callback log entry."""
+
+    user = callback.from_user if callback else None
+    log.info(
+        "CB  update=%s uid=%s uname=%s chat=%s data=%r",
+        update_id,
+        getattr(user, "id", None),
+        getattr(user, "username", None),
+        chat_id,
+        callback.data if callback else None,
+    )
+
+
 class AuditMiddleware(BaseMiddleware):
     """Log every incoming update, message, or callback and surface handler errors."""
 
@@ -25,44 +52,26 @@ class AuditMiddleware(BaseMiddleware):
         try:
             if isinstance(event, Update):
                 if event.message:
-                    user = event.message.from_user
-                    log.info(
-                        "MSG uid=%s uname=%s chat=%s text=%r",
-                        getattr(user, "id", None),
-                        getattr(user, "username", None),
+                    _log_msg(
+                        event.update_id,
+                        event.message.from_user,
                         getattr(event.message.chat, "id", None),
                         event.message.text or event.message.caption,
                     )
                 elif event.callback_query:
                     callback = event.callback_query
-                    user = callback.from_user
-                    chat = callback.message.chat if callback.message else None
-                    log.info(
-                        "CB  uid=%s uname=%s chat=%s data=%r",
-                        getattr(user, "id", None),
-                        getattr(user, "username", None),
-                        getattr(chat, "id", None) if chat else None,
-                        callback.data,
-                    )
+                    chat_id = getattr(callback.message.chat, "id", None) if callback.message else None
+                    _log_cb(event.update_id, callback, chat_id)
             elif isinstance(event, Message):
-                user = event.from_user
-                log.info(
-                    "MSG uid=%s uname=%s chat=%s text=%r",
-                    getattr(user, "id", None),
-                    getattr(user, "username", None),
+                _log_msg(
+                    None,
+                    event.from_user,
                     getattr(event.chat, "id", None),
                     event.text or event.caption,
                 )
             elif isinstance(event, CallbackQuery):
-                user = event.from_user
-                chat = event.message.chat if event.message else None
-                log.info(
-                    "CB  uid=%s uname=%s chat=%s data=%r",
-                    getattr(user, "id", None),
-                    getattr(user, "username", None),
-                    getattr(chat, "id", None) if chat else None,
-                    event.data,
-                )
+                chat_id = getattr(event.message.chat, "id", None) if event.message else None
+                _log_cb(None, event, chat_id)
             return await handler(event, data)
         except Exception:
             log.exception("Handler error on event")

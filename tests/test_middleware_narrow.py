@@ -29,7 +29,7 @@ async def test_audit_logs_message_direct(caplog: pytest.LogCaptureFixture) -> No
         await middleware(handler, message, {})
 
     handler.assert_awaited()
-    assert any("MSG uid=12" in record.message for record in caplog.records)
+    assert any("MSG update=None" in record.message for record in caplog.records)
 
 
 @pytest.mark.anyio("asyncio")
@@ -55,4 +55,4 @@ async def test_audit_logs_callback_direct(caplog: pytest.LogCaptureFixture) -> N
         await middleware(handler, callback, {})
 
     handler.assert_awaited()
-    assert any("CB  uid=55" in record.message for record in caplog.records)
+    assert any("CB  update=None" in record.message for record in caplog.records)

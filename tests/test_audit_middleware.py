@@ -33,7 +33,7 @@ def test_audit_logs_message(caplog) -> None:
 
     assert result == "ok"
     handler.assert_awaited()
-    assert "MSG uid=200" in caplog.text
+    assert "MSG update=None" in caplog.text
 
 
 def test_audit_logs_callback_and_errors(caplog) -> None:
@@ -63,7 +63,7 @@ def test_audit_logs_callback_and_errors(caplog) -> None:
 
     handler = AsyncMock(return_value=None)
     asyncio.run(middleware(handler, callback, {}))
-    assert "CB  uid=654" in caplog.text
+    assert "CB  update=None" in caplog.text
 
     failing = AsyncMock(side_effect=RuntimeError("boom"))
     caplog.clear()
