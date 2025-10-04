@@ -137,6 +137,7 @@ async def main() -> None:
     dp.update.outer_middleware(audit_middleware)
     dp.message.middleware(audit_middleware)
     dp.callback_query.middleware(audit_middleware)
+    logging.getLogger("startup").info("Audit middleware registered")
 
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)

@@ -6,15 +6,14 @@ import logging
 import time
 from typing import Any, Awaitable, Callable, Dict
 
-from aiogram import types
-from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from aiogram.types import CallbackQuery, Message
+from aiogram import BaseMiddleware, types
+from aiogram.types import CallbackQuery, Message, Update
 
 log = logging.getLogger("audit")
 
 
 class AuditMiddleware(BaseMiddleware):
-    """Log every incoming message or callback and surface handler errors."""
+    """Log every incoming update, message, or callback and surface handler errors."""
 
     async def __call__(
         self,
@@ -24,7 +23,28 @@ class AuditMiddleware(BaseMiddleware):
     ) -> Any:
         started = time.perf_counter()
         try:
-            if isinstance(event, Message):
+            if isinstance(event, Update):
+                if event.message:
+                    user = event.message.from_user
+                    log.info(
+                        "MSG uid=%s uname=%s chat=%s text=%r",
+                        getattr(user, "id", None),
+                        getattr(user, "username", None),
+                        getattr(event.message.chat, "id", None),
+                        event.message.text or event.message.caption,
+                    )
+                elif event.callback_query:
+                    callback = event.callback_query
+                    user = callback.from_user
+                    chat = callback.message.chat if callback.message else None
+                    log.info(
+                        "CB  uid=%s uname=%s chat=%s data=%r",
+                        getattr(user, "id", None),
+                        getattr(user, "username", None),
+                        getattr(chat, "id", None) if chat else None,
+                        callback.data,
+                    )
+            elif isinstance(event, Message):
                 user = event.from_user
                 log.info(
                     "MSG uid=%s uname=%s chat=%s text=%r",
@@ -35,13 +55,12 @@ class AuditMiddleware(BaseMiddleware):
                 )
             elif isinstance(event, CallbackQuery):
                 user = event.from_user
-                chat = getattr(event.message, "chat", None) if event.message else None
-                chat_id = getattr(chat, "id", None)
+                chat = event.message.chat if event.message else None
                 log.info(
                     "CB  uid=%s uname=%s chat=%s data=%r",
                     getattr(user, "id", None),
                     getattr(user, "username", None),
-                    chat_id,
+                    getattr(chat, "id", None) if chat else None,
                     event.data,
                 )
             return await handler(event, data)
