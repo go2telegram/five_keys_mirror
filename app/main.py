@@ -12,7 +12,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
 
-from app import ALLOWED_UPDATES, build_info
+from app import build_info
 from app.config import settings
 from app.db.session import init_db
 from app.handlers import (
@@ -53,6 +53,9 @@ try:
     from app.handlers import health as h_health
 except ImportError:  # pragma: no cover - optional router
     h_health = None
+
+
+ALLOWED_UPDATES = ["message", "callback_query"]
 
 
 log_home = logging.getLogger("home")
@@ -121,6 +124,8 @@ async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
 
 
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
+    """Register the audit middleware on every dispatcher layer."""
+
     audit_middleware = AuditMiddleware()
     dp.update.outer_middleware(audit_middleware)
     dp.message.middleware(audit_middleware)
@@ -154,7 +159,7 @@ def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterabl
     router_names = [router.name or router.__class__.__name__ for router in routers]
     startup_log.info("routers=%s count=%s", router_names, len(router_names))
     allowed_list = list(allowed_updates)
-    startup_log.info("allowed_updates=%s", [*allowed_list])
+    startup_log.info("allowed_updates=%r", allowed_list)
     resolved_updates = sorted(dp.resolve_used_update_types())
     startup_log.info("resolve_used_update_types=%s", resolved_updates)
 
@@ -221,6 +226,7 @@ async def main() -> None:
     _log_startup_metadata()
 
     allowed_updates = list(ALLOWED_UPDATES)
+    logging.getLogger("startup").info("allowed_updates=%r", ALLOWED_UPDATES)
 
     routers = [
         h_start.router,
