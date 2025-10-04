@@ -12,12 +12,19 @@ from aiogram.types import CallbackQuery, Message, Update
 log = logging.getLogger("audit")
 
 
-def _log_msg(update_id: int | None, user: types.User | None, chat_id: int | None, text: str | None) -> None:
+def _log_msg(
+    update_id: int | None,
+    message_id: int | None,
+    user: types.User | None,
+    chat_id: int | None,
+    text: str | None,
+) -> None:
     """Emit a consistent message log entry."""
 
     log.info(
-        "MSG update=%s uid=%s uname=%s chat=%s text=%r",
+        "MSG update=%s message=%s uid=%s uname=%s chat=%s text=%r",
         update_id,
+        message_id,
         getattr(user, "id", None),
         getattr(user, "username", None),
         chat_id,
@@ -25,13 +32,18 @@ def _log_msg(update_id: int | None, user: types.User | None, chat_id: int | None
     )
 
 
-def _log_cb(update_id: int | None, callback: CallbackQuery, chat_id: int | None) -> None:
+def _log_cb(
+    update_id: int | None,
+    callback: CallbackQuery,
+    chat_id: int | None,
+) -> None:
     """Emit a consistent callback log entry."""
 
     user = callback.from_user if callback else None
     log.info(
-        "CB  update=%s uid=%s uname=%s chat=%s data=%r",
+        "CB  update=%s message=%s uid=%s uname=%s chat=%s data=%r",
         update_id,
+        getattr(callback.message, "message_id", None) if callback else None,
         getattr(user, "id", None),
         getattr(user, "username", None),
         chat_id,
@@ -54,6 +66,7 @@ class AuditMiddleware(BaseMiddleware):
                 if event.message:
                     _log_msg(
                         event.update_id,
+                        event.message.message_id,
                         event.message.from_user,
                         getattr(event.message.chat, "id", None),
                         event.message.text or event.message.caption,
@@ -65,6 +78,7 @@ class AuditMiddleware(BaseMiddleware):
             elif isinstance(event, Message):
                 _log_msg(
                     None,
+                    event.message_id,
                     event.from_user,
                     getattr(event.chat, "id", None),
                     event.text or event.caption,
