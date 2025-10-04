@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Optional
 
 from aiogram import Bot, Dispatcher, F, __version__ as aiogram_version
@@ -11,6 +12,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
 
+from app import build_info
 from app.config import settings
 from app.db.session import init_db
 from app.handlers import (
@@ -127,6 +129,19 @@ def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     return audit_middleware
 
 
+def _log_startup_metadata() -> None:
+    startup_log = logging.getLogger("startup")
+    startup_log.info(
+        "build: branch=%s commit=%s time=%s",
+        getattr(build_info, "GIT_BRANCH", "unknown"),
+        getattr(build_info, "GIT_COMMIT", "unknown"),
+        getattr(build_info, "BUILD_TIME", "unknown"),
+    )
+    startup_log.info("cwd: %s", Path.cwd())
+    startup_log.info("log_dir=%s log_level=%s", settings.LOG_DIR, settings.LOG_LEVEL)
+    startup_log.info("aiogram version: %s", aiogram_version)
+
+
 async def main() -> None:
     setup_logging(
         log_dir=settings.LOG_DIR,
@@ -143,7 +158,7 @@ async def main() -> None:
     dp = Dispatcher()
 
     _register_audit_middleware(dp)
-    logging.getLogger("startup").info("aiogram version: %s", aiogram_version)
+    _log_startup_metadata()
 
     dp.include_router(h_start.router)
     dp.include_router(h_calc.router)

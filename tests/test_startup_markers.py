@@ -4,7 +4,8 @@ import logging
 
 from aiogram import Dispatcher
 
-from app.main import _register_audit_middleware
+from app import build_info
+from app.main import _log_startup_metadata, _register_audit_middleware
 from app.middlewares import AuditMiddleware
 
 
@@ -40,3 +41,8 @@ def test_register_audit_logs_marker(monkeypatch) -> None:  # noqa: ANN001
 
     assert isinstance(middleware, AuditMiddleware)
     assert any("Audit middleware registered" in msg for msg in dummy.messages)
+
+    _log_startup_metadata()
+
+    assert any("build: branch=" in msg for msg in dummy.messages)
+    assert any(build_info.GIT_COMMIT in msg for msg in dummy.messages)

@@ -109,6 +109,15 @@ try {
   git reset --hard ("origin/" + $Branch)
   if ($LASTEXITCODE -ne 0) { throw "git reset failed." }
 
+  Write-Host "Writing build info..."
+  python tools\write_build_info.py
+  if ($LASTEXITCODE -ne 0) { throw "Failed to write build info." }
+  $commitLine = Select-String -Path 'app\build_info.py' -Pattern 'GIT_COMMIT' -SimpleMatch -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($commitLine) {
+    $parts = $commitLine.Line.Split('"')
+    if ($parts.Length -ge 2) { Write-Host ("Update to {0}" -f $parts[1]) }
+  }
+
   $offline = Join-Path $ScriptDir 'offline_install.ps1'
   Ensure-AsciiOfflineScript -Path $offline
 

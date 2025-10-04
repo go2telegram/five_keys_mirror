@@ -51,7 +51,7 @@ cp .env.example .env
 
 ## Обновление локальной копии (Windows)
 
-Скрипт `scripts/update_local.cmd` запускает PowerShell-обновление двойным кликом и не закрывает окно при ошибках. Логи сохраняются в `./scripts/logs/update_*.log`.
+Скрипт `scripts/update_local.cmd` запускает PowerShell-обновление двойным кликом и не закрывает окно при ошибках. Логи сохраняются в `./scripts/logs/update_*.log`. После обновления в `app/build_info.py` фиксируется ветка/коммит и время сборки, а в журнале появляются строки вида `build: branch=... commit=...`.
 
 Альтернативно можно выполнить PowerShell-скрипт напрямую:
 
@@ -81,6 +81,14 @@ LOG_DIR=logs     # каталог для файлов журнала
 ```powershell
 Get-Content .\logs\bot.log -Wait -Encoding UTF8     # потоковое наблюдение за основным логом
 Get-Content .\logs\errors.log -Tail 50 -Encoding UTF8
+
+Для быстрой проверки окружения и статуса бота используйте `scripts/doctor.ps1`:
+
+```
+powershell -ExecutionPolicy Bypass -File .\scripts\doctor.ps1
+```
+
+Скрипт выводит состояние venv, ветки Git, наличие audit-middleware, корректность CRLF в PowerShell-скриптах и статус Telegram вебхука.
 ```
 
 В файле `bot.log` фиксируются все сообщения и колбэки (префиксы `MSG` и `CB`), а также отметка `logging initialized...` при старте. Аудит подключён как `dp.update.outer_middleware`, поэтому в журнал попадают любые типы апдейтов. В `errors.log` собираются предупреждения и ошибки. Если нужно временно повысить детализацию, установите `LOG_LEVEL=DEBUG` и перезапустите бота.
