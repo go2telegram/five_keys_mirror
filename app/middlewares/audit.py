@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import types
@@ -21,6 +22,7 @@ class AuditMiddleware(BaseMiddleware):
         event: types.TelegramObject,
         data: Dict[str, Any],
     ) -> Any:
+        started = time.perf_counter()
         try:
             if isinstance(event, Message):
                 user = event.from_user
@@ -46,3 +48,6 @@ class AuditMiddleware(BaseMiddleware):
         except Exception:
             log.exception("Handler error on event")
             raise
+        finally:
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            log.debug("AUDIT latency_ms=%.2f", elapsed_ms)

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 pytest.importorskip("aiosqlite")
@@ -7,7 +9,29 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.handlers import notify, picker, premium, referral, subscription
 from app.keyboards import kb_back_home, kb_card_actions
+from app.main import home_main
 from app.pdf_report import build_pdf
+
+
+class _DummyMessage:
+    def __init__(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        self.chat = SimpleNamespace(id=999)
+        self.edit_text = AsyncMock(side_effect=RuntimeError("cannot edit"))
+        self.answer = AsyncMock()
+
+
+class _DummyCallback:
+    def __init__(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        self.from_user = SimpleNamespace(id=111, username="tester")
+        self.message = _DummyMessage()
+        self.answer = AsyncMock()
+        self.data = "home:main"
 
 
 def _flatten(markup):
@@ -79,3 +103,10 @@ def test_build_pdf_returns_non_empty_bytes():
     )
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 1000
+
+
+def test_home_main_fallback_to_new_message():
+    cb = _DummyCallback()
+    asyncio.run(home_main(cb))
+    cb.message.answer.assert_awaited()
+    cb.answer.assert_awaited()

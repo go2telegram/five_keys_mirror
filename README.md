@@ -67,6 +67,24 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update_local.ps1 -Branch main
 
 Скрипт создаёт/активирует `.venv`, подтягивает выбранную ветку (не трогая `wheels/`, `var/`, `logs/`, `dist/`), выполняет офлайн-установку, прогоняет миграции, проверяет БД, снимает вебхук и (если не передан `-NoRunBot`) запускает бота. В конце печатается путь к логу `Log: .\scripts\logs\update_YYYYMMDD_HHMMSS.log`.
 
+## Логи и аудит
+
+Бот пишет журналы в консоль и в файлы (по умолчанию `./logs/bot.log` и `./logs/errors.log`). Поведение настраивается переменными окружения:
+
+```
+LOG_LEVEL=INFO   # DEBUG/INFO/WARNING/ERROR
+LOG_DIR=logs     # каталог для файлов журнала
+```
+
+Полезные команды в PowerShell:
+
+```powershell
+Get-Content .\logs\bot.log -Wait -Encoding UTF8     # потоковое наблюдение за основным логом
+Get-Content .\logs\errors.log -Tail 50 -Encoding UTF8
+```
+
+В файле `bot.log` фиксируются все сообщения и колбэки (префиксы `MSG` и `CB`), а также отметка `logging initialized...` при старте. В `errors.log` попадают предупреждения и ошибки. Если нужно временно повысить детализацию, установите `LOG_LEVEL=DEBUG` и перезапустите бота.
+
 ## Типовые ошибки апдейтера
 
 - `Offline wheels directory not found` — распакуйте `wheels-win_amd64-cp311.zip` в указанный каталог или передайте `-WheelsDir`.
