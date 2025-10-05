@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
+    LOG_PATH: str | None = None
+    DEBUG: bool = False
     TZ: str = "Europe/Moscow"
 
     # Партнёрские/коммерческие ссылки

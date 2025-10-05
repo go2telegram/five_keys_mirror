@@ -11,6 +11,7 @@ from aiohttp import ContentTypeError, web
 from app.config import settings
 from app.instance_lock import AlreadyRunningError, InstanceLock
 from app.scheduler.service import start_scheduler
+from app.telemetry import TelemetryMiddleware, setup_logging
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -38,9 +39,14 @@ from app.handlers import referral as h_referral
 
 
 async def main():
-    bot = Bot(token=settings.BOT_TOKEN,
-              default=DefaultBotProperties(parse_mode="HTML"))
+    telemetry_logger = setup_logging(settings.DEBUG, settings.LOG_PATH)
+
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode="HTML"),
+    )
     dp = Dispatcher()
+    dp.update.middleware(TelemetryMiddleware(logger=telemetry_logger, debug=settings.DEBUG))
 
     # роутеры
     dp.include_router(h_start.router)
