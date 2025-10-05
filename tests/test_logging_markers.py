@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+import pytest
 from aiogram import Dispatcher, Router
 
 from app import ALLOWED_UPDATES, build_info
@@ -9,49 +10,21 @@ from app.main import _log_router_overview, _log_startup_metadata, _register_audi
 from app.middlewares import AuditMiddleware
 
 
-class _DummyLogger:
-    def __init__(self) -> None:
-        self.messages: list[str] = []
-
-    def info(self, msg: str, *args, **kwargs) -> None:  # noqa: ANN001, ANN002
-        if args:
-            msg = msg % args
-        self.messages.append(msg)
-
-    def __getattr__(self, name: str):  # noqa: ANN001
-        def _(*_args, **_kwargs) -> None:  # noqa: ANN001, ANN002
-            return None
-
-        return _
-
-
-def test_register_audit_logs_marker(monkeypatch) -> None:  # noqa: ANN001
-    dummy = _DummyLogger()
-    original_get_logger = logging.getLogger
-
-    def fake_get_logger(name: str | None = None):  # noqa: ANN001
-        if name == "startup":
-            return dummy
-        return original_get_logger(name)
-
-    monkeypatch.setattr(logging, "getLogger", fake_get_logger)
-
+def test_register_audit_logs_marker(monkeypatch, caplog: pytest.LogCaptureFixture) -> None:  # noqa: ANN001
     dp = Dispatcher()
-    middleware = _register_audit_middleware(dp)
+
+    with caplog.at_level(logging.INFO, logger="startup"):
+        middleware = _register_audit_middleware(dp)
+        _log_startup_metadata()
+        router = Router(name="test")
+        _log_router_overview(dp, [router], ALLOWED_UPDATES)
 
     assert isinstance(middleware, AuditMiddleware)
-    assert any("Audit middleware registered" in msg for msg in dummy.messages)
-
-    _log_startup_metadata()
-
-    assert any("build: branch=" in msg for msg in dummy.messages)
-    assert any(build_info.GIT_COMMIT in msg for msg in dummy.messages)
-    assert any("log_paths dir=" in msg for msg in dummy.messages)
-    assert any("aiogram=" in msg for msg in dummy.messages)
-
-    dummy.messages.clear()
-    router = Router(name="test")
-    _log_router_overview(dp, [router], ALLOWED_UPDATES)
-    assert any("routers=['test']" in msg for msg in dummy.messages)
-    assert any("allowed_updates=['message', 'callback_query']" in msg for msg in dummy.messages)
-    assert any("resolve_used_update_types=" in msg for msg in dummy.messages)
+    messages = [record.message for record in caplog.records if record.name == "startup"]
+    assert any("S4: audit middleware registered" in msg for msg in messages)
+    assert any("build: branch=" in msg for msg in messages)
+    assert any(build_info.GIT_COMMIT in msg for msg in messages)
+    assert any("log_paths dir=" in msg for msg in messages)
+    assert any("aiogram=" in msg for msg in messages)
+    assert any("S5: routers attached" in msg for msg in messages)
+    assert any("resolve_used_update_types=" in msg for msg in messages)

@@ -64,10 +64,12 @@ foreach ($file in $requiredFiles) {
 
 $mainContent = Get-Content 'app/main.py' -Encoding UTF8 -ErrorAction SilentlyContinue
 $mainText = $mainContent -join "`n"
+Write-Check 'S1 marker present' ($mainText -match 'S1: setup_logging done') 'ensure setup marker is logged'
 Write-Check 'outer middleware registered' ($mainText -match 'outer_middleware\(AuditMiddleware\(\)\)') 'call _register_audit_middleware in main.py'
-Write-Check 'audit marker logged' ($mainText -match 'Audit middleware registered') 'ensure startup logger prints the marker'
-Write-Check 'allowed updates fixed list' ($mainText -match "allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'
-Write-Check 'startup marker present' ($mainText -match 'startup event fired') 'include startup router logging'
+Write-Check 'S4 marker present' ($mainText -match 'S4: audit middleware registered') 'ensure startup logger prints S4'
+Write-Check 'S6 marker present' ($mainText -match "S6: allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'
+Write-Check 'S7 marker present' ($mainText -match 'S7: start_polling enter') 'log polling entry'
+Write-Check 'S0 marker present' ($mainText -match 'S0: startup event fired') 'include startup router logging'
 
 $psFiles = Get-ChildItem 'scripts' -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue
 foreach ($ps in $psFiles) {

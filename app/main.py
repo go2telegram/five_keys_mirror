@@ -59,6 +59,7 @@ ALLOWED_UPDATES = ["message", "callback_query"]
 
 
 log_home = logging.getLogger("home")
+startup_log = logging.getLogger("startup")
 
 
 def _resolve_log_level(value: str) -> int:
@@ -130,12 +131,11 @@ def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     dp.update.outer_middleware(audit_middleware)
     dp.message.middleware(audit_middleware)
     dp.callback_query.middleware(audit_middleware)
-    logging.getLogger("startup").info("Audit middleware registered")
+    startup_log.info("S4: audit middleware registered")
     return audit_middleware
 
 
 def _log_startup_metadata() -> None:
-    startup_log = logging.getLogger("startup")
     startup_log.info(
         "build: branch=%s commit=%s time=%s",
         getattr(build_info, "GIT_BRANCH", "unknown"),
@@ -155,11 +155,8 @@ def _log_startup_metadata() -> None:
 
 
 def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterable[str]) -> None:
-    startup_log = logging.getLogger("startup")
     router_names = [router.name or router.__class__.__name__ for router in routers]
-    startup_log.info("routers=%s count=%s", router_names, len(router_names))
-    allowed_list = list(allowed_updates)
-    startup_log.info("allowed_updates=%r", allowed_list)
+    startup_log.info("S5: routers attached count=%s names=%s", len(router_names), router_names)
     resolved_updates = sorted(dp.resolve_used_update_types())
     startup_log.info("resolve_used_update_types=%s", resolved_updates)
 
@@ -169,8 +166,7 @@ def _create_startup_router(allowed_updates: Iterable[str]) -> Router:
 
     @startup_router.startup()
     async def on_startup(bot: Bot) -> None:  # pragma: no cover - covered via unit test
-        startup_log = logging.getLogger("startup")
-        startup_log.info("startup event fired")
+        startup_log.info("S0: startup event fired")
         await _notify_admin_startup(bot, allowed_updates)
 
     return startup_router
@@ -212,8 +208,10 @@ async def main() -> None:
         log_dir=settings.LOG_DIR,
         level=_resolve_log_level(settings.LOG_LEVEL),
     )
+    startup_log.info("S1: setup_logging done")
 
     revision = await init_db()
+    startup_log.info("S2: init_db done")
     logging.info("current alembic version: %s", revision or "unknown")
 
     bot = Bot(
@@ -221,12 +219,13 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode="HTML"),
     )
     dp = Dispatcher()
+    startup_log.info("S3: bot/dispatcher created")
 
     _register_audit_middleware(dp)
     _log_startup_metadata()
 
     allowed_updates = list(ALLOWED_UPDATES)
-    logging.getLogger("startup").info("allowed_updates=%r", ALLOWED_UPDATES)
+    startup_log.info("S6: allowed_updates=%r", allowed_updates)
 
     routers = [
         h_start.router,
@@ -261,6 +260,12 @@ async def main() -> None:
     if settings.DEBUG_COMMANDS and h_health is not None:
         routers.append(h_health.router)
 
+    if settings.DEBUG_COMMANDS:
+        from app.handlers import _echo_debug as h_echo
+
+        routers.append(h_echo.router)
+        startup_log.info("S5b: echo_debug router attached")
+
     startup_router = _create_startup_router(allowed_updates)
     routers.insert(0, startup_router)
 
@@ -274,13 +279,18 @@ async def main() -> None:
     start_scheduler(bot)
 
     runner = await _setup_tribute_webhook()
-    logging.info(">>> Starting polling (aiogram)...")
+    startup_log.info("S7: start_polling enter")
     try:
         await dp.start_polling(
             bot,
             allowed_updates=allowed_updates,
         )
+        startup_log.info("S8: start_polling exited normally")
+    except Exception:
+        startup_log.exception("E!: start_polling crashed")
+        raise
     finally:
+        startup_log.info("S9: shutdown sequence")
         logging.info(">>> Polling stopped")
         if runner is not None:
             await runner.cleanup()

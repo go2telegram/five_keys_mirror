@@ -36,6 +36,7 @@ async def test_startup_handler_invokes_notify(monkeypatch) -> None:  # noqa: ANN
         return original_get_logger(name)
 
     monkeypatch.setattr(logging, "getLogger", fake_get_logger)
+    monkeypatch.setattr("app.main.startup_log", dummy_logger)
 
     notify_mock = AsyncMock()
     monkeypatch.setattr("app.main._notify_admin_startup", notify_mock)
@@ -51,5 +52,5 @@ async def test_startup_handler_invokes_notify(monkeypatch) -> None:  # noqa: ANN
 
     await handler(_DummyBot())
 
-    assert any("startup event fired" in msg for msg in dummy_logger.messages)
+    assert any("S0: startup event fired" in msg for msg in dummy_logger.messages)
     notify_mock.assert_awaited()
