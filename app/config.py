@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     LEADS_CHAT_ID: int | None = None
 
     DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
+    DB_MIGRATE_ON_START: bool = True
     REDIS_URL: str | None = None
     TIMEZONE: str = "Europe/Moscow"
 
