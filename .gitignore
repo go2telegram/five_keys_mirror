@@ -7,8 +7,11 @@ __pycache__/
 .venv/
 venv/
 .env
+*.env
 .env.*
 *.sqlite
+app/build_info.py
+.run/
 
 # Node (tunnel, tools)
 node_modules/
