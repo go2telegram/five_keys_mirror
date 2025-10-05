@@ -1,9 +1,13 @@
 import asyncio
+import sys
+from pathlib import Path
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 from app.config import settings
+from app.instance_lock import AlreadyRunningError, InstanceLock
 from app.scheduler.service import start_scheduler
 
 # существующие роутеры
@@ -74,4 +78,10 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    lock = InstanceLock(Path(".run") / "bot.lock")
+    try:
+        with lock:
+            asyncio.run(main())
+    except AlreadyRunningError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(12) from exc
