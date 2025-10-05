@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -208,10 +209,21 @@ async def main() -> None:
         log_dir=settings.LOG_DIR,
         level=_resolve_log_level(settings.LOG_LEVEL),
     )
-    startup_log.info("S1: setup_logging done")
 
-    revision = await init_db()
-    startup_log.info("S2: init_db done")
+    t0 = time.perf_counter()
+
+    def mark(tag: str) -> None:
+        startup_log.info("%s (%.1f ms)", tag, (time.perf_counter() - t0) * 1000)
+
+    mark("S1: setup_logging done")
+
+    mark("S2-start: init_db")
+    try:
+        revision = await init_db()
+    except Exception:
+        startup_log.exception("E!: init_db failed")
+        raise
+    mark("S2-done: init_db")
     logging.info("current alembic version: %s", revision or "unknown")
 
     bot = Bot(
@@ -219,13 +231,13 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode="HTML"),
     )
     dp = Dispatcher()
-    startup_log.info("S3: bot/dispatcher created")
+    mark("S3: bot/dispatcher created")
 
     _register_audit_middleware(dp)
+    mark("S4: audit middleware registered")
     _log_startup_metadata()
 
     allowed_updates = list(ALLOWED_UPDATES)
-    startup_log.info("S6: allowed_updates=%r", allowed_updates)
 
     routers = [
         h_start.router,
@@ -275,22 +287,25 @@ async def main() -> None:
     dp.callback_query.register(home_main, F.data == "home:main")
 
     _log_router_overview(dp, routers, allowed_updates)
+    mark(f"S5: routers attached count={len(routers)}")
+
+    mark(f"S6: allowed_updates={allowed_updates}")
 
     start_scheduler(bot)
 
     runner = await _setup_tribute_webhook()
-    startup_log.info("S7: start_polling enter")
+    mark("S7: start_polling enter")
     try:
         await dp.start_polling(
             bot,
             allowed_updates=allowed_updates,
         )
-        startup_log.info("S8: start_polling exited normally")
+        mark("S8: start_polling exited normally")
     except Exception:
         startup_log.exception("E!: start_polling crashed")
         raise
     finally:
-        startup_log.info("S9: shutdown sequence")
+        mark("S9: shutdown sequence")
         logging.info(">>> Polling stopped")
         if runner is not None:
             await runner.cleanup()

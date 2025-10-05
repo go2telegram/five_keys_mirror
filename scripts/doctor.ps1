@@ -65,6 +65,8 @@ foreach ($file in $requiredFiles) {
 $mainContent = Get-Content 'app/main.py' -Encoding UTF8 -ErrorAction SilentlyContinue
 $mainText = $mainContent -join "`n"
 Write-Check 'S1 marker present' ($mainText -match 'S1: setup_logging done') 'ensure setup marker is logged'
+Write-Check 'S2-start marker present' ($mainText -match 'S2-start: init_db') 'log init_db start marker'
+Write-Check 'S2-done marker present' ($mainText -match 'S2-done: init_db') 'log init_db completion marker'
 Write-Check 'outer middleware registered' ($mainText -match 'outer_middleware\(AuditMiddleware\(\)\)') 'call _register_audit_middleware in main.py'
 Write-Check 'S4 marker present' ($mainText -match 'S4: audit middleware registered') 'ensure startup logger prints S4'
 Write-Check 'S6 marker present' ($mainText -match "S6: allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'

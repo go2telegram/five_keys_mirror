@@ -85,11 +85,14 @@ async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.Log
     for marker in [
         "S0:",
         "S1:",
-        "S2:",
+        "S2-start:",
+        "S2-done:",
         "S3:",
         "S4:",
         "S5:",
         "S6:",
         "S7:",
+        "S8:",
+        "S9:",
     ]:
         assert marker in text
