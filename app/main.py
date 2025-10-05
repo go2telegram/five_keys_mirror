@@ -218,13 +218,14 @@ async def main() -> None:
     mark("S1: setup_logging done")
 
     mark("S2-start: init_db")
+    revision: str | None = None
     try:
         revision = await init_db()
     except Exception:
         startup_log.exception("E!: init_db failed")
-        raise
-    mark("S2-done: init_db")
-    logging.info("current alembic version: %s", revision or "unknown")
+    finally:
+        mark("S2-done: init_db")
+        logging.info("current alembic version: %s", revision or "unknown")
 
     bot = Bot(
         token=settings.BOT_TOKEN,
