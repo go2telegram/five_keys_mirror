@@ -30,6 +30,7 @@ from app.handlers import navigator as h_navigator
 from app.handlers import notify as h_notify
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
+from app.handlers import panel as h_panel
 
 # новые
 from app.handlers import subscription as h_subscription
@@ -65,6 +66,7 @@ async def main():
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
     dp.include_router(h_lead.router)
+    dp.include_router(h_panel.router)
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)

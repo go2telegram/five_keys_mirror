@@ -25,6 +25,15 @@ def kb_main() -> InlineKeyboardMarkup:
     kb.adjust(1, 2, 1, 1, 1, 3)
     return kb.as_markup()
 
+
+def kb_panel() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔁 Ping", callback_data="panel:ping")
+    kb.button(text="🪪 Echo", callback_data="panel:echo")
+    kb.button(text="📜 Логи", callback_data="panel:logs")
+    kb.adjust(1)
+    return kb.as_markup()
+
 # ---------- Меню «Все квизы» ----------
 
 
