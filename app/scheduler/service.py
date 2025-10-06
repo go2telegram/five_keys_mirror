@@ -2,7 +2,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
-from app.scheduler.jobs import send_nudges
+from app.scheduler.jobs import send_nudges, run_autonomous_research
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +29,17 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if getattr(settings, "ENABLE_AUTONOMOUS_RESEARCH", False):
+        research_trigger = CronTrigger(hour=4, minute=0)
+        scheduler.add_job(
+            run_autonomous_research,
+            trigger=research_trigger,
+            args=[bot],
+            name="autonomous_research",
+            misfire_grace_time=900,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler

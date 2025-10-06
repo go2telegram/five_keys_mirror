@@ -29,6 +29,7 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from bot import admin_research as h_admin_research
 
 
 async def main():
@@ -49,6 +50,7 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
+    dp.include_router(h_admin_research.router)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)

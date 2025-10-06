@@ -4,6 +4,8 @@ from zoneinfo import ZoneInfo
 from aiogram import Bot
 from app.storage import USERS
 from app.utils_openai import ai_generate
+from app.config import settings
+from research.engine import engine
 
 async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     """
@@ -32,4 +34,18 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
             await bot.send_message(uid, text)
         except Exception:
             # молча пропускаем закрытые чаты/блок
+            pass
+
+
+async def run_autonomous_research(bot: Bot):
+    """Ensure the autonomous research loop is executed and notify the admin."""
+    notifications = engine.ensure_daily_experiment()
+    if not notifications:
+        return
+
+    for note in notifications:
+        try:
+            await bot.send_message(settings.ADMIN_ID, note)
+        except Exception:
+            # Ignore delivery errors so that the job never crashes APScheduler.
             pass
