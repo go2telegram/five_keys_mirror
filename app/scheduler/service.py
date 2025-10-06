@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.economy_regulate import run_weekly_regulation
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,21 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if settings.ENABLE_REGULATION_LAYER:
+        regulation_trigger = CronTrigger(
+            day_of_week=settings.REGULATION_UPDATE_DAY,
+            hour=settings.REGULATION_UPDATE_HOUR_LOCAL,
+            minute=0,
+        )
+        scheduler.add_job(
+            run_weekly_regulation,
+            trigger=regulation_trigger,
+            name="run_weekly_regulation",
+            misfire_grace_time=3600,
+            coalesce=True,
+            max_instances=1,
+        )
+
     scheduler.start()
     return scheduler

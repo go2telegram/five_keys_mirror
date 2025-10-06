@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
 
+    # Экономика / регулирование
+    ENABLE_REGULATION_LAYER: bool = True
+    REGULATION_UPDATE_DAY: str = "mon"
+    REGULATION_UPDATE_HOUR_LOCAL: int = 4
+
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"
     SUB_PRO_MATCH: str = "pro"
