@@ -1,0 +1,15 @@
+# ethics/rules.yml
+# Определяет допустимые и запрещённые автоматические действия.
+# Любое автоматизированное действие должно быть явно перечислено в allowed_actions.
+# Если действие попадает в forbidden_actions или отсутствует в списке разрешённых,
+# валидатор заблокирует его выполнение.
+
+allowed_actions:
+  - generate_nudge_content
+  - send_nudge_message
+  - record_opt_in_status
+
+forbidden_actions:
+  - share_personal_data_without_consent
+  - mass_message_without_opt_in
+  - delete_user_data_without_request

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
     TZ: str = "Europe/Moscow"
+    ENABLE_ETHICS: bool = True
 
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""

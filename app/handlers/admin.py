@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from app.ethics import ethics_validator
 
 router = Router()
 
@@ -105,3 +106,18 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+
+
+@router.message(Command("ethics_status"))
+async def ethics_status(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+
+    status = ethics_validator.status()
+    enabled_icon = "🟢" if status["enabled"] else "⚪️"
+    await m.answer(
+        "🛡️ Этический контроль\n"
+        f"Статус: {enabled_icon} {'включён' if status['enabled'] else 'выключен'}\n"
+        f"Нарушений: {status['violations']}\n"
+        f"Файл правил: {status['rules_path']}"
+    )
