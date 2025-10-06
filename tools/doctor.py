@@ -62,7 +62,7 @@ def check_environment(env: Dict[str, str]) -> CheckReport:
     details: Dict[str, Any] = {}
     actions: List[Action] = []
 
-    required = ["BOT_TOKEN", "ADMIN_ID"]
+    required = ["BOT_TOKEN"]
     missing_required = [var for var in required if not env.get(var)]
     if missing_required:
         status = upgrade_status(status, "FAIL")
@@ -76,7 +76,18 @@ def check_environment(env: Dict[str, str]) -> CheckReport:
         )
     else:
         details["BOT_TOKEN"] = bool(env.get("BOT_TOKEN"))
-        details["ADMIN_ID"] = env.get("ADMIN_ID")
+
+    admin_ids_raw = env.get("ADMIN_IDS") or env.get("ADMIN_ID")
+    if not admin_ids_raw:
+        status = upgrade_status(status, "FAIL")
+        actions.append(
+            Action(
+                "Configure ADMIN_IDS (comma-separated) or legacy ADMIN_ID for access control.",
+                "FAIL",
+            )
+        )
+    else:
+        details["ADMIN_IDS"] = admin_ids_raw
 
     log_path = env.get("LOG_PATH")
     if not log_path:

@@ -11,6 +11,7 @@ from aiogram.types import CallbackQuery, Message
 
 from app.config import settings
 from app.keyboards import kb_panel
+from app.throttle import allow
 from app.utils_logs import tail_logs
 
 router = Router()
@@ -56,12 +57,13 @@ def _format_as_pre(text: str) -> str:
 
 
 def _check_admin(user_id: int) -> bool:
-    return user_id == settings.ADMIN_ID
+    return settings.is_admin(user_id)
 
 
 @router.message(Command("panel"))
 async def panel_command(message: Message) -> None:
     if not _check_admin(message.from_user.id):
+        await message.answer("Команда доступна только администраторам")
         return
 
     await message.answer(
@@ -73,7 +75,11 @@ async def panel_command(message: Message) -> None:
 @router.callback_query(F.data == "panel:ping")
 async def panel_ping(callback: CallbackQuery) -> None:
     if not _check_admin(callback.from_user.id):
-        await callback.answer()
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+
+    if not allow(callback.from_user.id, "panel:ping"):
+        await callback.answer("Слишком часто", show_alert=True)
         return
 
     result = await _request_json("GET", "/ping")
@@ -88,7 +94,11 @@ async def panel_ping(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "panel:echo")
 async def panel_echo(callback: CallbackQuery) -> None:
     if not _check_admin(callback.from_user.id):
-        await callback.answer()
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+
+    if not allow(callback.from_user.id, "panel:echo"):
+        await callback.answer("Слишком часто", show_alert=True)
         return
 
     payload = {"source": "panel", "ts": datetime.now(timezone.utc).isoformat()}
@@ -104,7 +114,11 @@ async def panel_echo(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "panel:logs")
 async def panel_logs(callback: CallbackQuery) -> None:
     if not _check_admin(callback.from_user.id):
-        await callback.answer()
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+
+    if not allow(callback.from_user.id, "panel:logs"):
+        await callback.answer("Слишком часто", show_alert=True)
         return
 
     if not settings.LOG_PATH:
