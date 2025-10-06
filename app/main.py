@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from growth.referrals import export_prometheus_metrics
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -60,9 +61,16 @@ async def main():
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
+    async def metrics_handler(_: web.Request) -> web.Response:
+        return web.Response(
+            text=export_prometheus_metrics(),
+            content_type="text/plain; version=0.0.4",
+        )
+
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web.router.add_get("/metrics", metrics_handler)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)

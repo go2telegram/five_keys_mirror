@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.growth_report import send_growth_digest
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,16 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    digest_trigger = CronTrigger(day_of_week="mon", hour=settings.NOTIFY_HOUR_LOCAL, minute=30)
+    scheduler.add_job(
+        send_growth_digest,
+        trigger=digest_trigger,
+        args=[bot],
+        name="growth_digest",
+        misfire_grace_time=600,
+        coalesce=True,
+        max_instances=1,
+    )
+
     scheduler.start()
     return scheduler

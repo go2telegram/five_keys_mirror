@@ -1,72 +1,70 @@
 # app/handlers/referral.py
+from datetime import timedelta
+
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from datetime import datetime, timezone
+from aiogram.types import CallbackQuery, Message
 
 from app.storage import USERS, save_event
+from bot.referral_ui import build_dashboard
+from growth.bonuses import get_bonus_profile
+from growth.referrals import compute_viral_k, get_user_stats
 
 router = Router()
 
-
-def _now(): return datetime.now(timezone.utc)
-
-
-async def _ref_link(bot, user_id: int) -> str:
-    me = await bot.get_me()
-    uname = me.username or "your_bot"
-    return f"https://t.me/{uname}?start=ref_{user_id}"
+_CHANNELS = ("organic", "stories", "reels", "newsletter")
 
 
 def _ensure_ref_fields(uid: int):
     u = USERS.setdefault(uid, {})
     u.setdefault("ref_code", str(uid))
     u.setdefault("referred_by", None)
-    u.setdefault("ref_clicks", 0)       # уникальные входы по ссылке
-    # подтверждённые регистрации (первый /start)
+    u.setdefault("ref_clicks", 0)
     u.setdefault("ref_joins", 0)
-    u.setdefault("ref_conversions", 0)  # оплатившие (из вебхука)
-    u.setdefault("ref_users", set())    # set(uid) приглашённых (в памяти)
+    u.setdefault("ref_conversions", 0)
+    u.setdefault("ref_users", set())
+    u.setdefault("ref_channel", _CHANNELS[0])
 
 
-def _kb_ref(link: str):
-    kb = InlineKeyboardBuilder()
-    kb.button(text="🔗 Поделиться ссылкой", url=link)
-    kb.button(text="🏠 Домой", callback_data="home")
-    kb.adjust(1, 1)
-    return kb.as_markup()
+async def _dashboard(bot, uid: int, *, channel: str | None = None):
+    _ensure_ref_fields(uid)
+    user_data = USERS[uid]
+    if channel:
+        user_data["ref_channel"] = channel
+    current_channel = user_data.get("ref_channel", _CHANNELS[0])
+    me = await bot.get_me()
+    username = me.username or "your_bot"
+    stats = get_user_stats(uid)
+    bonus = get_bonus_profile(uid)
+    viral_k = compute_viral_k(window=timedelta(days=30))
+    dash = build_dashboard(
+        bot_username=username,
+        user_id=uid,
+        stats=stats,
+        bonus=bonus,
+        invited=len(user_data.get("ref_users", set())),
+        channel=current_channel,
+        viral_k=viral_k,
+        channels=_CHANNELS,
+    )
+    return dash
 
 
 @router.callback_query(F.data == "ref:menu")
 async def ref_menu_cb(c: CallbackQuery):
-    uid = c.from_user.id
-    _ensure_ref_fields(uid)
-    link = await _ref_link(c.bot, uid)
-    u = USERS[uid]
-    text = (
-        "👥 <b>Реферальная ссылка</b>\n"
-        f"{link}\n\n"
-        f"Приглашённых: <b>{len(u['ref_users'])}</b>\n"
-        f"Уникальных переходов: <b>{u['ref_clicks']}</b>\n"
-        f"Оплат (конверсий): <b>{u['ref_conversions']}</b>\n\n"
-        "Поделитесь ссылкой — когда друг оформит подписку, я засчитаю конверсию."
-    )
-    await c.message.edit_text(text, reply_markup=_kb_ref(link))
+    dash = await _dashboard(c.bot, c.from_user.id)
+    await c.message.edit_text(dash.text, reply_markup=dash.keyboard)
+
+
+@router.callback_query(F.data.startswith("ref:channel:"))
+async def ref_select_channel(c: CallbackQuery):
+    _, _, channel = c.data.partition("ref:channel:")
+    dash = await _dashboard(c.bot, c.from_user.id, channel=channel)
+    await c.message.edit_text(dash.text, reply_markup=dash.keyboard)
 
 
 @router.message(Command("ref"))
 async def ref_menu_msg(m: Message):
-    uid = m.from_user.id
-    _ensure_ref_fields(uid)
-    link = await _ref_link(m.bot, uid)
-    u = USERS[uid]
-    text = (
-        "👥 <b>Реферальная ссылка</b>\n"
-        f"{link}\n\n"
-        f"Приглашённых: <b>{len(u['ref_users'])}</b>\n"
-        f"Уникальных переходов: <b>{u['ref_clicks']}</b>\n"
-        f"Оплат (конверсий): <b>{u['ref_conversions']}</b>\n"
-    )
-    await m.answer(text, reply_markup=_kb_ref(link))
-    save_event(uid, USERS.get(uid, {}).get("source"), "ref_menu")
+    dash = await _dashboard(m.bot, m.from_user.id)
+    await m.answer(dash.text, reply_markup=dash.keyboard)
+    save_event(m.from_user.id, USERS.get(m.from_user.id, {}).get("source"), "ref_menu")
