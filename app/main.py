@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from symbiosis.core import symbiosis_engine
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -29,6 +30,17 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+
+if settings.ENABLE_SYMBIOTIC_INTELLIGENCE:
+    from bot import admin_symbiosis as b_admin_symbiosis
+
+
+async def http_symbiosis_status(_: web.Request) -> web.Response:
+    if not settings.ENABLE_SYMBIOTIC_INTELLIGENCE:
+        raise web.HTTPNotFound(text="Symbiotic intelligence disabled")
+
+    status = await symbiosis_engine.status()
+    return web.json_response(status)
 
 
 async def main():
@@ -57,12 +69,17 @@ async def main():
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
 
+    if settings.ENABLE_SYMBIOTIC_INTELLIGENCE:
+        dp.include_router(b_admin_symbiosis.router)
+
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    if settings.ENABLE_SYMBIOTIC_INTELLIGENCE:
+        app_web.router.add_get("/symbiosis_status", http_symbiosis_status)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)

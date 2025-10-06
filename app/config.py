@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
 
+    ENABLE_SYMBIOTIC_INTELLIGENCE: bool = True
+
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"
     SUB_PRO_MATCH: str = "pro"
