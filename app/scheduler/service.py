@@ -2,7 +2,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
-from app.scheduler.jobs import send_nudges
+from app.scheduler.jobs import send_daily_admin_report, send_nudges
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -25,6 +25,19 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         trigger=trigger,
         args=[bot, settings.TZ, weekdays],
         name="send_nudges",
+        misfire_grace_time=600,
+        coalesce=True,
+        max_instances=1,
+    )
+    report_trigger = CronTrigger(
+        hour=settings.ADMIN_REPORT_HOUR,
+        minute=settings.ADMIN_REPORT_MINUTE,
+    )
+    scheduler.add_job(
+        send_daily_admin_report,
+        trigger=report_trigger,
+        args=[bot, settings.ADMIN_REPORT_WINDOW_HOURS],
+        name="daily_admin_report",
         misfire_grace_time=600,
         coalesce=True,
         max_instances=1,

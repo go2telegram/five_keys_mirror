@@ -91,7 +91,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         if tg_id:
             user_id = int(tg_id)
             expiry = _parse_expiry(expires)
-            profile = await ensure_user(user_id)
+            profile, _ = await ensure_user(user_id)
             await set_subscription(user_id, plan_code=plan, expires_at=expiry)
 
             if profile.referred_by:

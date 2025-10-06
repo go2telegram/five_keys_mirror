@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, Optional
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Lead, Subscription, User, Product
+from app.db.models import AdminEvent, Lead, Subscription, User, Product
 from app.db.session import session_scope
 
 # временные состояния/ивенты остаются ин-мемори
@@ -52,6 +52,14 @@ class LeadRecord:
     comment: Optional[str]
     created_at: dt.datetime
     metadata: dict
+
+
+@dataclass(slots=True)
+class AdminEventRecord:
+    id: int
+    kind: str
+    payload: dict
+    created_at: dt.datetime
 
 
 def _map_subscription(orm_sub: Subscription | None) -> SubscriptionInfo | None:
@@ -98,6 +106,15 @@ def _map_lead(lead: Lead) -> LeadRecord:
     )
 
 
+def _map_admin_event(event: AdminEvent) -> AdminEventRecord:
+    return AdminEventRecord(
+        id=event.id,
+        kind=event.kind,
+        payload=dict(event.payload or {}),
+        created_at=event.created_at,
+    )
+
+
 async def _load_user(session, tg_id: int) -> User | None:
     stmt = select(User).where(User.telegram_id == tg_id).options(selectinload(User.referred_by))
     return await session.scalar(stmt)
@@ -112,17 +129,62 @@ async def _load_active_subscription(session, user_id: int) -> Subscription | Non
     return await session.scalar(stmt)
 
 
-async def ensure_user(tg_id: int, *, source: Optional[str] = None) -> UserProfile:
+async def ensure_user(tg_id: int, *, source: Optional[str] = None) -> tuple[UserProfile, bool]:
     async with session_scope() as session:
         user = await _load_user(session, tg_id)
+        created = False
         if user is None:
             user = User(telegram_id=tg_id, ref_code=str(tg_id))
             session.add(user)
             await session.flush()
+            created = True
         if user.source is None and source:
             user.source = source
         sub = await _load_active_subscription(session, user.id)
-        return _map_user(user, sub)
+        return _map_user(user, sub), created
+
+
+async def log_admin_event(kind: str, payload: Optional[dict] = None) -> AdminEventRecord:
+    async with session_scope() as session:
+        event = AdminEvent(kind=kind, payload=payload or {})
+        session.add(event)
+        await session.flush()
+        await session.refresh(event)
+        return _map_admin_event(event)
+
+
+async def fetch_admin_events(
+    kind: Optional[str] = None,
+    *,
+    since: Optional[dt.datetime] = None,
+    limit: Optional[int] = None,
+) -> list[AdminEventRecord]:
+    async with session_scope() as session:
+        stmt = select(AdminEvent)
+        if kind:
+            stmt = stmt.where(AdminEvent.kind == kind)
+        if since:
+            stmt = stmt.where(AdminEvent.created_at >= since)
+        stmt = stmt.order_by(AdminEvent.created_at.desc())
+        if limit:
+            stmt = stmt.limit(limit)
+        records = await session.scalars(stmt)
+        return [_map_admin_event(item) for item in records]
+
+
+async def count_admin_events(
+    kind: Optional[str] = None,
+    *,
+    since: Optional[dt.datetime] = None,
+) -> int:
+    async with session_scope() as session:
+        stmt = select(func.count()).select_from(AdminEvent)
+        if kind:
+            stmt = stmt.where(AdminEvent.kind == kind)
+        if since:
+            stmt = stmt.where(AdminEvent.created_at >= since)
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
 
 
 async def get_user(tg_id: int) -> Optional[UserProfile]:
@@ -245,7 +307,16 @@ async def add_lead(lead: dict) -> LeadRecord:
         session.add(orm_lead)
         await session.flush()
         await session.refresh(orm_lead, attribute_names=["user"])
-        return _map_lead(orm_lead)
+        record = _map_lead(orm_lead)
+    await log_admin_event(
+        "lead_created",
+        {
+            "lead_id": record.id,
+            "user_id": record.user_id,
+            "name": record.name,
+        },
+    )
+    return record
 
 
 async def get_leads_last(n: int = 10) -> list[LeadRecord]:

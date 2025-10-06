@@ -91,3 +91,12 @@ class Lead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     user: Mapped[Optional["User"]] = relationship(back_populates="leads")
+
+
+class AdminEvent(Base):
+    __tablename__ = "admin_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    payload: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)

@@ -30,7 +30,7 @@ def _kb_ref(link: str):
 @router.callback_query(F.data == "ref:menu")
 async def ref_menu_cb(c: CallbackQuery):
     uid = c.from_user.id
-    profile = await ensure_user(uid)
+    profile, _ = await ensure_user(uid)
     link = await _ref_link(c.bot, uid)
     text = (
         "👥 <b>Реферальная ссылка</b>\n"
@@ -46,7 +46,7 @@ async def ref_menu_cb(c: CallbackQuery):
 @router.message(Command("ref"))
 async def ref_menu_msg(m: Message):
     uid = m.from_user.id
-    profile = await ensure_user(uid)
+    profile, _ = await ensure_user(uid)
     link = await _ref_link(m.bot, uid)
     text = (
         "👥 <b>Реферальная ссылка</b>\n"

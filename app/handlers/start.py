@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
+from html import escape
 
 from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
 from app.keyboards import kb_main, kb_yes_no
@@ -13,6 +14,7 @@ from app.storage import (
     save_event,
     get_user,
 )
+from app.notifications import notify_admins
 
 router = Router()
 
@@ -23,7 +25,27 @@ async def start(message: Message):
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
-    profile = await ensure_user(tg_id, source=payload or None)
+    profile, created = await ensure_user(tg_id, source=payload or None)
+    if created:
+        username_raw = message.from_user.username
+        username = f"@{escape(username_raw)}" if username_raw else "—"
+        full_name = escape(message.from_user.full_name) if message.from_user.full_name else "(не указано)"
+        source_label = escape(payload) if payload else "—"
+        await notify_admins(
+            "👋 Новый пользователь\n"
+            f"ID: <code>{tg_id}</code>\n"
+            f"Имя: {full_name}\n"
+            f"Username: {username}\n"
+            f"Источник: {source_label}",
+            bot=message.bot,
+            event_kind="user_registered",
+            event_payload={
+                "user_id": tg_id,
+                "username": message.from_user.username,
+                "full_name": message.from_user.full_name,
+                "source": payload or None,
+            },
+        )
     await save_event(tg_id, payload or profile.source, "start")
 
     # --- обработка реферального кода ---

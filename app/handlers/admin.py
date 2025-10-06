@@ -6,13 +6,8 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
-from app.storage import (
-    EVENTS,
-    get_leads_last,
-    count_users,
-    count_notify_enabled,
-    count_leads,
-)
+from app.storage import get_leads_last
+from app.notifications import collect_daily_stats, render_stats_report, render_error_report
 
 router = Router()
 
@@ -21,25 +16,38 @@ router = Router()
 async def stats(m: Message):
     if m.from_user.id != settings.ADMIN_ID:
         return
-    total_users = await count_users()
-    subs = await count_notify_enabled()
-    quizzes = sum(1 for e in EVENTS if e["action"] == "quiz_finish")
-    starts = sum(1 for e in EVENTS if e["action"] == "start")
-    leads_cnt = await count_leads()
-
+    hours = 24
+    parts = m.text.strip().split()
+    if len(parts) > 1:
+        try:
+            hours = max(1, int(parts[1]))
+        except Exception:
+            hours = 24
+    stats = await collect_daily_stats(hours)
     await m.answer(
-        "📊 Статистика\n"
-        f"Пользователи: {total_users}\n"
-        f"Подписаны на напоминания: {subs}\n"
-        f"Стартов: {starts}\n"
-        f"Завершено квизов: {quizzes}\n"
-        f"Лиды (всего): {leads_cnt}\n\n"
-        "Команды:\n"
+        render_stats_report(stats)
+        + "\n\nКоманды:\n"
         "• /leads — последние 10 лидов\n"
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
-        "• /leads_csv 500 — CSV последних 500"
+        "• /leads_csv 500 — CSV последних 500\n"
+        "• /errors — ошибки за период"
     )
+
+
+@router.message(Command("errors"))
+async def errors_report(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+    hours = 24
+    parts = m.text.strip().split()
+    if len(parts) > 1:
+        try:
+            hours = max(1, int(parts[1]))
+        except Exception:
+            hours = 24
+    report = await render_error_report(window_hours=hours)
+    await m.answer(report)
 
 
 @router.message(Command("leads"))

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
 
+    ADMIN_REPORT_HOUR: int = 9
+    ADMIN_REPORT_MINUTE: int = 30
+    ADMIN_REPORT_WINDOW_HOURS: int = 24
+
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 

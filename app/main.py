@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import traceback
 from contextlib import suppress
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.types import ErrorEvent
 from aiohttp import web
 
 from app.config import settings
@@ -15,6 +17,7 @@ from app.products import sync_products
 from app.scheduler.service import start_scheduler
 from app.security import configure_logging
 from app.watchdog import start_watchdog
+from app.notifications import admin_notifier, notify_admins
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -45,12 +48,41 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+async def on_error(event: ErrorEvent) -> bool:
+    exc = event.exception
+    fingerprint = f"{type(exc).__name__}: {str(exc)[:80]}"
+    stack = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    stack_tail = stack[-400:]
+    update_preview = ""
+    if event.update:
+        try:
+            update_preview = str(event.update.model_dump(exclude_none=True))[:200]
+        except Exception:
+            update_preview = repr(event.update)[:200]
+    payload = {
+        "fingerprint": fingerprint,
+        "message": str(exc),
+        "sample": stack_tail,
+        "update": update_preview,
+    }
+    logger.error("Unhandled update error: %s\n%s", fingerprint, stack_tail)
+    text = (
+        "🚨 Ошибка обработчика\n"
+        f"{fingerprint}\n"
+        f"Update: {update_preview}"
+    )
+    await notify_admins(text, event_kind="error", event_payload=payload)
+    return True
+
+
 async def main():
     await init_db_safe()
     await sync_products()
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
+    admin_notifier.bind(bot)
     dp = Dispatcher()
+    dp.errors.register(on_error)
 
     # роутеры
     dp.include_router(h_start.router)

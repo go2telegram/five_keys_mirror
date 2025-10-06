@@ -115,3 +115,17 @@ state is kept across restarts.
 - **GitHub security**: enable _Secret Scanning_ and _Push Protection_ for the
   repository (Settings → Code security and analysis) to block accidental
   credential leaks during code review.
+
+## Admin notifications & reports
+
+- **Instant alerts**: critical events automatically ping the admin chat via
+  `notify_admins()`. The bot notifies about new user registrations, background
+  broadcast runs, and any unhandled errors (with stack trace fingerprints).
+- **Command reports**: `/stats [hours]` renders a summary with total users,
+  notification opt-ins, and new leads/broadcasts/errors for the selected
+  window (24 h by default). `/errors [hours]` groups recent failures by
+  fingerprint so recurring issues are easy to spot.
+- **Daily digest**: an APScheduler job (configurable via
+  `ADMIN_REPORT_HOUR`, `ADMIN_REPORT_MINUTE`, and `ADMIN_REPORT_WINDOW_HOURS`)
+  sends a morning report with the latest statistics plus the condensed error
+  breakdown. The digest is delivered silently to avoid noisy wake-ups.
