@@ -6,7 +6,13 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
-from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from app.storage import (
+    EVENTS,
+    get_leads_last,
+    count_users,
+    count_notify_enabled,
+    count_leads,
+)
 
 router = Router()
 
@@ -15,11 +21,11 @@ router = Router()
 async def stats(m: Message):
     if m.from_user.id != settings.ADMIN_ID:
         return
-    total_users = len(USERS)
-    subs = sum(1 for u in USERS.values() if u.get("subs"))
+    total_users = await count_users()
+    subs = await count_notify_enabled()
     quizzes = sum(1 for e in EVENTS if e["action"] == "quiz_finish")
     starts = sum(1 for e in EVENTS if e["action"] == "start")
-    leads_cnt = len(get_leads_all())
+    leads_cnt = await count_leads()
 
     await m.answer(
         "📊 Статистика\n"
@@ -48,7 +54,7 @@ async def leads_list(m: Message):
     except Exception:
         n = 10
 
-    items = get_leads_last(n)
+    items = await get_leads_last(n)
     if not items:
         await m.answer("Лидов пока нет.")
         return
@@ -57,11 +63,11 @@ async def leads_list(m: Message):
     chunks = []
     for i, lead in enumerate(items, 1):
         chunks.append(
-            f"#{i} — <b>{lead.get('name','(без имени)')}</b>\n"
-            f"📞 {lead.get('phone','(нет)')}\n"
-            f"💬 {lead.get('comment','(пусто)')}\n"
-            f"👤 {lead.get('username')}\n"
-            f"🕒 {lead.get('ts')}"
+            f"#{i} — <b>{lead.name or '(без имени)'}</b>\n"
+            f"📞 {lead.phone or '(нет)'}\n"
+            f"💬 {lead.comment or '(пусто)'}\n"
+            f"👤 {lead.username or lead.user_id or '(нет)'}\n"
+            f"🕒 {lead.created_at.isoformat()}"
         )
 
     text = "📝 Последние лиды:\n\n" + "\n\n".join(chunks)
@@ -83,7 +89,7 @@ async def leads_csv(m: Message):
     except Exception:
         n = 100
 
-    items = get_leads_last(n)
+    items = await get_leads_last(n)
     if not items:
         await m.answer("Лидов пока нет.")
         return
@@ -92,12 +98,12 @@ async def leads_csv(m: Message):
     out = StringIO()
     out.write("ts;name;phone;comment;username;user_id\n")
     for lead in items:
-        ts = lead.get("ts", "")
-        name = (lead.get("name", "").replace(";", ","))
-        phone = lead.get("phone", "")
-        comment = (lead.get("comment", "").replace(";", ","))
-        username = lead.get("username", "")
-        user_id = lead.get("user_id", "")
+        ts = lead.created_at.isoformat()
+        name = (lead.name or "").replace(";", ",")
+        phone = lead.phone or ""
+        comment = (lead.comment or "").replace(";", ",")
+        username = lead.username or ""
+        user_id = lead.user_id or ""
         out.write(f"{ts};{name};{phone};{comment};{username};{user_id}\n")
 
     csv_bytes = out.getvalue().encode("utf-8")

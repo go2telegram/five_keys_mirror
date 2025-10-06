@@ -41,3 +41,20 @@ InfluxDB/Prometheus data sources. Recommended Grafana queries:
 
 This setup ensures production-grade observability with Prometheus scraping,
 Telegraf forwarding, and Grafana dashboards.
+
+## Data persistence (PostgreSQL)
+
+User profiles, leads, subscriptions and the static product catalog are
+persisted in PostgreSQL via SQLAlchemy's async ORM. The application expects a
+`DATABASE_URL` environment variable (e.g.
+`postgresql://bot:password@localhost:5432/five_keys`) and falls back to a local
+SQLite file (`bot.db`) for development environments.
+
+Schema changes are tracked with Alembic. To create/update the database run:
+
+```
+alembic upgrade head
+```
+
+During startup the bot will also call `sync_products()` to ensure the built-in
+product catalog is synchronised with the database.

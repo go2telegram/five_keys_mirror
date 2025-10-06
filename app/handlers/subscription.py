@@ -4,7 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timezone
 
 from app.config import settings
-from app.storage import USERS
+from app.storage import get_user
 
 router = Router()
 
@@ -13,12 +13,14 @@ def _now():
     return datetime.now(timezone.utc)
 
 
-def _has_active_sub(user_id: int) -> tuple[bool, str]:
-    sub = USERS.get(user_id, {}).get("subscription")
-    if not sub:
+async def _has_active_sub(user_id: int) -> tuple[bool, str]:
+    profile = await get_user(user_id)
+    if not profile or not profile.subscription:
         return False, ""
-    until = datetime.fromisoformat(sub["until"])
-    return (until > _now(), sub["plan"])
+    until = profile.subscription.until
+    if until is None:
+        return True, profile.subscription.plan
+    return (until > _now(), profile.subscription.plan)
 
 
 def _kb_sub_menu():
@@ -46,7 +48,7 @@ async def sub_menu(c: CallbackQuery):
 
 @router.callback_query(F.data == "sub:check")
 async def sub_check(c: CallbackQuery):
-    ok, plan = _has_active_sub(c.from_user.id)
+    ok, plan = await _has_active_sub(c.from_user.id)
     if ok:
         await c.message.edit_text(f"✅ Подписка активна: <b>{plan.upper()}</b>")
     else:

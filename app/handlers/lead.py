@@ -83,7 +83,7 @@ async def lead_done(m: Message, state: FSMContext):
         "comment": comment,
         "ts": datetime.utcnow().isoformat()
     }
-    add_lead(lead)
+    await add_lead(lead)
 
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID

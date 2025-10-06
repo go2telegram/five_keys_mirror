@@ -98,3 +98,19 @@ GOAL_MAP = {
     "sleep": ["MAG_B6", "OMEGA3", "D3"],
     "beauty_joint": ["ERA_MIT_UP", "OMEGA3"],
 }
+
+
+async def sync_products() -> None:
+    from app.storage import upsert_product
+
+    for code, data in PRODUCTS.items():
+        metadata = {
+            "bullets": data.get("bullets", []),
+            "image_url": data.get("image_url"),
+            "buy_url": BUY_URLS.get(code),
+        }
+        await upsert_product(
+            code,
+            data.get("title", code.title()),
+            metadata=metadata,
+        )

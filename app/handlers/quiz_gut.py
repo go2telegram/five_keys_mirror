@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from app.keyboards import kb_buylist_pdf
-from app.storage import SESSIONS, USERS, save_event, set_last_plan
+from app.storage import SESSIONS, save_event, set_last_plan, get_user
 from app.utils_media import send_product_album
 from app.reco import product_lines
 from app.config import settings
@@ -84,7 +84,7 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         notes = "Если были антибиотики — курс MOBIO поможет быстрее восстановиться."
 
-        set_last_plan(
+        await set_last_plan(
             c.from_user.id,
             {
                 "title": "План: ЖКТ / микробиом",
@@ -109,8 +109,13 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:gut", rec_codes[:3]))
 
-        save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
-                   {"quiz": "gut", "score": total, "level": level})
+        profile = await get_user(c.from_user.id)
+        await save_event(
+            c.from_user.id,
+            profile.source if profile else None,
+            "quiz_finish",
+            {"quiz": "gut", "score": total, "level": level},
+        )
         SESSIONS.pop(c.from_user.id, None)
         return
 
