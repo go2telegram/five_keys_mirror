@@ -7,6 +7,8 @@ REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 cd "${REPO_ROOT}"
 
 ALLOW_STASH=${ALLOW_STASH:-0}
+REQUIRE_CI_MARKER=${REQUIRE_CI_MARKER:-1}
+CI_MARKER_FILE=${CI_MARKER_FILE:-.ciok}
 STASH_CREATED=0
 EXIT_CODE=0
 
@@ -41,7 +43,15 @@ fi
 
 if [ $EXIT_CODE -eq 0 ]; then
   if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
-    if ! git pull --ff-only; then
+    UPSTREAM_REF=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+    if [ "$REQUIRE_CI_MARKER" = "1" ]; then
+      UPSTREAM_COMMIT=$(git rev-parse "$UPSTREAM_REF")
+      if ! git show "${UPSTREAM_COMMIT}:${CI_MARKER_FILE}" >/dev/null 2>&1; then
+        echo "CI marker ${CI_MARKER_FILE} missing in ${UPSTREAM_REF}. Refusing to sync." >&2
+        EXIT_CODE=1
+      fi
+    fi
+    if [ $EXIT_CODE -eq 0 ] && ! git pull --ff-only; then
       echo "git pull failed." >&2
       EXIT_CODE=1
     fi

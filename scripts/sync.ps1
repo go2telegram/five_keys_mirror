@@ -7,6 +7,8 @@ $repoRoot = Resolve-Path (Join-Path $scriptDir '..')
 Set-Location $repoRoot
 
 $allowStash = $env:ALLOW_STASH -eq '1'
+$requireCiMarker = if ($env:REQUIRE_CI_MARKER) { $env:REQUIRE_CI_MARKER -eq '1' } else { $true }
+$ciMarkerFile = if ($env:CI_MARKER_FILE) { $env:CI_MARKER_FILE } else { '.ciok' }
 $stashCreated = $false
 $exitCode = 0
 
@@ -47,12 +49,30 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($exitCode -eq 0) {
-    git rev-parse --abbrev-ref --symbolic-full-name @{u} *> $null
+    $upstreamRef = git rev-parse --abbrev-ref --symbolic-full-name @{u}
     if ($LASTEXITCODE -eq 0) {
-        git pull --ff-only | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error 'git pull failed.'
-            $exitCode = 1
+        $upstreamRef = $upstreamRef.Trim()
+        if ($requireCiMarker) {
+            $upstreamCommit = git rev-parse $upstreamRef
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error 'Unable to resolve upstream commit.'
+                $exitCode = 1
+            }
+            else {
+                git show "$upstreamCommit:$ciMarkerFile" *> $null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "CI marker $ciMarkerFile missing in $upstreamRef. Refusing to sync."
+                    $exitCode = 1
+                }
+            }
+        }
+
+        if ($exitCode -eq 0) {
+            git pull --ff-only | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error 'git pull failed.'
+                $exitCode = 1
+            }
         }
     }
     else {
