@@ -1,148 +1,169 @@
-five_keys_bot
-=================
+# Five Keys Bot
 
-## Telemetry & Monitoring
+Production-ready Telegram assistant for wellness coaching with PostgreSQL persistence, Prometheus telemetry, and Docker-first deployment tooling.
 
-The bot exposes runtime metrics in Prometheus format at `GET /metrics`. The
-endpoint is served by the embedded aiohttp application (same host/port as the
-Tribute webhook server) and includes the following key series:
+- **Framework**: [Aiogram 3](https://docs.aiogram.dev/).
+- **Storage**: PostgreSQL for long-lived data, Redis for ephemeral cache/event fan-out.
+- **Observability**: `/metrics` Prometheus endpoint, `/ping` watchdog, masked `/panel/logs`.
+- **Automation**: APScheduler jobs, admin notifications, and a stress-test harness for performance baselines.
 
-- `bot_update_latency_seconds` — histogram with per-update processing latency.
-- `bot_updates_total` — counter for the total number of updates (use `rate()` in
-  Grafana to get updates per second).
-- `bot_update_errors_total` — counter of failed update processing attempts.
-- `bot_active_users` — gauge with the number of active users within the last
-  five minutes.
-- `bot_uptime_seconds` — gauge with the bot uptime, used by Grafana to visualise
-  service availability.
+---
 
-### Telegraf
+## Repository layout
 
-Add the following input to your Telegraf agent to scrape the metrics:
+| Path | Purpose |
+| ---- | ------- |
+| `app/` | Bot application code, organised by feature packages (admin, profile, referral, subscription) plus infrastructure modules. |
+| `alembic/` | Database migrations maintained with Alembic. |
+| `tools/stress_test.py` | Load generator that replays `/start` and `/panel` updates while capturing latency/CPU/RSS metrics. |
+| `doctor.py` | Operational diagnostics hitting `/ping` and `/metrics`. |
+| `docker-compose.yml` | One-command stack (bot + Postgres + Redis + Grafana). |
+| `docs/` | MkDocs documentation sources (API reference, onboarding guides). |
 
+---
+
+## Quickstart (15 min)
+
+### 1. Clone & prepare environment
+
+```bash
+git clone https://github.com/<your-org>/five_keys_bot.git
+cd five_keys_bot
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+pip install --upgrade pip
+pip install -r requirements-dev.txt
 ```
-[[inputs.prometheus]]
-  urls = ["http://localhost:8080/metrics"]
-  metric_version = 2
+
+### 2. Configure secrets
+
+Create a `.env` file at the project root (or export variables in your shell):
+
+```env
+BOT_TOKEN=123456:REPLACE_ME
+ADMIN_ID=123456789
+CALLBACK_SECRET=super-secret
+DATABASE_URL=postgresql://bot:password@localhost:5432/five_keys
+REDIS_URL=redis://localhost:6379/0
+TZ=Europe/Moscow
 ```
 
-Update the URL if your bot runs on a different host/port.
+> ℹ️  A local PostgreSQL/Redis stack is available via Docker Compose (see below) if you do not have services installed locally.
 
-### Grafana
+### 3. Apply database migrations
 
-With the Telegraf Prometheus input enabled, the metrics become available in
-InfluxDB/Prometheus data sources. Recommended Grafana queries:
-
-- **Uptime**: `bot_uptime_seconds` (displayed as a single stat or time series).
-- **Latency (p95)**: `histogram_quantile(0.95, sum by (le) (rate(bot_update_latency_seconds_bucket[5m])))`.
-- **Updates per second**: `rate(bot_updates_total[1m])`.
-- **Errors per second**: `rate(bot_update_errors_total[5m])`.
-- **Active users**: `bot_active_users`.
-
-This setup ensures production-grade observability with Prometheus scraping,
-Telegraf forwarding, and Grafana dashboards.
-
-## Data persistence (PostgreSQL)
-
-User profiles, leads, subscriptions and the static product catalog are
-persisted in PostgreSQL via SQLAlchemy's async ORM. The application expects a
-`DATABASE_URL` environment variable (e.g.
-`postgresql://bot:password@localhost:5432/five_keys`) and falls back to a local
-SQLite file (`bot.db`) for development environments.
-
-Schema changes are tracked with Alembic. To create/update the database run:
-
-```
+```bash
 alembic upgrade head
 ```
 
-During startup the bot will also call `sync_products()` to ensure the built-in
-product catalog is synchronised with the database.
+### 4. Launch the bot
 
-## Docker deployment
+```bash
+python run.py
+```
 
-The repository ships with a production-oriented Docker setup. To run the entire
-stack (bot, PostgreSQL, Redis, Grafana):
+The aiohttp webhook server listens on `http://0.0.0.0:8080`. Visit:
 
-1. Create a `.env` file next to `docker-compose.yml` with the required
-   application secrets, for example:
+- `GET /ping` — readiness/health check.
+- `GET /metrics` — Prometheus metrics.
+- `GET /panel/logs?secret=<CALLBACK_SECRET>` — masked logs for operators.
 
-   ```env
-   BOT_TOKEN=your-telegram-token
-    CALLBACK_SECRET=choose-a-long-random-string
-    ADMIN_ID=123456789
-    TZ=Europe/Moscow
-   ```
+Stop the bot with <kbd>Ctrl</kbd> + <kbd>C</kbd>.
 
-2. Build and start the services:
+---
 
-   ```bash
-   docker compose up --build
-   ```
+## Docker-based stack
 
-   The compose file exposes the webhook server on `http://localhost:8080` and
-   Grafana on `http://localhost:3000` (defaults: `admin` / `admin`).
+Run the complete production-like stack (bot, PostgreSQL, Redis, Grafana):
 
-3. Check that the bot container reports a healthy state:
+```bash
+cp .env.example .env  # or craft your own secrets as above
+# Ensure the BOT_TOKEN and ADMIN_ID are set in .env before continuing
+docker compose up --build
+```
 
-   ```bash
-   docker ps --filter "name=five_keys_bot-bot" --format '{{.Names}} {{.Status}}'
-   ```
+Key services:
 
-   The image defines a Docker `HEALTHCHECK` that pings `GET /ping` to ensure the
-   aiohttp service and database connection are responsive.
+- **Bot**: http://localhost:8080
+- **Grafana**: http://localhost:3000 (default credentials `admin` / `admin`)
+- **PostgreSQL**: exposed as `postgres:5432` inside the Compose network
+- **Redis**: `redis:6379`
 
-With the containers running, apply Alembic migrations inside the bot service if
-needed:
+Apply database migrations inside the running container if needed:
 
 ```bash
 docker compose exec bot alembic upgrade head
 ```
 
-The PostgreSQL and Redis data directories are persisted using Docker volumes so
-state is kept across restarts.
+Data for PostgreSQL and Redis is stored in named volumes, so restarts keep state.
 
-## Security hardening
+---
 
-- **Secret management**: runtime secrets such as `BOT_TOKEN`, `CALLBACK_SECRET`,
-  and `OPENAI_API_KEY` are only sourced from environment variables. The
-  application automatically redacts these values from structured logs and the
-  `/panel/logs` endpoint so they never appear in history or operator dashboards.
-- **Operations panel**: access the last 100 log lines via
-  `GET /panel/logs?secret=<CALLBACK_SECRET>` (adjust the `limit` query parameter
-  up to 500). Requests are denied unless the correct callback secret is
-  supplied in the query string or `X-Panel-Token` header.
-- **GitHub security**: enable _Secret Scanning_ and _Push Protection_ for the
-  repository (Settings → Code security and analysis) to block accidental
-  credential leaks during code review.
+## Environment variables
 
-## Admin notifications & reports
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `BOT_TOKEN` | Telegram bot token issued by BotFather. | — |
+| `ADMIN_ID` | Telegram user ID receiving admin alerts. | — |
+| `CALLBACK_SECRET` | Shared secret for `/panel/logs` access. | `None` (panel disabled) |
+| `DATABASE_URL` | SQLAlchemy URL for PostgreSQL/SQLite. | `sqlite+aiosqlite:///./bot.db` |
+| `REDIS_URL` | Redis connection string for caching. | `None` |
+| `TZ` | IANA timezone for scheduled jobs. | `Europe/Moscow` |
+| `TRIBUTE_API_KEY` | API key for Tribute subscription webhooks. | `""` |
+| `TRIBUTE_WEBHOOK_PATH` | aiohttp route for Tribute callbacks. | `/tribute/webhook` |
+| `SUB_BASIC_MATCH` / `SUB_PRO_MATCH` | Plan identifiers used to map Tribute subscriptions. | `basic` / `pro` |
+| `ADMIN_REPORT_HOUR`/`ADMIN_REPORT_MINUTE` | Daily digest scheduling. | `9` / `30` |
+| `OPENAI_API_KEY` | Optional key for assistant features. | `None` |
 
-- **Instant alerts**: critical events automatically ping the admin chat via
-  `notify_admins()`. The bot notifies about new user registrations, background
-  broadcast runs, and any unhandled errors (with stack trace fingerprints).
-- **Command reports**: `/stats [hours]` renders a summary with total users,
-  notification opt-ins, and new leads/broadcasts/errors for the selected
-  window (24 h by default). `/errors [hours]` groups recent failures by
-  fingerprint so recurring issues are easy to spot.
-- **Daily digest**: an APScheduler job (configurable via
-  `ADMIN_REPORT_HOUR`, `ADMIN_REPORT_MINUTE`, and `ADMIN_REPORT_WINDOW_HOURS`)
-  sends a morning report with the latest statistics plus the condensed error
-  breakdown. The digest is delivered silently to avoid noisy wake-ups.
+Refer to [`app/config.py`](app/config.py) for the exhaustive list and defaults.
 
-## Stress testing
+---
 
-Synthetic load tests are available via `tools/stress_test.py`. The helper spins
-up the dispatcher with an in-memory Telegram session and fires a configurable
-number of `/start` and `/panel` updates while tracking latency, CPU usage, and
-RSS memory. Example run:
+## Operational tooling
+
+- **Metrics**: Prometheus endpoint at `/metrics` exports latency histograms, update counters, error counters, active user gauges, and uptime gauges. Integrate with Telegraf using:
+
+  ```toml
+  [[inputs.prometheus]]
+    urls = ["http://localhost:8080/metrics"]
+    metric_version = 2
+  ```
+
+- **Watchdog**: `doctor.py` polls `/ping` and `/metrics`, reporting recovery status during incidents.
+- **Stress testing**: `python tools/stress_test.py --updates 200 --concurrency 20` to replay synthetic traffic and ensure average latency stays under 200 ms.
+
+---
+
+## Running quality checks
+
+| Check | Command |
+| ----- | ------- |
+| Lint | `ruff check` |
+| Type hints | `mypy --config-file pyproject.toml` |
+| Security scan | `bandit -r app --confidence-level MEDIUM` |
+| Bytecode compilation | `python -m compileall app doctor.py` |
+| Load test | `python tools/stress_test.py --updates 100 --concurrency 10 --max-duration 10` |
+
+Run these before opening a pull request. The CI workflow enforces the same gates.
+
+---
+
+## Documentation
+
+MkDocs is configured for onboarding and API reference material:
 
 ```bash
-export BOT_TOKEN="123456:TESTTOKEN"
-export ADMIN_ID="1"
-python tools/stress_test.py --updates 200 --concurrency 20
+mkdocs serve  # starts docs at http://127.0.0.1:8000
 ```
 
-By default the script fails if 100 updates cannot be processed within 10 seconds
-or if the average per-update latency exceeds 200 ms. CI executes the same check
-to guard against regressions.
+The documentation lives under `docs/` and includes auto-generated API references via `mkdocstrings`.
+
+---
+
+## Need help?
+
+- `doctor.py` — diagnose health issues.
+- `app/notifications.py` — understand admin alert flows.
+- `tools/stress_test.py` — profile performance regressions.
+
+For questions about contributing or release workflow see [CONTRIBUTING.md](CONTRIBUTING.md).

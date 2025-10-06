@@ -1,0 +1,44 @@
+site_name: Five Keys Bot Docs
+site_description: Developer documentation and API reference for the Five Keys Telegram assistant.
+site_url: ""
+repo_url: https://github.com/<your-org>/five_keys_bot
+repo_name: five_keys_bot
+
+nav:
+  - Overview: index.md
+  - Getting started: getting-started.md
+  - Development workflow: development.md
+  - API reference:
+      - Configuration: reference/config.md
+      - Application runtime: reference/runtime.md
+      - Monitoring: reference/monitoring.md
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - "import os"
+            - "os.environ.setdefault('BOT_TOKEN', '000:TEST')"
+            - "os.environ.setdefault('CALLBACK_SECRET', 'docs-secret')"
+            - "os.environ.setdefault('ADMIN_ID', '1')"
+            - "os.environ.setdefault('DATABASE_URL', 'sqlite+aiosqlite:///./docs.db')"
+          options:
+            show_source: false
+            heading_level: 2
+            separate_signature: true
+            docstring_style: google
+            members_order: source
+            filters:
+              - "!^__"
+watch:
+  - app
+  - docs
