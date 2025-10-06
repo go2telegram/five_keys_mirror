@@ -11,14 +11,16 @@ from app.storage import (
     get_event_count,
     get_leads_last,
     get_leads_all,
+    redis_enabled,
 )
+from version import git_rev
 
 router = Router()
 
 
 @router.message(Command("stats"))
 async def stats(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
     users = await get_all_users()
     total_users = len(users)
@@ -44,7 +46,7 @@ async def stats(m: Message):
 
 @router.message(Command("leads"))
 async def leads_list(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
 
     # /leads <N?>
@@ -79,8 +81,18 @@ async def leads_list(m: Message):
 
 @router.message(Command("leads_csv"))
 async def leads_csv(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
+
+
+@router.message(Command("version"))
+async def version_info(message: Message) -> None:
+    if not settings.is_admin(message.from_user.id):
+        return
+
+    rev = git_rev()
+    mode = "NORMAL" if redis_enabled() else "FALLBACK"
+    await message.answer(f"rev: {rev} • mode: {mode}")
 
     # /leads_csv <N?>
     parts = m.text.strip().split()
