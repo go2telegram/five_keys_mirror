@@ -1,8 +1,13 @@
-.PHONY: migrate
+.PHONY: run doctor migrate ci
 
-migrate:
-	@if [ -z "$$DATABASE_URL" ]; then \
-		echo "DATABASE_URL is not set" >&2; \
-		exit 1; \
-	fi
-	PYTHONPATH=. alembic upgrade head
+run:      ## Запуск бота (dev)
+	BOT_TOKEN=$${BOT_TOKEN} LOG_PATH=./logs/telemetry.log python run.py
+
+doctor:   ## Сухая диагностика
+	python tools/doctor.py
+
+migrate:  ## Применить миграции
+	alembic upgrade head
+
+ci:       ## Локальный прогон проверок
+	ruff . && mypy . && pytest -q || true

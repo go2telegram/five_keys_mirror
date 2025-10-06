@@ -8,3 +8,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
+os.environ.setdefault("ADMIN_IDS", "1")
+os.environ.setdefault("TRIBUTE_API_KEY", "test-secret")
+os.environ.setdefault("TRIBUTE_WEBHOOK_NOTIFY", "0")

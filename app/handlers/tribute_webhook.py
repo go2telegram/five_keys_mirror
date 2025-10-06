@@ -1,9 +1,13 @@
-import hmac
 import hashlib
+import hmac
 import json
+import logging
 import os
-from aiohttp import web
+import time
 from datetime import datetime, timezone, timedelta
+from typing import Dict, Tuple
+
+from aiohttp import web
 
 from app.config import settings
 from app.storage import ensure_user, user_set
@@ -12,9 +16,14 @@ from app.storage import ensure_user, user_set
 from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+logger = logging.getLogger(__name__)
+
 LOG = os.getenv("TRIBUTE_WEBHOOK_LOG", "0") == "1"
-INSECURE = os.getenv("TRIBUTE_WEBHOOK_INSECURE", "0") == "1"
-NOTIFY = True
+NOTIFY = os.getenv("TRIBUTE_WEBHOOK_NOTIFY", "1") == "1"
+
+_RATE_LIMIT_WINDOW = 60
+_RATE_LIMIT_MAX = 30
+_RATE_BUCKETS: Dict[str, Tuple[float, int]] = {}
 
 BASIC_KEYS = [x.strip().lower() for x in settings.SUB_BASIC_MATCH.split(",") if x.strip()]
 PRO_KEYS = [x.strip().lower() for x in settings.SUB_PRO_MATCH.split(",") if x.strip()]
@@ -49,7 +58,15 @@ async def _activate(user_id: int, plan: str, expires_iso: str | None):
     }
     await user_set(user_id, profile)
     if LOG:
-        print(f"[TRIBUTE] activated: user={user_id} plan={plan} until={until.isoformat()}")
+        logger.info(
+            "Tribute subscription activated",
+            extra={
+                "event": "activated",
+                "plan": plan,
+                "user": _mask_user_id(user_id),
+                "until": until.isoformat(),
+            },
+        )
     return profile
 
 
@@ -68,20 +85,79 @@ async def _notify_user(user_id: int, plan: str):
         await bot.session.close()
     except Exception as e:
         if LOG:
-            print(f"[TRIBUTE] notify failed for user={user_id}: {e}")
+            logger.warning(
+                "Tribute notify failed",
+                extra={"user": _mask_user_id(user_id), "error": str(e)},
+            )
+
+
+def _mask_user_id(user_id: int | None) -> str | None:
+    if user_id is None:
+        return None
+    text = str(user_id)
+    if len(text) <= 4:
+        return text
+    return f"***{text[-4:]}"
+
+
+def _extract_remote(request: web.Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote or "unknown"
+
+
+def _mask_remote(remote: str) -> str:
+    if not remote:
+        return "unknown"
+    digest = hashlib.sha256(remote.encode("utf-8")).hexdigest()[:10]
+    return f"hash:{digest}"
+
+
+def _allow_request(key: str, *, limit: int | None = None, window: int | None = None) -> bool:
+    if limit is None:
+        limit = _RATE_LIMIT_MAX
+    if window is None:
+        window = _RATE_LIMIT_WINDOW
+    if limit <= 0:
+        return True
+
+    now = time.monotonic()
+    start, count = _RATE_BUCKETS.get(key, (now, 0))
+    if now - start > window:
+        _RATE_BUCKETS[key] = (now, 1)
+        return True
+    if count >= limit:
+        return False
+    _RATE_BUCKETS[key] = (start, count + 1)
+    return True
+
+
+def _log_event(message: str, **fields) -> None:
+    if not LOG:
+        return
+    safe_fields = {k: v for k, v in fields.items() if v is not None}
+    logger.info("Tribute webhook %s", message, extra={"payload": safe_fields})
 
 
 async def tribute_webhook(request: web.Request) -> web.Response:
     raw = await request.read()
 
     signature = request.headers.get("trbt-signature") or ""
+    remote = _extract_remote(request)
+    rate_key = f"{remote}:{signature[:16] if signature else 'missing'}"
+    if not _allow_request(rate_key):
+        _log_event("rate_limited", remote=_mask_remote(remote))
+        return web.json_response({"ok": False, "reason": "rate_limited"}, status=429)
+
+    if not signature:
+        _log_event("missing_signature", remote=_mask_remote(remote))
+        return web.json_response({"ok": False, "reason": "missing_signature"}, status=401)
+
     mac = hmac.new(settings.TRIBUTE_API_KEY.encode("utf-8"), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, signature):
-        if INSECURE:
-            if LOG:
-                print("[TRIBUTE] insecure accept (bad/missing signature)")
-        else:
-            return web.json_response({"ok": False, "reason": "invalid_signature"}, status=401)
+        _log_event("invalid_signature", remote=_mask_remote(remote))
+        return web.json_response({"ok": False, "reason": "invalid_signature"}, status=401)
 
     try:
         data = json.loads(raw.decode("utf-8") or "{}")
@@ -109,11 +185,21 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 })
                 ref_profile["ref_conversions"] = ref_profile.get("ref_conversions", 0) + 1
                 await user_set(ref_by, ref_profile)
-                if LOG:
-                    print(f"[TRIBUTE] ref conversion: user={user_id} by={ref_by}")
+            _log_event(
+                "ref_conversion",
+                referrer=_mask_user_id(ref_by),
+                user=_mask_user_id(user_id),
+            )
 
             if NOTIFY:
                 await _notify_user(user_id, plan)
+            _log_event(
+                "subscription_processed",
+                event=ev,
+                plan=plan,
+                remote=_mask_remote(remote),
+                user=_mask_user_id(tg_id if tg_id is not None else None),
+            )
             return web.json_response({"ok": True})
         return web.json_response({"ok": False, "reason": "no_telegram_id"}, status=400)
 
@@ -129,6 +215,13 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 except Exception:
                     pass
                 await user_set(user_id, profile)
+        _log_event(
+            "subscription_processed",
+            event=ev,
+            remote=_mask_remote(remote),
+            user=_mask_user_id(tg_id if tg_id is not None else None),
+        )
         return web.json_response({"ok": True})
 
+    _log_event("ignored", event=ev or "", remote=_mask_remote(remote))
     return web.json_response({"ok": True, "ignored": ev or ""})
