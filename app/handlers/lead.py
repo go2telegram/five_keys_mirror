@@ -8,7 +8,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 
 from app.keyboards import kb_cancel_home, kb_main
-from app.storage import add_lead
+from app.storage import USERS, add_lead, save_event
 from app.config import settings
 
 router = Router()
@@ -84,6 +84,8 @@ async def lead_done(m: Message, state: FSMContext):
         "ts": datetime.utcnow().isoformat()
     }
     add_lead(lead)
+    items = data.get("products") or []
+    save_event(m.from_user.id, USERS.get(m.from_user.id, {}).get("source"), "lead_done", {"items": items})
 
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID

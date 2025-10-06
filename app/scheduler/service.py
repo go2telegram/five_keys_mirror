@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.reco_refresh import refresh_recommendations
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -25,6 +26,14 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         trigger=trigger,
         args=[bot, settings.TZ, weekdays],
         name="send_nudges",
+        misfire_grace_time=600,
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        refresh_recommendations,
+        trigger=CronTrigger(hour=3, minute=0),
+        name="refresh_recommendations",
         misfire_grace_time=600,
         coalesce=True,
         max_instances=1,
