@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -25,6 +26,19 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+
+    # Самооптимизация конфигураций
+    ENABLE_SELF_OPTIMIZATION: bool = False
+    OPTIMIZER_BATCH_CHOICES: str = "4,8,16"
+    OPTIMIZER_TIMEOUT_CHOICES: str = "8000,12000,16000"
+    OPTIMIZER_MEMORY_CHOICES: str = "512,768,1024"
+    OPTIMIZER_INTERVAL_SECONDS: int = 300
+    OPTIMIZER_REQUIRED_IMPROVEMENT: float = 0.1
+    OPTIMIZER_MIN_SAMPLES: int = 3
+    OPTIMIZER_METRICS_URL: str = "http://localhost:8000/metrics"
+    OPTIMIZER_HTTP_TIMEOUT: float = 2.0
+    OPTIMIZER_TARGET_LATENCY_MS: int = 1200
+    OPTIMIZER_MEMORY_BUDGET_MB: int = 1024
 
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
@@ -59,3 +73,25 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+RUNTIME_CONFIG_DEFAULTS = {
+    "BATCH_SIZE": 8,
+    "TIMEOUT_MS": 12000,
+    "MEMORY_LIMIT_MB": 768,
+}
+
+try:
+    from optimizer.config_tuner import JSONConfigRepository
+
+    _runtime_repo = JSONConfigRepository(Path("optimizer/runtime_config.json"), RUNTIME_CONFIG_DEFAULTS)
+    settings.RUNTIME_CONFIG = _runtime_repo.read()
+except Exception:
+    settings.RUNTIME_CONFIG = dict(RUNTIME_CONFIG_DEFAULTS)
+
+
+
+def get_runtime_config() -> dict[str, int]:
+    """Return the latest configuration selected by the optimizer."""
+
+    return dict(getattr(settings, "RUNTIME_CONFIG", RUNTIME_CONFIG_DEFAULTS))
+
