@@ -1,0 +1,10 @@
+{
+  "welcome_text": {
+    "description": "A/B приветствие на /start",
+    "enabled": true,
+    "default_variant": "A",
+    "rollout": 50,
+    "variant_true": "B",
+    "variant_false": "A"
+  }
+}

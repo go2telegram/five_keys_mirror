@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    FEATURE_FLAGS_PATH: str = "feature_flags.json"
+
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""

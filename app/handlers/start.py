@@ -2,9 +2,10 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
 
-from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
+from app.texts import WELCOME, WELCOME_EXPERIMENT, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
 from app.keyboards import kb_main, kb_yes_no
 from app.storage import USERS, save_event
+from app.flags import flags
 
 router = Router()
 
@@ -25,9 +26,12 @@ async def start(message: Message):
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
-    USERS.setdefault(
+    user = USERS.setdefault(
         tg_id, {"subs": False, "tz": "Europe/Moscow", "source": None})
-    save_event(tg_id, payload, "start")
+    variant = flags.variant("welcome_text", message.from_user)
+    user_variants = user.setdefault("variants", {})
+    user_variants["welcome_text"] = variant
+    save_event(tg_id, payload, "start", {"welcome_variant": variant})
     _ensure_ref_fields(tg_id)
 
     # --- обработка реферального кода ---
@@ -46,7 +50,8 @@ async def start(message: Message):
                 USERS[ref_id]["ref_joins"] += 1
             save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
 
-    await message.answer(WELCOME, reply_markup=kb_main())
+    welcome_text = WELCOME_EXPERIMENT if variant == "B" else WELCOME
+    await message.answer(welcome_text, reply_markup=kb_main())
 
     if not USERS[tg_id].get("asked_notify"):
         USERS[tg_id]["asked_notify"] = True
@@ -71,4 +76,6 @@ async def notify_no(c: CallbackQuery):
 
 @router.callback_query(F.data == "home")
 async def back_home(c: CallbackQuery):
-    await c.message.answer(WELCOME, reply_markup=kb_main())
+    variant = USERS.get(c.from_user.id, {}).get("variants", {}).get("welcome_text", "A")
+    welcome_text = WELCOME_EXPERIMENT if variant == "B" else WELCOME
+    await c.message.answer(welcome_text, reply_markup=kb_main())

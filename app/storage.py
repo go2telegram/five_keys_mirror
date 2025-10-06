@@ -8,12 +8,19 @@ EVENTS: List[Dict[str, Any]] = []         # события атрибуции
 
 
 def save_event(user_id: Optional[int], source: Optional[str], action: str, payload: Optional[dict] = None):
+    variants: Dict[str, str] = {}
+    if user_id is not None:
+        user_variants = USERS.get(user_id, {}).get("variants")
+        if isinstance(user_variants, dict):
+            variants = dict(user_variants)
+
     EVENTS.append({
         "ts": dt.datetime.utcnow().isoformat(),
         "user_id": user_id,
         "source": source,
         "action": action,
-        "payload": payload or {}
+        "payload": payload or {},
+        "variants": variants
     })
 
 # ---- Хелперы для PDF-плана ----
