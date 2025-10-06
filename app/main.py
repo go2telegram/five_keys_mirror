@@ -29,6 +29,8 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from bot import admin_security as h_admin_security
+from security import setup_security
 
 
 async def main():
@@ -56,11 +58,23 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(h_admin_security.router)
 
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
+    setup_security(
+        app_web,
+        enabled=settings.ENABLE_SECURITY_AUTONOMY,
+        allowed_paths={
+            settings.TRIBUTE_WEBHOOK_PATH,
+            "/security_status",
+            "/version",
+            "/ping",
+            "/metrics",
+        },
+    )
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)
