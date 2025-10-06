@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from bot.admin_trust import build_trust_report
 
 router = Router()
 
@@ -32,8 +33,17 @@ async def stats(m: Message):
         "• /leads — последние 10 лидов\n"
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
-        "• /leads_csv 500 — CSV последних 500"
+        "• /leads_csv 500 — CSV последних 500\n"
+        "• /trust — репутация агентов"
     )
+
+
+@router.message(Command("trust"))
+async def trust(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+
+    await m.answer(build_trust_report())
 
 
 @router.message(Command("leads"))
