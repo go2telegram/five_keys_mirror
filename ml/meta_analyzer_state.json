@@ -1,0 +1,8 @@
+{
+  "selected_algorithm": "baseline",
+  "metrics": {
+    "auc": 0.7125418526785714,
+    "mae": 0.39828856691701453,
+    "samples_per_second": 2400
+  }
+}

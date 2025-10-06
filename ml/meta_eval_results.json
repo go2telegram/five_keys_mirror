@@ -1,0 +1,17 @@
+{
+  "baseline": {
+    "auc": 0.7125418526785714,
+    "mae": 0.39828856691701453,
+    "samples_per_second": 2400
+  },
+  "meta_forest": {
+    "auc": 0.7442103794642857,
+    "mae": 0.3954081461491114,
+    "samples_per_second": 2050
+  },
+  "adaptive_boost": {
+    "auc": 0.7492327008928571,
+    "mae": 0.3851420583346658,
+    "samples_per_second": 1980
+  }
+}
