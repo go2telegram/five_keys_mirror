@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
+from app.catalog import record_view
 from app.keyboards import kb_buylist_pdf
 from app.storage import SESSIONS, USERS, save_event, set_last_plan
 from app.utils_media import send_product_album
@@ -117,7 +118,13 @@ async def quiz_sleep_step(c: CallbackQuery):
             "• Проветрить комнату и убрать лишний свет\n",
             "Поддержка:\n" + "\n".join(lines),
         ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:sleep", rec_codes[:3]))
+        await c.message.answer(
+            "\n".join(msg),
+            reply_markup=kb_buylist_pdf("quiz:sleep", rec_codes[:3], campaign="sleep")
+        )
+
+        source = USERS.get(c.from_user.id, {}).get("source")
+        record_view(c.from_user.id, source, rec_codes[:3], "sleep")
 
         save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
                    {"quiz": "sleep", "score": total, "level": level})

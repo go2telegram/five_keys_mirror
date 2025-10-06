@@ -4,10 +4,10 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.keyboards import kb_goal_menu, kb_buylist_pdf
-from app.products import PRODUCTS, GOAL_MAP
+from app.catalog import PRODUCTS, GOAL_MAP, record_view
 from app.utils_media import send_product_album
 from app.reco import product_lines
-from app.storage import set_last_plan, SESSIONS
+from app.storage import set_last_plan, SESSIONS, USERS
 from app.config import settings
 
 router = Router()
@@ -288,7 +288,10 @@ async def pick_finalize(c: CallbackQuery):
         desc + "\n",
         "Поддержка:\n" + "\n".join(lines),
     ]
-    await c.message.answer("".join(msg), reply_markup=kb_buylist_pdf("pick:menu", rec_codes[:3]))
+    await c.message.answer(
+        "".join(msg),
+        reply_markup=kb_buylist_pdf("pick:menu", rec_codes[:3], campaign=goal_key)
+    )
 
     # Сохраняем план для PDF
     actions = meta["actions"]
@@ -312,3 +315,6 @@ async def pick_finalize(c: CallbackQuery):
             "order_url": settings.VILAVI_ORDER_NO_REG,
         }
     )
+
+    source = USERS.get(c.from_user.id, {}).get("source")
+    record_view(c.from_user.id, source, rec_codes[:3], goal_key)

@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.catalog_checks import run_catalog_link_check
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,18 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    if getattr(settings, "ENABLE_CATALOG_ADMIN", True):
+        chat_id = getattr(settings, "CATALOG_ADMIN_CHAT_ID", None) or settings.ADMIN_ID
+        scheduler.add_job(
+            run_catalog_link_check,
+            trigger=CronTrigger(hour=3, minute=30),
+            args=[bot],
+            kwargs={"chat_id": chat_id},
+            name="catalog_link_check",
+            misfire_grace_time=3600,
+            coalesce=True,
+            max_instances=1,
+        )
+
     scheduler.start()
     return scheduler

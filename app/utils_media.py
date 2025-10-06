@@ -1,7 +1,7 @@
 from typing import List, Tuple
 from aiogram import Bot
 from aiogram.types import InputMediaPhoto, BufferedInputFile
-from app.products import PRODUCTS
+from app.catalog import PRODUCTS
 import httpx
 from io import BytesIO
 from app.config import settings

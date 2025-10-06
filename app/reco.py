@@ -1,5 +1,5 @@
 from typing import List
-from app.products import PRODUCTS
+from app.catalog import PRODUCTS
 
 # Контекстные подсказки, зависящие от ситуации
 CTX = {

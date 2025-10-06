@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     ADMIN_ID: int
 
+    # Дополнительные администраторы (через запятую)
+    ADMIN_IDS: str | None = None
+
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
     TZ: str = "Europe/Moscow"
@@ -13,6 +16,14 @@ class Settings(BaseSettings):
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
+
+    # Админ-каналы
+    LEADS_CHAT_ID: int | None = None
+    CATALOG_ADMIN_CHAT_ID: int | None = None
+
+    # Каталог
+    CATALOG_PRODUCTS_PATH: str | None = None
+    ENABLE_CATALOG_ADMIN: bool = True
 
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9
@@ -55,6 +66,13 @@ class Settings(BaseSettings):
     @classmethod
     def _fix_admin_id(cls, v):
         # просто показать приём — админ id должен быть int
+        return int(v)
+
+    @field_validator("LEADS_CHAT_ID", "CATALOG_ADMIN_CHAT_ID", mode="before")
+    @classmethod
+    def _optional_int(cls, v):
+        if v in (None, "", 0):
+            return None
         return int(v)
 
 

@@ -2,8 +2,9 @@ import re
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 
+from app.catalog import record_view
 from app.keyboards import kb_calc_menu, kb_back_home, kb_buylist_pdf
-from app.storage import SESSIONS, set_last_plan
+from app.storage import SESSIONS, USERS, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
 from app.config import settings
@@ -99,7 +100,12 @@ async def handle_msd(m: Message):
         "• Важнее не просто число, а <b>состав тела</b> (мышцы ≠ жир).\n\n"
         "Поддержка:\n" + "\n".join(lines)
     )
-    await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
+    await m.answer(
+        text,
+        reply_markup=kb_buylist_pdf("calc:menu", rec_codes, campaign="calc_msd")
+    )
+    source = USERS.get(m.from_user.id, {}).get("source")
+    record_view(m.from_user.id, source, rec_codes, "calc_msd")
     SESSIONS.pop(m.from_user.id, None)
 
 # --- ИМТ (индекс массы тела) ---
@@ -170,5 +176,10 @@ async def handle_bmi(m: Message):
         f"{hint}\n\n"
         "Поддержка:\n" + "\n".join(lines)
     )
-    await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
+    await m.answer(
+        text,
+        reply_markup=kb_buylist_pdf("calc:menu", rec_codes, campaign="calc_bmi")
+    )
+    source = USERS.get(m.from_user.id, {}).get("source")
+    record_view(m.from_user.id, source, rec_codes, "calc_bmi")
     SESSIONS.pop(m.from_user.id, None)

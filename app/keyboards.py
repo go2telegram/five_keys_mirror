@@ -1,7 +1,8 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
 from app.config import settings
-from app.products import PRODUCTS, BUY_URLS
+from app.catalog import PRODUCTS, get_buy_url
+from app.catalog.analytics import normalize_campaign
 
 # ---------- Главное меню ----------
 
@@ -127,15 +128,21 @@ def kb_cancel_home() -> InlineKeyboardMarkup:
 # ---------- Кнопки покупки продуктов ----------
 
 
-def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
+def kb_buylist_pdf(back_cb: str, codes: list[str], campaign: str | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
+    campaign_slug = normalize_campaign(campaign or "general")
+    count = 0
     for code in codes:
         p = PRODUCTS.get(code)
-        url = BUY_URLS.get(code)
+        url = get_buy_url(code)
         if not p or not url:
             continue
         title = p.get("title", code)
-        kb.button(text=f"🛒 Купить {title}", url=url)
+        kb.button(
+            text=f"🛒 Купить {title}",
+            callback_data=f"catalog:buy:{code}:{campaign_slug}",
+        )
+        count += 1
 
     kb.button(text="📄 PDF-план", callback_data="pdf:last")
     if settings.VILAVI_REF_LINK_DISCOUNT:
@@ -144,6 +151,6 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home")
 
-    rows = [1] * len(codes)
+    rows = [1] * count
     kb.adjust(*(rows + [1, 1, 2]))
     return kb.as_markup()

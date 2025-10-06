@@ -29,6 +29,8 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from app.handlers import catalog as h_catalog
+from app.catalog import admin as h_catalog_admin
 
 
 async def main():
@@ -56,6 +58,9 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(h_catalog.router)
+    if getattr(settings, "ENABLE_CATALOG_ADMIN", True):
+        dp.include_router(h_catalog_admin.router)
 
     start_scheduler(bot)
 
