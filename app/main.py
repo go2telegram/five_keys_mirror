@@ -29,6 +29,7 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from bot import admin_experiments as h_admin_exp
 
 
 async def main():
@@ -56,6 +57,7 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(h_admin_exp.router)
 
     start_scheduler(bot)
 

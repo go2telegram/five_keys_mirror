@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
 
+    EXPERIMENTS_ENABLED: bool = True
+
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 

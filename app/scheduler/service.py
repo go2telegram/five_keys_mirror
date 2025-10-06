@@ -1,9 +1,11 @@
 # app/scheduler/service.py
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
 from app.config import settings
+from app.jobs.experiments import experiments_cycle
 
 def _parse_weekdays(csv: str | None) -> set[str]:
     # Пример: "Mon,Thu" -> {"Mon","Thu"}
@@ -29,5 +31,16 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if getattr(settings, "EXPERIMENTS_ENABLED", True):
+        scheduler.add_job(
+            experiments_cycle,
+            trigger=IntervalTrigger(minutes=5),
+            args=[bot],
+            name="experiments_cycle",
+            misfire_grace_time=120,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler
