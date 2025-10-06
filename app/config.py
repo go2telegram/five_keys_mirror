@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     TZ: str = "Europe/Moscow"
 
+    ENABLE_BUSINESS_ANALYTICS: bool = True
+
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""

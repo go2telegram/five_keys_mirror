@@ -30,6 +30,13 @@ from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
+from analytics.business import (
+    collect_business_metrics,
+    render_admin_dashboard,
+    render_prometheus,
+)
+from bot import admin_finance as h_admin_finance
+
 
 async def main():
     bot = Bot(token=settings.BOT_TOKEN,
@@ -57,12 +64,34 @@ async def main():
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
 
+    if settings.ENABLE_BUSINESS_ANALYTICS:
+        dp.include_router(h_admin_finance.router)
+
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+
+    if settings.ENABLE_BUSINESS_ANALYTICS:
+
+        async def admin_dashboard(_: web.Request) -> web.Response:
+            metrics = collect_business_metrics()
+            return web.Response(
+                text=render_admin_dashboard(metrics),
+                content_type="text/html; charset=utf-8",
+            )
+
+        async def metrics_endpoint(_: web.Request) -> web.Response:
+            metrics = collect_business_metrics()
+            return web.Response(
+                text=render_prometheus(metrics),
+                content_type="text/plain; version=0.0.4",
+            )
+
+        app_web.router.add_get("/admin", admin_dashboard)
+        app_web.router.add_get("/metrics", metrics_endpoint)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
