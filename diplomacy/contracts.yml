@@ -1,0 +1,38 @@
+networks:
+  - id: core
+    title: "Five Keys — Центральное ядро"
+    contact: "cluster-core.five-keys"
+    knowledge_base:
+      - "Переизбыток сахара и гормональный ответ"
+      - "Протоколы сна и восстановления"
+      - "Метаболические циклы поста"
+    trade_profile:
+      exports:
+        nutraceuticals: 18000
+        adaptogens: 7600
+      imports:
+        analytics: 5200
+        probiotics: 3100
+    alerts:
+      - "Проблемы с поставками цинка в Q4"
+  - id: frontier
+    title: "Five Keys — Пограничный пояс"
+    contact: "cluster-frontier.five-keys"
+    knowledge_base:
+      - "Протоколы сна и восстановления"
+      - "Полевые исследования по стрессу"
+      - "Стратегии витаминизации в северных регионах"
+    trade_profile:
+      exports:
+        analytics: 9100
+        probiotics: 3800
+      imports:
+        nutraceuticals: 13400
+        adaptogens: 4200
+    alerts:
+      - "Наблюдается рост сезонных вирусов"
+      - "Необходим контроль за омега-3"
+strategies:
+  - knowledge_exchange
+  - trade_agreement
+  - alert_sharing

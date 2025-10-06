@@ -32,7 +32,8 @@ async def stats(m: Message):
         "• /leads — последние 10 лидов\n"
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
-        "• /leads_csv 500 — CSV последних 500"
+        "• /leads_csv 500 — CSV последних 500\n"
+        "• /diplomacy_status — статус обменов между сетями"
     )
 
 

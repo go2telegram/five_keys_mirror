@@ -23,6 +23,7 @@ from app.handlers import navigator as h_navigator
 from app.handlers import notify as h_notify
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
+from bot.admin_diplomacy import router as h_admin_diplomacy
 
 # новые
 from app.handlers import subscription as h_subscription
@@ -49,6 +50,7 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
+    dp.include_router(h_admin_diplomacy.router)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
