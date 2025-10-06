@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    # Голосовой интерфейс
+    ENABLE_VOICE_INTERFACE: bool = False
+    VOICE_MODEL: str = "gpt-4o-mini-transcribe"
+    VOICE_CACHE_DIR: str = "models/audio"
+    VOICE_LANGUAGE: str = "ru"
+
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""
