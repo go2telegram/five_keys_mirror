@@ -1,0 +1,3 @@
+# Ignore generated profiling reports
+profile.md
+profile_history.json

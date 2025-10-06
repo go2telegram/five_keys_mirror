@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from middleware import ProfilerMiddleware, metrics_handler
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -35,6 +36,7 @@ async def main():
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
+    dp.update.middleware.register(ProfilerMiddleware())
 
     # роутеры
     dp.include_router(h_start.router)
@@ -63,6 +65,7 @@ async def main():
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web.router.add_get("/metrics", metrics_handler)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
