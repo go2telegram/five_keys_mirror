@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    ADMIN_AI_CACHE_SECONDS: int = 60
+    ADMIN_AI_RATE_LIMIT_SECONDS: int = 30
+    METRICS_URL: str | None = None
+    ERROR_LOG_PATH: str = "errors.log"
+
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""
