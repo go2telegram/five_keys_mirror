@@ -31,8 +31,37 @@ async def check_metrics_endpoint() -> None:
         raise SystemExit("/metrics missing required counters")
 
 
+async def check_ping_endpoint() -> bool:
+    ping_url = os.getenv(
+        "PING_URL",
+        f"http://{settings.WEB_HOST}:{settings.WEB_PORT}/ping",
+    )
+
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        response = await client.get(ping_url)
+
+    if response.status_code != 200:
+        raise SystemExit(f"/ping health-check failed: HTTP {response.status_code}")
+
+    try:
+        payload = response.json()
+    except ValueError as exc:  # noqa: PERF203 - explicit failure message
+        raise SystemExit(f"/ping returned invalid JSON: {exc}") from exc
+
+    if payload.get("status") != "ok":
+        detail = payload.get("detail")
+        raise SystemExit(f"/ping unhealthy: {detail}")
+
+    recovery = payload.get("recovery", {}) or {}
+    recovered = bool(recovery.get("count"))
+    if recovered:
+        print("service recovered", flush=True)
+    return recovered
+
+
 async def main() -> None:
     await check_metrics_endpoint()
+    await check_ping_endpoint()
 
 
 if __name__ == "__main__":

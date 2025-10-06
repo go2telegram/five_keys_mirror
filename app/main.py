@@ -1,4 +1,7 @@
 import asyncio
+import logging
+from contextlib import suppress
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
@@ -6,8 +9,10 @@ from aiohttp import web
 from app.config import settings
 from app.scheduler.service import start_scheduler
 from app.metrics import setup_metrics
-from app.db.session import init_db
+from app.db.session import init_db_safe
 from app.products import sync_products
+from app.health import recovery_state, setup_healthcheck
+from app.watchdog import start_watchdog
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -34,8 +39,11 @@ from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
 
+logger = logging.getLogger(__name__)
+
+
 async def main():
-    await init_db()
+    await init_db_safe()
     await sync_products()
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
@@ -67,6 +75,7 @@ async def main():
     # aiohttp сервер для Tribute и метрик
     app_web = web.Application()
     setup_metrics(dp, app_web)
+    setup_healthcheck(app_web)
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)
@@ -76,8 +85,47 @@ async def main():
         f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
     await site.start()
 
+    restart_event = asyncio.Event()
+
+    async def trigger_restart(reason: str) -> None:
+        if restart_event.is_set():
+            return
+
+        restart_event.set()
+        await recovery_state.request(reason)
+        try:
+            await dp.stop_polling()
+        except Exception as exc:  # noqa: BLE001 - logging for visibility
+            logger.exception("Failed to stop polling during restart: %s", exc)
+
+    ping_url = f"http://{settings.WEB_HOST}:{settings.WEB_PORT}/ping"
+    watchdog_task = start_watchdog(ping_url, trigger_restart)
+
     print("Bot is running…")
-    await dp.start_polling(bot)
+
+    try:
+        while True:
+            try:
+                await dp.start_polling(bot)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - restart loop on any failure
+                logger.exception("Polling crashed, scheduling restart", exc_info=exc)
+                await trigger_restart("polling-crash")
+
+            if restart_event.is_set():
+                await init_db_safe()
+                await sync_products()
+                await recovery_state.mark_recovered()
+                restart_event.clear()
+                continue
+
+            break
+    finally:
+        watchdog_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await watchdog_task
+        await runner.cleanup()
 
 if __name__ == "__main__":
     asyncio.run(main())
