@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from app.utils import init_cache_safe, init_db_safe
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -32,6 +33,8 @@ from app.handlers import referral as h_referral
 
 
 async def main():
+    await init_cache_safe()
+    await init_db_safe()
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
