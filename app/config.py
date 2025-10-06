@@ -26,6 +26,16 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    # Кросс-коммуникация с внешними ИИ
+    ENABLE_CROSS_AI_COMM: bool = False
+    CROSS_AI_PROVIDER: str = "openai"
+    ANTHROPIC_API_KEY: str | None = None
+    ANTHROPIC_BASE: str = "https://api.anthropic.com/v1"
+    ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
+    GEMINI_API_KEY: str | None = None
+    GEMINI_BASE: str = "https://generativelanguage.googleapis.com/v1"
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""
