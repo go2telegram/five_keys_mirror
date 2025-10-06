@@ -27,3 +27,11 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Ignore model artifacts
+models/*.pkl
+models/*.bin
+models/*.pt
+
+# Ignore training artifacts
+artifacts/

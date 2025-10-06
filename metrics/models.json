@@ -1,0 +1,26 @@
+{
+  "ctr": {
+    "accuracy_delta": -0.0,
+    "last_trained": "2025-10-06T12:17:37.464284+00:00",
+    "model_accuracy": 0.78,
+    "model_version": 2,
+    "status": "active",
+    "updated_at": "2025-10-06T12:17:37.464633+00:00"
+  },
+  "recommendations": {
+    "accuracy_delta": -0.0,
+    "last_trained": "2025-10-06T12:17:37.924781+00:00",
+    "model_accuracy": 0.915,
+    "model_version": 3,
+    "status": "active",
+    "updated_at": "2025-10-06T12:17:37.925042+00:00"
+  },
+  "segments": {
+    "accuracy_delta": -0.0,
+    "last_trained": "2025-10-06T12:17:38.380017+00:00",
+    "model_accuracy": 0.95,
+    "model_version": 2,
+    "status": "active",
+    "updated_at": "2025-10-06T12:17:38.380314+00:00"
+  }
+}

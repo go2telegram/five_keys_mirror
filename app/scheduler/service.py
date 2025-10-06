@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.model_retrain import retrain_models
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,19 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    if settings.ENABLE_SELF_TRAINING:
+        retrain_trigger = CronTrigger(
+            hour=settings.MODEL_RETRAIN_HOUR_LOCAL,
+            minute=0,
+        )
+        scheduler.add_job(
+            retrain_models,
+            trigger=retrain_trigger,
+            name="model_retrain",
+            misfire_grace_time=1800,
+            coalesce=True,
+            max_instances=1,
+        )
+
     scheduler.start()
     return scheduler

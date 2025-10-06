@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
 
+    # Самообучение моделей
+    ENABLE_SELF_TRAINING: bool = True
+    MODEL_RETRAIN_HOUR_LOCAL: int = 3
+
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 

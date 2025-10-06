@@ -5,6 +5,8 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from app.metrics import metrics_payload
+from app import __version__
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -60,7 +62,19 @@ async def main():
     start_scheduler(bot)
 
     # aiohttp сервер для Tribute
+    async def handle_ping(_request: web.Request) -> web.Response:
+        return web.json_response({"status": "ok"})
+
+    async def handle_version(_request: web.Request) -> web.Response:
+        return web.json_response({"version": __version__})
+
+    async def handle_metrics(_request: web.Request) -> web.Response:
+        return web.json_response(metrics_payload())
+
     app_web = web.Application()
+    app_web.router.add_get("/ping", handle_ping)
+    app_web.router.add_get("/version", handle_version)
+    app_web.router.add_get("/metrics", handle_metrics)
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)
