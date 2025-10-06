@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    # Режим совместной работы оператора
+    ENABLE_HUMAN_COLLAB: bool = False
+
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""
