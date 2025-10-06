@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
+    REVENUE_DB_PATH: str = "data/revenue.sqlite3"
     TZ: str = "Europe/Moscow"
 
     # Партнёрские/коммерческие ссылки
