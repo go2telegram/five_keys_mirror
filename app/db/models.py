@@ -50,13 +50,12 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price_label: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    metadata: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict)
+    meta: Mapped[dict] = mapped_column("metadata", MutableDict.as_mutable(JSON), default=dict)
 
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="product", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
-
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
@@ -87,11 +86,10 @@ class Lead(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict)
+    meta: Mapped[dict] = mapped_column("metadata", MutableDict.as_mutable(JSON), default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     user: Mapped[Optional["User"]] = relationship(back_populates="leads")
-
 
 class AdminEvent(Base):
     __tablename__ = "admin_events"

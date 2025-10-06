@@ -129,3 +129,20 @@ state is kept across restarts.
   `ADMIN_REPORT_HOUR`, `ADMIN_REPORT_MINUTE`, and `ADMIN_REPORT_WINDOW_HOURS`)
   sends a morning report with the latest statistics plus the condensed error
   breakdown. The digest is delivered silently to avoid noisy wake-ups.
+
+## Stress testing
+
+Synthetic load tests are available via `tools/stress_test.py`. The helper spins
+up the dispatcher with an in-memory Telegram session and fires a configurable
+number of `/start` and `/panel` updates while tracking latency, CPU usage, and
+RSS memory. Example run:
+
+```bash
+export BOT_TOKEN="123456:TESTTOKEN"
+export ADMIN_ID="1"
+python tools/stress_test.py --updates 200 --concurrency 20
+```
+
+By default the script fails if 100 updates cannot be processed within 10 seconds
+or if the average per-update latency exceeds 200 ms. CI executes the same check
+to guard against regressions.

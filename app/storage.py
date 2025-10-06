@@ -102,7 +102,7 @@ def _map_lead(lead: Lead) -> LeadRecord:
         phone=lead.phone,
         comment=lead.comment,
         created_at=lead.created_at,
-        metadata=dict(lead.metadata or {}),
+        metadata=dict(lead.meta or {}),
     )
 
 
@@ -372,7 +372,7 @@ async def upsert_product(code: str, name: str, *, description: str | None = None
         product.name = name
         product.description = description
         product.price_label = price_label
-        product.metadata = metadata or {}
+        product.meta = metadata or {}
         await session.flush()
         return product
 

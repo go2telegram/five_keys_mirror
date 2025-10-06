@@ -9,3 +9,5 @@ redis==5.0.7
 APScheduler==3.10.4
 httpx==0.27.2
 prometheus-client==0.20.0
+psutil==5.9.8
+aiosqlite==0.20.0
