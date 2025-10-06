@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+    ENABLE_EMOTIONAL_MODELING: bool = True
 
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
