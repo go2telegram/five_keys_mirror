@@ -6,7 +6,13 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
-from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from app.storage import (
+    USERS,
+    EVENTS,
+    get_leads_last,
+    get_leads_all,
+    get_segment_summary,
+)
 
 router = Router()
 
@@ -32,7 +38,8 @@ async def stats(m: Message):
         "• /leads — последние 10 лидов\n"
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
-        "• /leads_csv 500 — CSV последних 500"
+        "• /leads_csv 500 — CSV последних 500\n"
+        "• /segments — срез по сегментам"
     )
 
 
@@ -105,3 +112,26 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+
+
+@router.message(Command("segments"))
+async def segments_overview(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+
+    summary, updated_at = get_segment_summary()
+    if not summary:
+        await m.answer("Сегменты пока не рассчитаны. Ночная задача обновит их к утру.")
+        return
+
+    total = sum(summary.values()) or 1
+    parts = []
+    for segment, count in sorted(summary.items(), key=lambda x: x[0]):
+        share = count / total * 100
+        parts.append(f"• {segment}: {count} ({share:.1f}%)")
+
+    updated_text = updated_at.isoformat(timespec="minutes") if updated_at else "—"
+
+    await m.answer(
+        "👥 Распределение сегментов\n" + "\n".join(parts) + f"\n\nПоследнее обновление: {updated_text}"
+    )

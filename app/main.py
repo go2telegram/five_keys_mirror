@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from app.metrics import render_metrics
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -63,6 +64,11 @@ async def main():
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+
+    async def metrics_handler(_: web.Request) -> web.Response:
+        return web.Response(text=render_metrics(), content_type="text/plain")
+
+    app_web.router.add_get("/metrics", metrics_handler)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
