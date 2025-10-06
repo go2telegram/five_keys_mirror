@@ -1,4 +1,4 @@
-# app/handlers/referral.py
+# app/handlers/referral/referral.py
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command

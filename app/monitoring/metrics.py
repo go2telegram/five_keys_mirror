@@ -12,6 +12,7 @@ from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Gauge, Histogram,
 __all__ = [
     "MetricsMiddleware",
     "metrics_handler",
+    "register_metrics",
     "setup_metrics",
 ]
 
@@ -119,11 +120,15 @@ async def metrics_handler(_: web.Request) -> web.Response:
     return web.Response(body=payload, content_type=CONTENT_TYPE_LATEST)
 
 
-def setup_metrics(dp: Dispatcher, web_app: web.Application) -> None:
+def register_metrics(dp: Dispatcher) -> None:
+    """Attach the metrics middleware and start uptime tracking."""
     global _uptime_task
 
     dp.update.middleware(MetricsMiddleware())
-    web_app.router.add_get("/metrics", metrics_handler)
-
     if _uptime_task is None or _uptime_task.done():
         _uptime_task = asyncio.create_task(_uptime_updater())
+
+
+def setup_metrics(web_app: web.Application) -> None:
+    """Expose the Prometheus metrics endpoint."""
+    web_app.router.add_get("/metrics", metrics_handler)
