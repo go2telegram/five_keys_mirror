@@ -1,0 +1,39 @@
+groups:
+  - name: five-keys-bot.availability
+    rules:
+      - alert: BotDown
+        expr: (avg_over_time(up{job="five_keys_bot"}[2m]) < 0.5) or absent(up{job="five_keys_bot"})
+        for: 2m
+        labels:
+          severity: critical
+          service: five_keys_bot
+        annotations:
+          summary: "Бот five_keys_bot недоступен"
+          description: |
+            Healthcheck /ping не отвечает в течение 2 минут. Проверьте, что процесс запущен и доступен по сети.
+            Runbook: docs/ops.md#runbook
+  - name: five-keys-bot.performance
+    rules:
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="five_keys_bot"}[5m])) by (le)) > 0.25
+        for: 10m
+        labels:
+          severity: warning
+          service: five_keys_bot
+        annotations:
+          summary: "Высокая латентность обработчиков"
+          description: |
+            P95 длительности запросов превышает 250 мс дольше 10 минут.
+            Проверьте последние релизы, внешние зависимости и состояние очередей.
+            Runbook: docs/ops.md#runbook
+      - alert: ErrorRate
+        expr: (sum(rate(http_requests_total{app="five_keys_bot",status=~"5.."}[5m])) / sum(rate(http_requests_total{app="five_keys_bot"}[5m]))) > 0.001
+        for: 10m
+        labels:
+          severity: warning
+          service: five_keys_bot
+        annotations:
+          summary: "Рост доли ошибок"
+          description: |
+            Доля 5xx превышает 0.1 % в течение 10 минут. Проверьте логи и состояние зависимостей.
+            Runbook: docs/ops.md#runbook
