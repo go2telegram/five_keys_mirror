@@ -4,6 +4,7 @@ from pydantic import field_validator
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
+    CALLBACK_SECRET: str | None = None
     ADMIN_ID: int
 
     DATABASE_URL: str | None = None

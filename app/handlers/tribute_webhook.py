@@ -1,13 +1,18 @@
-import hmac, hashlib, json, os
-from aiohttp import web
+import hashlib
+import hmac
+import json
+import logging
+import os
 from datetime import datetime, timezone
+
+from aiohttp import web
 
 from app.config import settings
 from app.storage import (
     ensure_user,
+    increment_ref_conversion,
     set_subscription,
     update_subscription_expiry,
-    increment_ref_conversion,
 )
 
 # --- уведомления ---
@@ -18,6 +23,8 @@ LOG = os.getenv("TRIBUTE_WEBHOOK_LOG", "0") == "1"
 INSECURE = os.getenv("TRIBUTE_WEBHOOK_INSECURE", "0") == "1"
 NOTIFY = True
 
+logger = logging.getLogger(__name__)
+
 BASIC_KEYS = [x.strip().lower() for x in settings.SUB_BASIC_MATCH.split(",") if x.strip()]
 PRO_KEYS   = [x.strip().lower() for x in settings.SUB_PRO_MATCH.split(",") if x.strip()]
 
@@ -25,8 +32,10 @@ def _now(): return datetime.now(timezone.utc)
 
 def _infer_plan(name: str) -> str | None:
     n = (name or "").lower()
-    if any(k in n for k in PRO_KEYS):   return "pro"
-    if any(k in n for k in BASIC_KEYS): return "basic"
+    if any(k in n for k in PRO_KEYS):
+        return "pro"
+    if any(k in n for k in BASIC_KEYS):
+        return "basic"
     return None
 
 def _parse_expiry(expires_iso: str | None) -> datetime | None:
@@ -40,9 +49,9 @@ def _parse_expiry(expires_iso: str | None) -> datetime | None:
 async def _notify_user(user_id: int, plan: str):
     try:
         bot = Bot(token=settings.BOT_TOKEN)
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]]
+        )
         text = (
             f"🎉 <b>Подписка активирована</b>\n\n"
             f"Тариф: <b>MITO {plan.title()}</b>\n"
@@ -50,8 +59,9 @@ async def _notify_user(user_id: int, plan: str):
         )
         await bot.send_message(user_id, text, reply_markup=kb)
         await bot.session.close()
-    except Exception as e:
-        if LOG: print(f"[TRIBUTE] notify failed for user={user_id}: {e}")
+    except Exception as exc:  # noqa: BLE001 - notify failures shouldn't crash webhook
+        if LOG:
+            logger.warning("Tribute notify failed for user=%s: %s", user_id, exc)
 
 async def tribute_webhook(request: web.Request) -> web.Response:
     raw = await request.read()
@@ -60,7 +70,8 @@ async def tribute_webhook(request: web.Request) -> web.Response:
     mac = hmac.new(settings.TRIBUTE_API_KEY.encode("utf-8"), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, signature):
         if INSECURE:
-            if LOG: print("[TRIBUTE] insecure accept (bad/missing signature)")
+            if LOG:
+                logger.warning("Tribute webhook accepted with invalid signature (insecure mode)")
         else:
             return web.json_response({"ok": False, "reason": "invalid_signature"}, status=401)
 
@@ -86,7 +97,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
             if profile.referred_by:
                 await increment_ref_conversion(profile.referred_by)
                 if LOG:
-                    print(f"[TRIBUTE] ref conversion: user={user_id} by={profile.referred_by}")
+                    logger.info("Tribute ref conversion user=%s by=%s", user_id, profile.referred_by)
 
             if NOTIFY:
                 await _notify_user(user_id, plan)

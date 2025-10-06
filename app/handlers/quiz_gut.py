@@ -62,13 +62,16 @@ async def quiz_gut_step(c: CallbackQuery):
 
         if total <= 5:
             level = "Баланс в порядке"
-            rec_codes = ["TEO_GREEN", "OMEGA3"]; ctx = "gut_ok"
+            rec_codes = ["TEO_GREEN", "OMEGA3"]
+            ctx = "gut_ok"
         elif total <= 10:
             level = "Лёгкие нарушения микробиома"
-            rec_codes = ["TEO_GREEN", "MOBIO"]; ctx = "gut_mild"
+            rec_codes = ["TEO_GREEN", "MOBIO"]
+            ctx = "gut_mild"
         else:
             level = "ЖКТ под нагрузкой"
-            rec_codes = ["MOBIO", "TEO_GREEN", "OMEGA3"]; ctx = "gut_high"
+            rec_codes = ["MOBIO", "TEO_GREEN", "OMEGA3"]
+            ctx = "gut_high"
 
         # 1) фото
         await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])

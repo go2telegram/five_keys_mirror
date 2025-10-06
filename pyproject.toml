@@ -1,0 +1,28 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+  "alembic/versions",
+  "Вспомогательное",
+  "tunnel",
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_configs = true
+files = [
+  "app/config.py",
+  "app/main.py",
+  "app/panel.py",
+  "app/security.py",
+  "app/utils_openai.py",
+  "doctor.py",
+]
+follow_imports = "skip"
+show_error_codes = true
+
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["tests", "alembic", "Вспомогательное", "tunnel"]
+

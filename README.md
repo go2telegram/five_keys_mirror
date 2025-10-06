@@ -69,8 +69,9 @@ stack (bot, PostgreSQL, Redis, Grafana):
 
    ```env
    BOT_TOKEN=your-telegram-token
-   ADMIN_ID=123456789
-   TZ=Europe/Moscow
+    CALLBACK_SECRET=choose-a-long-random-string
+    ADMIN_ID=123456789
+    TZ=Europe/Moscow
    ```
 
 2. Build and start the services:
@@ -100,3 +101,17 @@ docker compose exec bot alembic upgrade head
 
 The PostgreSQL and Redis data directories are persisted using Docker volumes so
 state is kept across restarts.
+
+## Security hardening
+
+- **Secret management**: runtime secrets such as `BOT_TOKEN`, `CALLBACK_SECRET`,
+  and `OPENAI_API_KEY` are only sourced from environment variables. The
+  application automatically redacts these values from structured logs and the
+  `/panel/logs` endpoint so they never appear in history or operator dashboards.
+- **Operations panel**: access the last 100 log lines via
+  `GET /panel/logs?secret=<CALLBACK_SECRET>` (adjust the `limit` query parameter
+  up to 500). Requests are denied unless the correct callback secret is
+  supplied in the query string or `X-Panel-Token` header.
+- **GitHub security**: enable _Secret Scanning_ and _Push Protection_ for the
+  repository (Settings → Code security and analysis) to block accidental
+  credential leaks during code review.

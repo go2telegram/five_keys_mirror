@@ -7,11 +7,13 @@ from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 from app.config import settings
-from app.scheduler.service import start_scheduler
-from app.metrics import setup_metrics
 from app.db.session import init_db_safe
-from app.products import sync_products
 from app.health import recovery_state, setup_healthcheck
+from app.metrics import setup_metrics
+from app.panel import setup_panel
+from app.products import sync_products
+from app.scheduler.service import start_scheduler
+from app.security import configure_logging
 from app.watchdog import start_watchdog
 
 # существующие роутеры
@@ -39,6 +41,7 @@ from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
 
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -76,6 +79,7 @@ async def main():
     app_web = web.Application()
     setup_metrics(dp, app_web)
     setup_healthcheck(app_web)
+    setup_panel(app_web)
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)

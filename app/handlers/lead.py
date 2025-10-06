@@ -95,7 +95,6 @@ async def lead_done(m: Message, state: FSMContext):
         f"Профиль: @{m.from_user.username if m.from_user.username else m.from_user.id}"
     )
     try:
-        from aiogram import Bot
         # получаем bot через мидлварь? проще — попросим юзера передать через контекст нельзя; используем message.bot
         await m.bot.send_message(admin_chat, text_admin)
     except Exception:

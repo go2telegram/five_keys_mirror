@@ -1,5 +1,7 @@
 import httpx
+
 from app.config import settings
+from app.security import redact_text
 
 async def ai_generate(prompt: str, sys: str = "Ты — эксперт по здоровью, пиши кратко и по делу на русском."):
     if not settings.OPENAI_API_KEY:
@@ -23,4 +25,5 @@ async def ai_generate(prompt: str, sys: str = "Ты — эксперт по зд
             data = r.json()
             return data["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        return f"⚠️ Ошибка генерации: {e}"
+        message = redact_text(str(e))
+        return f"⚠️ Ошибка генерации: {message}"

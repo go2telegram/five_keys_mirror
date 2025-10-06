@@ -2,7 +2,6 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from app.keyboards import kb_back_home, kb_main
 
 router = Router()
 
