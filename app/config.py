@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
     TZ: str = "Europe/Moscow"
+    ENABLE_GLOBAL_ECONOMY: bool = True
+    ECONOMY_REPORT_HOUR_LOCAL: int = 21
 
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
