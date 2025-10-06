@@ -6,6 +6,7 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
+from app.catalog.loader import load_products
 from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
 
 router = Router()
@@ -105,3 +106,19 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+
+
+@router.message(Command("catalog_reload"))
+async def catalog_reload(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+    try:
+        data = load_products(force=True)
+    except Exception as exc:
+        await m.answer(f"Не удалось обновить каталог: {exc}")
+        return
+    await m.answer(
+        "Каталог обновлён."
+        f"\nКатегорий: {len(data.categories)}"
+        f"\nТоваров: {len(data.products)}"
+    )

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 
+    ENABLE_CATALOG_UI: bool = True
+
     # OpenAI (если используешь ассистента)
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"

@@ -3,6 +3,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
+from app.catalog.loader import load_products
+from app.catalog import handlers as h_catalog
 from app.config import settings
 from app.scheduler.service import start_scheduler
 
@@ -32,6 +34,11 @@ from app.handlers import referral as h_referral
 
 
 async def main():
+    try:
+        load_products()
+    except Exception as exc:
+        print(f"⚠️ Failed to load catalog: {exc}")
+
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
@@ -56,6 +63,8 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    if settings.ENABLE_CATALOG_UI:
+        dp.include_router(h_catalog.router)
 
     start_scheduler(bot)
 
