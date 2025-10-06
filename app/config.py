@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     SUB_PRO_PRICE: str = "599 ₽/мес"
     # --------------------------------------
 
+    # Federated learning
+    ENABLE_FED_LEARNING: bool = False
+    FED_SERVER_URL: str | None = None
+    FED_CLIENT_ID: str | None = None
+    FED_LOCAL_MODEL_PATH: str = "models/local.pkl"
+    FED_MERGED_MODEL_PATH: str = "models/_merged.pkl"
+    FED_SYNC_HOUR: int = 3
+    FED_SYNC_MINUTE: int = 0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

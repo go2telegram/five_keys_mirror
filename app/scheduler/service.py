@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.federated_sync import sync_federated_model
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,19 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if getattr(settings, "ENABLE_FED_LEARNING", False):
+        fed_trigger = CronTrigger(
+            hour=getattr(settings, "FED_SYNC_HOUR", 3),
+            minute=getattr(settings, "FED_SYNC_MINUTE", 0),
+        )
+        scheduler.add_job(
+            sync_federated_model,
+            trigger=fed_trigger,
+            name="federated_sync",
+            misfire_grace_time=3600,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler

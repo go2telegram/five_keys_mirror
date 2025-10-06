@@ -1,0 +1,4 @@
+# Ignore model artifacts produced by federated learning
+*.pkl
+*.pt
+*.bin
