@@ -1,18 +1,17 @@
 import asyncio
-import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from aiohttp import ContentTypeError, web
+from aiohttp import web
 
 from app.config import settings
 from app.instance_lock import AlreadyRunningError, InstanceLock
 from app.scheduler.service import start_scheduler
 from app.telemetry import TelemetryMiddleware, setup_logging
 from app.storage import init_storage
+from app.health import create_web_app
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -36,7 +35,6 @@ from app.handlers import panel as h_panel
 # новые
 from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
-from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
 
@@ -78,24 +76,7 @@ async def main():
 
     # aiohttp сервер для Tribute и health-check
 
-    async def handle_ping(_: web.Request) -> web.Response:
-        return web.json_response(
-            {"status": "ok", "ts": datetime.now(timezone.utc).isoformat()}
-        )
-
-    async def handle_doctor_echo(request: web.Request) -> web.Response:
-        try:
-            payload = await request.json()
-        except (json.JSONDecodeError, ContentTypeError):
-            payload = {"raw": await request.text()}
-
-        return web.json_response({"status": "ok", "echo": payload})
-
-    app_web = web.Application()
-    app_web.router.add_get("/ping", handle_ping)
-    app_web.router.add_post("/doctor/echo", handle_doctor_echo)
-    app_web.router.add_post(
-        settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web = create_web_app()
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
