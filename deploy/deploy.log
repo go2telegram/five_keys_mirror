@@ -1,0 +1,16 @@
+# Self-deploy log
+# Entries are appended automatically by tools/self_deploy.py.
+# Example:
+# [2024-03-01T12:00:00Z] Starting deploy
+[2025-10-06T12:07:27Z] Starting deploy
+[2025-10-06T12:07:27Z] ✅ Deployed
+[2025-10-06T12:07:45Z] Starting deploy
+[2025-10-06T12:07:45Z] ✅ Deployed
+[2025-10-06T12:07:45Z] Initiating rollback
+[2025-10-06T12:07:45Z] 🔴 Rolled back
+[2025-10-06T12:07:52Z] Starting deploy
+[2025-10-06T12:07:52Z] ✅ Deployed
+[2025-10-06T12:07:53Z] Starting deploy
+[2025-10-06T12:07:53Z] ✅ Deployed
+[2025-10-06T12:07:53Z] Initiating rollback
+[2025-10-06T12:07:53Z] 🔴 Rolled back

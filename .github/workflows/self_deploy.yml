@@ -1,0 +1,68 @@
+name: Self deploy manager
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      simulate_error:
+        description: "Simulate failure to verify rollback"
+        required: false
+        default: "false"
+  schedule:
+    - cron: "0 * * * *"
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Run self deploy manager
+        env:
+          ENABLE_SELF_DEPLOY: ${{ vars.ENABLE_SELF_DEPLOY }}
+          CI_STATUS: ${{ github.event.workflow_run.conclusion || 'success' }}
+          METRICS_DATA: ${{ secrets.METRICS_DATA }}
+          DEPLOY_COMMAND: ${{ vars.DEPLOY_COMMAND }}
+          ROLLBACK_COMMAND: ${{ vars.ROLLBACK_COMMAND }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          TELEGRAM_WEBHOOK: ${{ secrets.TELEGRAM_WEBHOOK }}
+        run: |
+          args=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.simulate_error }}" = "true" ]; then
+            args="--simulate-error"
+          fi
+          python tools/self_deploy.py $args
+
+  rollback-test:
+    needs: deploy
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.simulate_error == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure rollback log
+        run: |
+          if ! grep -q "Rolled back" deploy/deploy.log; then
+            echo "Rollback entry not found" >&2
+            exit 1
+          fi
