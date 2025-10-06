@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
 
+    ENABLE_PREDICTIVE_PLANNER: bool = True
+    FORECAST_METRICS: str = "rps,revenue_total,error_rate"
+    FORECAST_DAYS: int = 7
+    FORECAST_HOUR_LOCAL: int = 8
+    FORECAST_MINUTE_LOCAL: int = 0
+
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 

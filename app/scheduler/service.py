@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from jobs.forecast_daily import send_daily_forecasts
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,19 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    if getattr(settings, "ENABLE_PREDICTIVE_PLANNER", True):
+        forecast_trigger = CronTrigger(
+            hour=getattr(settings, "FORECAST_HOUR_LOCAL", 8),
+            minute=getattr(settings, "FORECAST_MINUTE_LOCAL", 0),
+        )
+        scheduler.add_job(
+            send_daily_forecasts,
+            trigger=forecast_trigger,
+            args=[bot],
+            name="send_daily_forecasts",
+            misfire_grace_time=600,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler
