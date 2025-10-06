@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from app.keyboards import kb_buylist_pdf
-from app.storage import SESSIONS, USERS, save_event, set_last_plan
+from app.storage import SESSIONS, ensure_user, save_event, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
 from app.config import settings
@@ -93,7 +93,7 @@ async def quiz_stress_step(c: CallbackQuery):
         ]
         notes = "Избегай кофеина после 16:00. Добавь тёплый душ/растяжку вечером."
 
-        set_last_plan(
+        await set_last_plan(
             c.from_user.id,
             {
                 "title": "План: Стресс",
@@ -118,8 +118,15 @@ async def quiz_stress_step(c: CallbackQuery):
         ]
         await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:stress", rec_codes[:3]))
 
-        save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
-                   {"quiz": "stress", "score": total, "level": level})
+        profile = await ensure_user(c.from_user.id, {})
+        await save_event(
+            {
+                "user_id": c.from_user.id,
+                "source": profile.get("source"),
+                "action": "quiz_finish",
+                "payload": {"quiz": "stress", "score": total, "level": level},
+            }
+        )
         SESSIONS.pop(c.from_user.id, None)
         return
 

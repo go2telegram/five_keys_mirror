@@ -1,9 +1,12 @@
-import hmac, hashlib, json, os
+import hmac
+import hashlib
+import json
+import os
 from aiohttp import web
 from datetime import datetime, timezone, timedelta
 
 from app.config import settings
-from app.storage import USERS
+from app.storage import ensure_user, user_set
 
 # --- уведомления ---
 from aiogram import Bot
@@ -14,31 +17,41 @@ INSECURE = os.getenv("TRIBUTE_WEBHOOK_INSECURE", "0") == "1"
 NOTIFY = True
 
 BASIC_KEYS = [x.strip().lower() for x in settings.SUB_BASIC_MATCH.split(",") if x.strip()]
-PRO_KEYS   = [x.strip().lower() for x in settings.SUB_PRO_MATCH.split(",") if x.strip()]
+PRO_KEYS = [x.strip().lower() for x in settings.SUB_PRO_MATCH.split(",") if x.strip()]
 
-def _now(): return datetime.now(timezone.utc)
+
+def _now():
+    return datetime.now(timezone.utc)
+
 
 def _infer_plan(name: str) -> str | None:
     n = (name or "").lower()
-    if any(k in n for k in PRO_KEYS):   return "pro"
-    if any(k in n for k in BASIC_KEYS): return "basic"
+    if any(k in n for k in PRO_KEYS):
+        return "pro"
+    if any(k in n for k in BASIC_KEYS):
+        return "basic"
     return None
 
-def _activate(user_id: int, plan: str, expires_iso: str | None):
+
+async def _activate(user_id: int, plan: str, expires_iso: str | None):
     if expires_iso:
         try:
-            until = datetime.fromisoformat(expires_iso.replace("Z","+00:00"))
+            until = datetime.fromisoformat(expires_iso.replace("Z", "+00:00"))
         except Exception:
             until = _now() + timedelta(days=30)
     else:
         until = _now() + timedelta(days=30)
-    USERS.setdefault(user_id, {})["subscription"] = {
+    profile = await ensure_user(user_id, {})
+    profile["subscription"] = {
         "plan": plan,
         "since": _now().isoformat(),
-        "until": until.isoformat()
+        "until": until.isoformat(),
     }
+    await user_set(user_id, profile)
     if LOG:
         print(f"[TRIBUTE] activated: user={user_id} plan={plan} until={until.isoformat()}")
+    return profile
+
 
 async def _notify_user(user_id: int, plan: str):
     try:
@@ -54,7 +67,9 @@ async def _notify_user(user_id: int, plan: str):
         await bot.send_message(user_id, text, reply_markup=kb)
         await bot.session.close()
     except Exception as e:
-        if LOG: print(f"[TRIBUTE] notify failed for user={user_id}: {e}")
+        if LOG:
+            print(f"[TRIBUTE] notify failed for user={user_id}: {e}")
+
 
 async def tribute_webhook(request: web.Request) -> web.Response:
     raw = await request.read()
@@ -63,7 +78,8 @@ async def tribute_webhook(request: web.Request) -> web.Response:
     mac = hmac.new(settings.TRIBUTE_API_KEY.encode("utf-8"), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, signature):
         if INSECURE:
-            if LOG: print("[TRIBUTE] insecure accept (bad/missing signature)")
+            if LOG:
+                print("[TRIBUTE] insecure accept (bad/missing signature)")
         else:
             return web.json_response({"ok": False, "reason": "invalid_signature"}, status=401)
 
@@ -82,14 +98,19 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         plan = _infer_plan(sub_name) or "basic"
         if tg_id:
             user_id = int(tg_id)
-            _activate(user_id, plan, expires)
+            profile = await _activate(user_id, plan, expires)
 
             # учёт конверсии для реферала
-            ref_by = USERS.get(user_id, {}).get("referred_by")
+            ref_by = profile.get("referred_by")
             if ref_by:
-                USERS.setdefault(ref_by, {}).setdefault("ref_conversions", 0)
-                USERS[ref_by]["ref_conversions"] += 1
-                if LOG: print(f"[TRIBUTE] ref conversion: user={user_id} by={ref_by}")
+                ref_profile = await ensure_user(ref_by, {
+                    "ref_conversions": 0,
+                    "ref_users": [],
+                })
+                ref_profile["ref_conversions"] = ref_profile.get("ref_conversions", 0) + 1
+                await user_set(ref_by, ref_profile)
+                if LOG:
+                    print(f"[TRIBUTE] ref conversion: user={user_id} by={ref_by}")
 
             if NOTIFY:
                 await _notify_user(user_id, plan)
@@ -97,13 +118,17 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         return web.json_response({"ok": False, "reason": "no_telegram_id"}, status=400)
 
     if ev == "cancelled_subscription":
-        if tg_id and tg_id in USERS and USERS[tg_id].get("subscription") and expires:
-            try:
-                USERS[tg_id]["subscription"]["until"] = datetime.fromisoformat(
-                    expires.replace("Z", "+00:00")
-                ).isoformat()
-            except Exception:
-                pass
+        if tg_id:
+            user_id = int(tg_id)
+            profile = await ensure_user(user_id, {})
+            if profile.get("subscription") and expires:
+                try:
+                    profile["subscription"]["until"] = datetime.fromisoformat(
+                        expires.replace("Z", "+00:00")
+                    ).isoformat()
+                except Exception:
+                    pass
+                await user_set(user_id, profile)
         return web.json_response({"ok": True})
 
     return web.json_response({"ok": True, "ignored": ev or ""})

@@ -50,7 +50,7 @@ def _compose_pdf(plan: dict) -> bytes:
 
 @router.callback_query(F.data == "pdf:last")
 async def pdf_last_cb(c: CallbackQuery):
-    plan = get_last_plan(c.from_user.id)
+    plan = await get_last_plan(c.from_user.id)
     if not plan:
         await c.answer("Нет данных для отчёта. Пройдите тест или калькулятор.", show_alert=True)
         return
@@ -61,7 +61,7 @@ async def pdf_last_cb(c: CallbackQuery):
 
 @router.message(Command("pdf"))
 async def pdf_cmd(m: Message):
-    plan = get_last_plan(m.from_user.id)
+    plan = await get_last_plan(m.from_user.id)
     if not plan:
         await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
         return

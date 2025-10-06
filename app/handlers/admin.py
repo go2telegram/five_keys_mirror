@@ -6,7 +6,12 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
-from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from app.storage import (
+    get_all_users,
+    get_event_count,
+    get_leads_last,
+    get_leads_all,
+)
 
 router = Router()
 
@@ -15,10 +20,11 @@ router = Router()
 async def stats(m: Message):
     if m.from_user.id != settings.ADMIN_ID:
         return
-    total_users = len(USERS)
-    subs = sum(1 for u in USERS.values() if u.get("subs"))
-    quizzes = sum(1 for e in EVENTS if e["action"] == "quiz_finish")
-    starts = sum(1 for e in EVENTS if e["action"] == "start")
+    users = await get_all_users()
+    total_users = len(users)
+    subs = sum(1 for u in users.values() if u.get("subs"))
+    quizzes = await get_event_count("quiz_finish")
+    starts = await get_event_count("start")
     leads_cnt = len(get_leads_all())
 
     await m.answer(

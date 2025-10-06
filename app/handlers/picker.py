@@ -298,7 +298,7 @@ async def pick_finalize(c: CallbackQuery):
     if age == "50p":
         notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците по согласованию с врачом."
 
-    set_last_plan(
+    await set_last_plan(
         c.from_user.id,
         {
             "title": meta["title"],

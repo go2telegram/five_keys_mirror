@@ -2,16 +2,21 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timezone
-from app.storage import USERS
+
+from app.storage import user_get
 
 router = Router()
 
 
-def _active(user_id: int) -> tuple[bool, str]:
-    sub = USERS.get(user_id, {}).get("subscription")
+async def _active(user_id: int) -> tuple[bool, str]:
+    profile = await user_get(user_id)
+    sub = profile.get("subscription")
     if not sub:
         return False, ""
-    return (datetime.fromisoformat(sub["until"]) > datetime.now(timezone.utc), sub["plan"])
+    return (
+        datetime.fromisoformat(sub["until"]) > datetime.now(timezone.utc),
+        sub["plan"],
+    )
 
 
 BASIC_LINKS = [
@@ -41,7 +46,7 @@ def _kb_links(pairs):
 
 @router.callback_query(F.data == "premium:menu")
 async def premium_menu(c: CallbackQuery):
-    ok, plan = _active(c.from_user.id)
+    ok, plan = await _active(c.from_user.id)
     if not ok:
         await c.message.edit_text("🔒 Premium недоступен. Оформите подписку в разделе «Подписка».")
         return

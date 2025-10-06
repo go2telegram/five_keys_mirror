@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from app.keyboards import kb_buylist_pdf
-from app.storage import SESSIONS, USERS, save_event, set_last_plan
+from app.storage import SESSIONS, ensure_user, save_event, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
 from app.config import settings
@@ -20,6 +20,7 @@ GUT_QUESTIONS = [
     ("Изжога/рефлюкс/дискомфорт в верхних отделах ЖКТ?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
 ]
 
+
 def kb_quiz_q(idx: int):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     _, answers = GUT_QUESTIONS[idx]
@@ -33,6 +34,8 @@ def kb_quiz_q(idx: int):
 # ----------------------------
 # СТАРТ КВИЗА
 # ----------------------------
+
+
 @router.callback_query(F.data == "quiz:gut")
 async def quiz_gut_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "gut", "idx": 0, "score": 0}
@@ -45,6 +48,8 @@ async def quiz_gut_start(c: CallbackQuery):
 # ----------------------------
 # ОБРАБОТКА ОТВЕТОВ
 # ----------------------------
+
+
 @router.callback_query(F.data.regexp(r"^q:gut:\d+:\d+$"))
 async def quiz_gut_step(c: CallbackQuery):
     sess = SESSIONS.get(c.from_user.id, {})
@@ -70,13 +75,9 @@ async def quiz_gut_step(c: CallbackQuery):
             level = "ЖКТ под нагрузкой"
             rec_codes = ["MOBIO", "TEO_GREEN", "OMEGA3"]; ctx = "gut_high"
 
-        # 1) фото
         await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
-
-        # 2) карточка
         lines = product_lines(rec_codes[:3], ctx)
 
-        # 3) план для PDF
         actions = [
             "Регулярный режим питания (без «донышек»).",
             "Клетчатка ежедневно (TEO GREEN) + вода 30–35 мл/кг.",
@@ -84,7 +85,7 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         notes = "Если были антибиотики — курс MOBIO поможет быстрее восстановиться."
 
-        set_last_plan(
+        await set_last_plan(
             c.from_user.id,
             {
                 "title": "План: ЖКТ / микробиом",
@@ -109,8 +110,15 @@ async def quiz_gut_step(c: CallbackQuery):
         ]
         await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:gut", rec_codes[:3]))
 
-        save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
-                   {"quiz": "gut", "score": total, "level": level})
+        profile = await ensure_user(c.from_user.id, {})
+        await save_event(
+            {
+                "user_id": c.from_user.id,
+                "source": profile.get("source"),
+                "action": "quiz_finish",
+                "payload": {"quiz": "gut", "score": total, "level": level},
+            }
+        )
         SESSIONS.pop(c.from_user.id, None)
         return
 

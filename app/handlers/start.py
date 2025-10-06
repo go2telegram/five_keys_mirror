@@ -4,19 +4,31 @@ from aiogram.filters import CommandStart
 
 from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
 from app.keyboards import kb_main, kb_yes_no
-from app.storage import USERS, save_event
+from app.storage import ensure_user, save_event, user_set
 
 router = Router()
 
 
-def _ensure_ref_fields(uid: int):
-    u = USERS.setdefault(uid, {})
-    u.setdefault("ref_code", str(uid))
-    u.setdefault("referred_by", None)
-    u.setdefault("ref_clicks", 0)
-    u.setdefault("ref_joins", 0)
-    u.setdefault("ref_conversions", 0)
-    u.setdefault("ref_users", set())
+async def _ensure_ref_fields(uid: int) -> dict:
+    profile = await ensure_user(
+        uid,
+        {
+            "subs": False,
+            "tz": "Europe/Moscow",
+            "source": None,
+            "asked_notify": False,
+            "ref_code": str(uid),
+            "referred_by": None,
+            "ref_clicks": 0,
+            "ref_joins": 0,
+            "ref_conversions": 0,
+            "ref_users": [],
+        },
+    )
+    if not isinstance(profile.get("ref_users"), list):
+        profile["ref_users"] = list(profile.get("ref_users", []))
+        await user_set(uid, profile)
+    return profile
 
 
 @router.message(CommandStart())
@@ -25,10 +37,15 @@ async def start(message: Message):
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
-    USERS.setdefault(
-        tg_id, {"subs": False, "tz": "Europe/Moscow", "source": None})
-    save_event(tg_id, payload, "start")
-    _ensure_ref_fields(tg_id)
+    user = await ensure_user(
+        tg_id,
+        {"subs": False, "tz": "Europe/Moscow", "source": None, "asked_notify": False},
+    )
+    if payload and not user.get("source"):
+        user["source"] = payload
+        await user_set(tg_id, user)
+    await save_event({"user_id": tg_id, "source": payload or user.get("source"), "action": "start"})
+    user = await _ensure_ref_fields(tg_id)
 
     # --- обработка реферального кода ---
     if payload.startswith("ref_"):
@@ -37,35 +54,61 @@ async def start(message: Message):
         except Exception:
             ref_id = None
         if ref_id and ref_id != tg_id:
-            _ensure_ref_fields(ref_id)
-            if tg_id not in USERS[ref_id]["ref_users"]:
-                USERS[ref_id]["ref_clicks"] += 1
-            if USERS[tg_id].get("referred_by") is None:
-                USERS[tg_id]["referred_by"] = ref_id
-                USERS[ref_id]["ref_users"].add(tg_id)
-                USERS[ref_id]["ref_joins"] += 1
-            save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+            ref_user = await _ensure_ref_fields(ref_id)
+            if tg_id not in ref_user["ref_users"]:
+                ref_user["ref_users"].append(tg_id)
+                ref_user["ref_clicks"] += 1
+            if user.get("referred_by") is None:
+                user["referred_by"] = ref_id
+                if tg_id not in ref_user["ref_users"]:
+                    ref_user["ref_users"].append(tg_id)
+                ref_user["ref_joins"] += 1
+                await save_event(
+                    {
+                        "user_id": tg_id,
+                        "source": ref_id,
+                        "action": "ref_join",
+                        "payload": {"ref_by": ref_id},
+                    }
+                )
+            await user_set(ref_id, ref_user)
+            await user_set(tg_id, user)
 
     await message.answer(WELCOME, reply_markup=kb_main())
 
-    if not USERS[tg_id].get("asked_notify"):
-        USERS[tg_id]["asked_notify"] = True
+    if not user.get("asked_notify"):
+        user["asked_notify"] = True
+        await user_set(tg_id, user)
         await message.answer(ASK_NOTIFY, reply_markup=kb_yes_no("notify:yes", "notify:no"))
 
 
 @router.callback_query(F.data == "notify:yes")
 async def notify_yes(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = True
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_on")
+    user = await _ensure_ref_fields(c.from_user.id)
+    user["subs"] = True
+    await user_set(c.from_user.id, user)
+    await save_event(
+        {
+            "user_id": c.from_user.id,
+            "source": user.get("source"),
+            "action": "notify_on",
+        }
+    )
     await c.message.edit_text(NOTIFY_ON)
 
 
 @router.callback_query(F.data == "notify:no")
 async def notify_no(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = False
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_off")
+    user = await _ensure_ref_fields(c.from_user.id)
+    user["subs"] = False
+    await user_set(c.from_user.id, user)
+    await save_event(
+        {
+            "user_id": c.from_user.id,
+            "source": user.get("source"),
+            "action": "notify_off",
+        }
+    )
     await c.message.edit_text(NOTIFY_OFF)
 
 

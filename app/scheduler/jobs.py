@@ -2,8 +2,10 @@
 import datetime as dt
 from zoneinfo import ZoneInfo
 from aiogram import Bot
-from app.storage import USERS
+
+from app.storage import get_all_users
 from app.utils_openai import ai_generate
+
 
 async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     """
@@ -25,7 +27,8 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
         text = "Микро-челлендж дня:\n☑️ Сон 7–9 часов\n☑️ 10 мин утреннего света\n☑️ 30 мин быстрой ходьбы"
 
     # Рассылаем тем, кто согласился на напоминания
-    for uid, profile in USERS.items():
+    users = await get_all_users()
+    for uid, profile in users.items():
         if not profile.get("subs"):
             continue
         try:

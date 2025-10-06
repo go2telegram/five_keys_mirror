@@ -12,6 +12,7 @@ from app.config import settings
 from app.instance_lock import AlreadyRunningError, InstanceLock
 from app.scheduler.service import start_scheduler
 from app.telemetry import TelemetryMiddleware, setup_logging
+from app.storage import init_storage
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -41,6 +42,8 @@ from app.handlers import referral as h_referral
 
 async def main():
     telemetry_logger = setup_logging(settings.DEBUG, settings.LOG_PATH)
+
+    await init_storage(settings.REDIS_URL)
 
     bot = Bot(
         token=settings.BOT_TOKEN,

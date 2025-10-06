@@ -77,7 +77,7 @@ async def handle_msd(m: Message):
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
     # для PDF
-    set_last_plan(
+    await set_last_plan(
         m.from_user.id,
         {
             "title": "План: Идеальный вес (MSD)",
@@ -147,7 +147,7 @@ async def handle_bmi(m: Message):
     ]
     notes = "Если есть ЖКТ-жалобы — начни с TEO GREEN + MOBIO и режима питания."
 
-    set_last_plan(
+    await set_last_plan(
         m.from_user.id,
         {
             "title": "План: Индекс массы тела (ИМТ)",
