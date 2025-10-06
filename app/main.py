@@ -30,6 +30,9 @@ from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
+if settings.ENABLE_HUMAN_FEEDBACK:
+    from bot.feedback_ui import router as h_feedback
+
 
 async def main():
     bot = Bot(token=settings.BOT_TOKEN,
@@ -56,6 +59,8 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    if settings.ENABLE_HUMAN_FEEDBACK:
+        dp.include_router(h_feedback)
 
     start_scheduler(bot)
 
