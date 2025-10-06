@@ -10,6 +10,7 @@ venv/
 *.env
 .env.*
 *.sqlite
+*.db
 app/build_info.py
 .run/
 
