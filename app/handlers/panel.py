@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 
 import aiohttp
-from aiogram import F, Router
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
@@ -13,6 +13,7 @@ from app.config import settings
 from app.keyboards import kb_panel
 from app.throttle import allow
 from app.utils_logs import tail_logs
+from app.utils_sign import SignedAction, SignedPayload
 
 router = Router()
 
@@ -72,13 +73,17 @@ async def panel_command(message: Message) -> None:
     )
 
 
-@router.callback_query(F.data == "panel:ping")
-async def panel_ping(callback: CallbackQuery) -> None:
+@router.callback_query(SignedAction("panel:ping"))
+async def panel_ping(callback: CallbackQuery, signed: SignedPayload) -> None:
+    if signed.is_expired():
+        await callback.answer("Кнопка устарела", show_alert=True)
+        return
+
     if not _check_admin(callback.from_user.id):
         await callback.answer("Недостаточно прав", show_alert=True)
         return
 
-    if not allow(callback.from_user.id, "panel:ping"):
+    if not allow(callback.from_user.id, signed.value):
         await callback.answer("Слишком часто", show_alert=True)
         return
 
@@ -91,13 +96,17 @@ async def panel_ping(callback: CallbackQuery) -> None:
     await callback.answer("Пинг выполнен")
 
 
-@router.callback_query(F.data == "panel:echo")
-async def panel_echo(callback: CallbackQuery) -> None:
+@router.callback_query(SignedAction("panel:echo"))
+async def panel_echo(callback: CallbackQuery, signed: SignedPayload) -> None:
+    if signed.is_expired():
+        await callback.answer("Кнопка устарела", show_alert=True)
+        return
+
     if not _check_admin(callback.from_user.id):
         await callback.answer("Недостаточно прав", show_alert=True)
         return
 
-    if not allow(callback.from_user.id, "panel:echo"):
+    if not allow(callback.from_user.id, signed.value):
         await callback.answer("Слишком часто", show_alert=True)
         return
 
@@ -111,13 +120,17 @@ async def panel_echo(callback: CallbackQuery) -> None:
     await callback.answer("Echo отправлен")
 
 
-@router.callback_query(F.data == "panel:logs")
-async def panel_logs(callback: CallbackQuery) -> None:
+@router.callback_query(SignedAction("panel:logs"))
+async def panel_logs(callback: CallbackQuery, signed: SignedPayload) -> None:
+    if signed.is_expired():
+        await callback.answer("Кнопка устарела", show_alert=True)
+        return
+
     if not _check_admin(callback.from_user.id):
         await callback.answer("Недостаточно прав", show_alert=True)
         return
 
-    if not allow(callback.from_user.id, "panel:logs"):
+    if not allow(callback.from_user.id, signed.value):
         await callback.answer("Слишком часто", show_alert=True)
         return
 

@@ -1,7 +1,9 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
+
 from app.config import settings
 from app.products import PRODUCTS, BUY_URLS
+from app.utils_sign import sign
 
 # ---------- Главное меню ----------
 
@@ -28,9 +30,9 @@ def kb_main() -> InlineKeyboardMarkup:
 
 def kb_panel() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="🔁 Ping", callback_data="panel:ping")
-    kb.button(text="🪪 Echo", callback_data="panel:echo")
-    kb.button(text="📜 Логи", callback_data="panel:logs")
+    kb.button(text="🔁 Ping", callback_data=sign("panel:ping"))
+    kb.button(text="🪪 Echo", callback_data=sign("panel:echo"))
+    kb.button(text="📜 Логи", callback_data=sign("panel:logs"))
     kb.adjust(1)
     return kb.as_markup()
 

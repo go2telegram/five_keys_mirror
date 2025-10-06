@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     ADMIN_ID: int
     ADMIN_IDS: List[int] = Field(default_factory=list)
+    CALLBACK_SECRET: str | None = None
 
     DATABASE_URL: str | None = None
     REDIS_URL: str | None = None
@@ -88,6 +89,9 @@ class Settings(BaseSettings):
 
     def is_admin(self, user_id: int) -> bool:
         return user_id in self.ADMIN_IDS
+
+    def get_callback_secret(self) -> str:
+        return self.CALLBACK_SECRET or self.BOT_TOKEN
 
 
 settings = Settings()

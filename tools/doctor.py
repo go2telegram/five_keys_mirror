@@ -89,6 +89,17 @@ def check_environment(env: Dict[str, str]) -> CheckReport:
     else:
         details["ADMIN_IDS"] = admin_ids_raw
 
+    if env.get("CALLBACK_SECRET"):
+        details["CALLBACK_SECRET"] = True
+    else:
+        status = upgrade_status(status, "WARN")
+        actions.append(
+            Action(
+                "Define CALLBACK_SECRET to sign and validate inline callback buttons.",
+                "WARN",
+            )
+        )
+
     log_path = env.get("LOG_PATH")
     if not log_path:
         status = upgrade_status(status, "WARN")
