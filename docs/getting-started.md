@@ -69,7 +69,10 @@ Services exposed:
 - `bot` (Five Keys Bot) — port 8080
 - `postgres` — port 5432
 - `redis` — port 6379
-- `grafana` — port 3000 (default credentials `admin`/`admin`)
+- `prometheus` — port 9090 (scrapes the bot's `/metrics` endpoint)
+- `grafana` — port 3000 (credentials configured through `.env`)
+
+To receive Telegram alerts from Grafana provisioning, set `GRAFANA_TELEGRAM_BOT_TOKEN` and `GRAFANA_TELEGRAM_CHAT_ID` in `.env` before launching `docker compose`.
 
 Run database migrations inside the container as required:
 

@@ -44,6 +44,13 @@ docker compose down
 - Confirm `/metrics` exposes the Prometheus counters/histograms referenced in dashboards.
 - Use Grafana (localhost:3000) to review latency, uptime, and error rate panels.
 - `doctor.py` should report "OK" and indicate when recovery events occur.
+- Configure Telegram notifications by setting `GRAFANA_TELEGRAM_BOT_TOKEN`/`GRAFANA_TELEGRAM_CHAT_ID` so alerts reach operators.
+
+## Release automation
+
+- Update [CHANGELOG.md](../CHANGELOG.md) and bump `app.__version__` before creating a git tag (`vMAJOR.MINOR.PATCH`).
+- Push to `main` and let the `CI` workflow finish successfully; `.github/workflows/deploy.yml` will deploy only after a green build.
+- Schedule-sensitive environments should keep `PROD_PING_URL`/`PROD_METRICS_URL` secrets configured so `.github/workflows/doctor-report.yml` can archive nightly health reports.
 
 ## Writing documentation
 

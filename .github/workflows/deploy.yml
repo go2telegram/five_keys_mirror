@@ -1,0 +1,63 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Ensure deployment enabled
+        run: |
+          if [ "${{ secrets.DEPLOY_ENABLED }}" != "true" ]; then
+            echo "Deployment disabled (set DEPLOY_ENABLED=true in repository secrets to activate)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+      - name: Prepare SSH key
+        if: ${{ secrets.DEPLOY_ENABLED == 'true' }}
+        run: |
+          if [ -z "${{ secrets.PROD_DEPLOY_KEY }}" ] || [ -z "${{ secrets.PROD_DEPLOY_HOST }}" ] || [ -z "${{ secrets.PROD_DEPLOY_USER }}" ]; then
+            echo "Missing PROD_DEPLOY_* secrets; cannot deploy." >&2
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.PROD_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >> ~/.ssh/config <<CFG
+Host production
+  HostName ${{ secrets.PROD_DEPLOY_HOST }}
+  User ${{ secrets.PROD_DEPLOY_USER }}
+  IdentityFile ~/.ssh/deploy_key
+  StrictHostKeyChecking no
+CFG
+
+      - name: Deploy with Docker Compose
+        if: ${{ secrets.DEPLOY_ENABLED == 'true' }}
+        env:
+          DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH || '/srv/five_keys_bot' }}
+        run: |
+          ssh production <<'REMOTE'
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          git fetch origin main
+          git reset --hard origin/main
+          docker compose pull
+          docker compose up -d
+REMOTE
+
+      - name: Cleanup SSH key
+        if: ${{ secrets.DEPLOY_ENABLED == 'true' }}
+        run: rm -rf ~/.ssh

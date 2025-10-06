@@ -1,0 +1,51 @@
+name: Nightly doctor report
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate doctor report
+        id: doctor
+        env:
+          PING_URL: ${{ secrets.PROD_PING_URL }}
+          METRICS_URL: ${{ secrets.PROD_METRICS_URL }}
+          REPORT_DIR: doctor_reports
+        run: |
+          if [ -z "$PING_URL" ] || [ -z "$METRICS_URL" ]; then
+            echo "PING_URL/METRICS_URL secrets not set; skipping doctor report." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python doctor.py --report --report-dir "$REPORT_DIR"
+          latest_report=$(ls -1t "$REPORT_DIR" | head -n 1)
+          if [ -z "$latest_report" ]; then
+            echo "No doctor report generated." >&2
+            exit 1
+          fi
+          echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+          echo "report_path=$REPORT_DIR/$latest_report" >> "$GITHUB_OUTPUT"
+
+      - name: Upload report artifact
+        if: ${{ steps.doctor.outputs.report_path != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: doctor-report-${{ github.run_id }}
+          path: ${{ steps.doctor.outputs.report_dir }}
+          retention-days: 14

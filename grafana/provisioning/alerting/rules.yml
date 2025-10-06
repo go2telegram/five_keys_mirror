@@ -1,0 +1,206 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: five-keys-runtime
+    folder: Five Keys Bot
+    interval: 1m
+    rules:
+      - uid: FiveKeysHighLatency
+        title: "FiveKeys: High latency"
+        condition: C
+        data:
+          - refId: A
+            queryType: timeSeriesQuery
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: histogram_quantile(0.95, sum(rate(bot_update_latency_seconds_bucket[5m])) by (le))
+              instant: false
+              interval: ""
+              legendFormat: p95
+              range: true
+          - refId: B
+            queryType: reduceQuery
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              type: reduce
+          - refId: C
+            queryType: threshold
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              type: threshold
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.4
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "p95 latency is above 400ms for 5 minutes"
+        labels:
+          alertname: FiveKeysHighLatency
+      - uid: FiveKeysErrorSpike
+        title: "FiveKeys: Error spike"
+        condition: C
+        data:
+          - refId: A
+            queryType: timeSeriesQuery
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: increase(bot_update_errors_total[5m]) / increase(bot_updates_total[5m])
+              instant: false
+              interval: ""
+              legendFormat: error_rate
+              range: true
+          - refId: B
+            queryType: reduceQuery
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: max
+              type: reduce
+          - refId: C
+            queryType: threshold
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              type: threshold
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.05
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: "Error rate exceeded 5% of updates"
+        labels:
+          alertname: FiveKeysErrorSpike
+      - uid: FiveKeysNoMetrics
+        title: "FiveKeys: No metrics scrape"
+        condition: C
+        data:
+          - refId: A
+            queryType: timeSeriesQuery
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: absent(bot_uptime_seconds)
+              instant: true
+              interval: ""
+              legendFormat: absent
+              range: false
+          - refId: B
+            queryType: reduceQuery
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              type: reduce
+          - refId: C
+            queryType: threshold
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              type: threshold
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: "Prometheus has not scraped metrics for 10 minutes"
+        labels:
+          alertname: FiveKeysNoMetrics

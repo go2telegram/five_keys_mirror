@@ -54,15 +54,36 @@ services:
     depends_on:
       bot:
         condition: service_started
+      prometheus:
+        condition: service_started
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    depends_on:
+      bot:
+        condition: service_started
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
 
 volumes:
   postgres_data:
   redis_data:
   grafana_data:
+  prometheus_data:

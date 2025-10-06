@@ -2,6 +2,8 @@
 
 Production-ready Telegram assistant for wellness coaching with PostgreSQL persistence, Prometheus telemetry, and Docker-first deployment tooling.
 
+> **Current release:** [v1.0.0](CHANGELOG.md)
+
 - **Framework**: [Aiogram 3](https://docs.aiogram.dev/).
 - **Storage**: PostgreSQL for long-lived data, Redis for ephemeral cache/event fan-out.
 - **Observability**: `/metrics` Prometheus endpoint, `/ping` watchdog, masked `/panel/logs`.
@@ -17,7 +19,7 @@ Production-ready Telegram assistant for wellness coaching with PostgreSQL persis
 | `alembic/` | Database migrations maintained with Alembic. |
 | `tools/stress_test.py` | Load generator that replays `/start` and `/panel` updates while capturing latency/CPU/RSS metrics. |
 | `doctor.py` | Operational diagnostics hitting `/ping` and `/metrics`. |
-| `docker-compose.yml` | One-command stack (bot + Postgres + Redis + Grafana). |
+| `docker-compose.yml` | One-command stack (bot + Postgres + Redis + Prometheus + Grafana). |
 | `docs/` | MkDocs documentation sources (API reference, onboarding guides). |
 
 ---
@@ -85,7 +87,8 @@ docker compose up --build
 Key services:
 
 - **Bot**: http://localhost:8080
-- **Grafana**: http://localhost:3000 (default credentials `admin` / `admin`)
+- **Prometheus**: http://localhost:9090 (scrapes `bot:8080/metrics`)
+- **Grafana**: http://localhost:3000 (default credentials configurable via `.env`)
 - **PostgreSQL**: exposed as `postgres:5432` inside the Compose network
 - **Redis**: `redis:6379`
 
@@ -96,6 +99,8 @@ docker compose exec bot alembic upgrade head
 ```
 
 Data for PostgreSQL and Redis is stored in named volumes, so restarts keep state.
+
+> 🛎️  Configure Telegram alerts by setting `GRAFANA_TELEGRAM_BOT_TOKEN` and `GRAFANA_TELEGRAM_CHAT_ID` in `.env` before launching the stack. Grafana provisioning ships with a "Five Keys Bot Overview" dashboard and alerting rules for latency, error spikes, and missing metrics.
 
 ---
 
@@ -130,6 +135,7 @@ Refer to [`app/config.py`](app/config.py) for the exhaustive list and defaults.
   ```
 
 - **Watchdog**: `doctor.py` polls `/ping` and `/metrics`, reporting recovery status during incidents.
+- **Nightly reports**: `python doctor.py --report` stores a JSON health snapshot under `reports/doctor/`. The scheduled GitHub Action `doctor-report.yml` runs nightly (configure `PING_URL` and `METRICS_URL` secrets) and uploads the artifact.
 - **Stress testing**: `python tools/stress_test.py --updates 200 --concurrency 20` to replay synthetic traffic and ensure average latency stays under 200 ms.
 
 ---
@@ -157,6 +163,14 @@ mkdocs serve  # starts docs at http://127.0.0.1:8000
 ```
 
 The documentation lives under `docs/` and includes auto-generated API references via `mkdocstrings`.
+
+---
+
+## Releases & deployments
+
+- Release notes live in [CHANGELOG.md](CHANGELOG.md). Tag the repository with `v1.0.0` (or the next semantic version) after updating the changelog.
+- Continuous Deployment is automated through `.github/workflows/deploy.yml`, which triggers only after a successful `CI` workflow on `main`. Configure production credentials via repository secrets (`DEPLOY_ENABLED=true`, `PROD_DEPLOY_HOST`, `PROD_DEPLOY_USER`, etc.) to activate the deployment step.
+- A nightly doctor report is produced by `.github/workflows/doctor-report.yml`; configure `PROD_PING_URL` / `PROD_METRICS_URL` secrets so the job targets your environment and retains JSON artifacts.
 
 ---
 
