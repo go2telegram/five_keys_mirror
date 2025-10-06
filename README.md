@@ -58,3 +58,45 @@ alembic upgrade head
 
 During startup the bot will also call `sync_products()` to ensure the built-in
 product catalog is synchronised with the database.
+
+## Docker deployment
+
+The repository ships with a production-oriented Docker setup. To run the entire
+stack (bot, PostgreSQL, Redis, Grafana):
+
+1. Create a `.env` file next to `docker-compose.yml` with the required
+   application secrets, for example:
+
+   ```env
+   BOT_TOKEN=your-telegram-token
+   ADMIN_ID=123456789
+   TZ=Europe/Moscow
+   ```
+
+2. Build and start the services:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   The compose file exposes the webhook server on `http://localhost:8080` and
+   Grafana on `http://localhost:3000` (defaults: `admin` / `admin`).
+
+3. Check that the bot container reports a healthy state:
+
+   ```bash
+   docker ps --filter "name=five_keys_bot-bot" --format '{{.Names}} {{.Status}}'
+   ```
+
+   The image defines a Docker `HEALTHCHECK` that pings `GET /ping` to ensure the
+   aiohttp service and database connection are responsive.
+
+With the containers running, apply Alembic migrations inside the bot service if
+needed:
+
+```bash
+docker compose exec bot alembic upgrade head
+```
+
+The PostgreSQL and Redis data directories are persisted using Docker volumes so
+state is kept across restarts.
