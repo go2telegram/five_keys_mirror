@@ -2,9 +2,12 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
+import os
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+
+from policy import get_policy_engine
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -30,11 +33,16 @@ from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
+from bot import admin_policy as h_admin_policy
+
 
 async def main():
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
+
+    policy_engine = get_policy_engine()
+    policy_engine.set_enabled(settings.ENABLE_META_POLICY_AI)
 
     # роутеры
     dp.include_router(h_start.router)
@@ -56,6 +64,7 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(h_admin_policy.router)
 
     start_scheduler(bot)
 
@@ -63,6 +72,60 @@ async def main():
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+
+    async def ping(_request: web.Request) -> web.Response:
+        return web.json_response({"status": "ok"})
+
+    async def version(_request: web.Request) -> web.Response:
+        version = os.getenv("APP_VERSION", "dev")
+        return web.json_response({"version": version})
+
+    async def metrics(_request: web.Request) -> web.Response:
+        payload = {"status": "ok"}
+        if settings.ENABLE_META_POLICY_AI:
+            payload.update({
+                "policy_enabled": True,
+                "policy": policy_engine.get_status(),
+            })
+        else:
+            payload["policy_enabled"] = False
+        return web.json_response(payload)
+
+    async def policy_status_handler(_request: web.Request) -> web.Response:
+        if not settings.ENABLE_META_POLICY_AI:
+            return web.json_response(
+                {"enabled": False, "message": "Meta policy AI disabled"},
+                status=503,
+            )
+        return web.json_response(policy_engine.get_status())
+
+    async def update_metrics(request: web.Request) -> web.Response:
+        if not settings.ENABLE_META_POLICY_AI:
+            return web.json_response(
+                {"enabled": False, "message": "Meta policy AI disabled"},
+                status=503,
+            )
+
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+
+        metrics_payload = payload.get("metrics") if isinstance(payload, dict) else None
+        if metrics_payload is None and isinstance(payload, dict):
+            metrics_payload = {k: v for k, v in payload.items() if isinstance(k, str)}
+
+        if not isinstance(metrics_payload, dict) or not metrics_payload:
+            return web.json_response({"error": "Metrics payload is empty"}, status=400)
+
+        status = policy_engine.update_metrics(metrics_payload, source="http")
+        return web.json_response(status)
+
+    app_web.router.add_get("/ping", ping)
+    app_web.router.add_get("/version", version)
+    app_web.router.add_get("/metrics", metrics)
+    app_web.router.add_get("/policy_status", policy_status_handler)
+    app_web.router.add_post("/metrics", update_metrics)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
