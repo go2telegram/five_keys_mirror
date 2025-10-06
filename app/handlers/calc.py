@@ -7,6 +7,7 @@ from app.storage import SESSIONS, set_last_plan
 from app.utils_media import send_product_album
 from app.reco import product_lines
 from app.config import settings
+from app.tracking import track
 
 router = Router()
 
@@ -38,6 +39,7 @@ def bmi_recommendations(bmi: float):
 
 @router.callback_query(F.data == "calc:menu")
 async def calc_menu(c: CallbackQuery):
+    await track("feature_use:calc_menu", c.from_user.id)
     await c.message.edit_text("Выбери калькулятор:", reply_markup=kb_calc_menu())
 
 # --- MSD (идеальный вес по росту) ---
@@ -46,6 +48,7 @@ async def calc_menu(c: CallbackQuery):
 @router.callback_query(F.data == "calc:msd")
 async def calc_msd(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "msd"}
+    await track("feature_use:calc_msd", c.from_user.id)
     await c.message.edit_text(
         "Введи рост в сантиметрах и пол (М/Ж), например: <code>165 Ж</code>",
         reply_markup=kb_back_home("calc:menu")
@@ -108,6 +111,7 @@ async def handle_msd(m: Message):
 @router.callback_query(F.data == "calc:bmi")
 async def calc_bmi(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "bmi"}
+    await track("feature_use:calc_bmi", c.from_user.id)
     await c.message.edit_text(
         "Введи рост и вес, например: <code>183 95</code>",
         reply_markup=kb_back_home("calc:menu")

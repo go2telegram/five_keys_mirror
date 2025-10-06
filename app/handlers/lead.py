@@ -9,6 +9,7 @@ from aiogram.filters import Command
 
 from app.keyboards import kb_cancel_home, kb_main
 from app.storage import add_lead
+from app.tracking import track
 from app.config import settings
 
 router = Router()
@@ -84,6 +85,7 @@ async def lead_done(m: Message, state: FSMContext):
         "ts": datetime.utcnow().isoformat()
     }
     add_lead(lead)
+    await track("lead_created", m.from_user.id, has_comment=bool(comment))
 
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID

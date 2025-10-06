@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime, timezone
 
 from app.storage import USERS, save_event
+from app.tracking import track
 
 router = Router()
 
@@ -44,6 +45,7 @@ async def ref_menu_cb(c: CallbackQuery):
     _ensure_ref_fields(uid)
     link = await _ref_link(c.bot, uid)
     u = USERS[uid]
+    await track("feature_use:referral_menu", uid)
     text = (
         "👥 <b>Реферальная ссылка</b>\n"
         f"{link}\n\n"
@@ -61,6 +63,7 @@ async def ref_menu_msg(m: Message):
     _ensure_ref_fields(uid)
     link = await _ref_link(m.bot, uid)
     u = USERS[uid]
+    await track("feature_use:referral_menu", uid)
     text = (
         "👥 <b>Реферальная ссылка</b>\n"
         f"{link}\n\n"

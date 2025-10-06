@@ -2,6 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
@@ -61,6 +62,11 @@ async def main():
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
+    async def metrics_handler(_: web.Request) -> web.Response:
+        payload = generate_latest()
+        return web.Response(body=payload, content_type=CONTENT_TYPE_LATEST)
+
+    app_web.router.add_get("/metrics", metrics_handler)
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)

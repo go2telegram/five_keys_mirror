@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 
 from app.config import settings
 from app.storage import USERS
+from app.tracking import track
 
 # --- уведомления ---
 from aiogram import Bot
@@ -83,6 +84,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         if tg_id:
             user_id = int(tg_id)
             _activate(user_id, plan, expires)
+            await track("purchase_success", user_id, plan=plan, source="tribute")
 
             # учёт конверсии для реферала
             ref_by = USERS.get(user_id, {}).get("referred_by")

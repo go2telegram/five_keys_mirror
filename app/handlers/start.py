@@ -5,6 +5,7 @@ from aiogram.filters import CommandStart
 from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
 from app.keyboards import kb_main, kb_yes_no
 from app.storage import USERS, save_event
+from app.tracking import track
 
 router = Router()
 
@@ -25,8 +26,11 @@ async def start(message: Message):
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
+    is_new_user = tg_id not in USERS
     USERS.setdefault(
         tg_id, {"subs": False, "tz": "Europe/Moscow", "source": None})
+    if is_new_user:
+        await track("user_signup", tg_id, source=payload or None)
     save_event(tg_id, payload, "start")
     _ensure_ref_fields(tg_id)
 
@@ -44,7 +48,8 @@ async def start(message: Message):
                 USERS[tg_id]["referred_by"] = ref_id
                 USERS[ref_id]["ref_users"].add(tg_id)
                 USERS[ref_id]["ref_joins"] += 1
-            save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+                save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+                await track("referral_join", tg_id, referrer=ref_id)
 
     await message.answer(WELCOME, reply_markup=kb_main())
 

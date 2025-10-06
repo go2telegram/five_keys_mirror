@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from app.config import settings
 from app.storage import USERS
+from app.tracking import track
 
 router = Router()
 
@@ -38,6 +39,7 @@ def _kb_sub_menu():
 
 @router.callback_query(F.data == "sub:menu")
 async def sub_menu(c: CallbackQuery):
+    await track("purchase_attempt", c.from_user.id)
     await c.message.edit_text(
         "💎 <b>Подписка</b>\nОформите доступ и получите Premium-разделы МИТОсообщества.",
         reply_markup=_kb_sub_menu()
