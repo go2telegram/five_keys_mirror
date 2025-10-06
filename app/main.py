@@ -30,6 +30,9 @@ from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
+# intent routing
+from bot.intent_router import router as intent_router
+
 
 async def main():
     bot = Bot(token=settings.BOT_TOKEN,
@@ -56,6 +59,7 @@ async def main():
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
+    dp.include_router(intent_router)
 
     start_scheduler(bot)
 
