@@ -4,12 +4,17 @@ from zoneinfo import ZoneInfo
 from aiogram import Bot
 from app.storage import USERS
 from app.utils_openai import ai_generate
+from app.features import is_feature_enabled
+from app.governor_service import run_governor
 
 async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     """
     Рассылка «мягких напоминаний» тем, кто согласился (USERS[uid]['subs'] == True).
     Дни недели фильтруем по TZ; тексты — короткие, через ChatGPT для свежести.
     """
+    if not is_feature_enabled("auto_notify"):
+        return
+
     now_local = dt.datetime.now(ZoneInfo(tz_name))
     wd = now_local.strftime("%a")  # 'Mon', 'Tue', ...
     if weekdays and wd not in weekdays:
@@ -33,3 +38,7 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
         except Exception:
             # молча пропускаем закрытые чаты/блок
             pass
+
+
+async def governor_tick(bot: Bot) -> None:
+    await run_governor(bot)

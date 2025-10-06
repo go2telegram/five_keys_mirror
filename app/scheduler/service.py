@@ -1,8 +1,9 @@
 # app/scheduler/service.py
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from aiogram import Bot
-from app.scheduler.jobs import send_nudges
+from app.scheduler.jobs import send_nudges, governor_tick
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -26,6 +27,16 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         args=[bot, settings.TZ, weekdays],
         name="send_nudges",
         misfire_grace_time=600,
+        coalesce=True,
+        max_instances=1,
+    )
+
+    scheduler.add_job(
+        governor_tick,
+        trigger=IntervalTrigger(minutes=5),
+        args=[bot],
+        name="governor_tick",
+        misfire_grace_time=60,
         coalesce=True,
         max_instances=1,
     )

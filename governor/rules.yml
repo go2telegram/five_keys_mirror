@@ -1,0 +1,6 @@
+- if: error_rate > 0.5
+  do:
+    disable_feature: auto_notify
+- if: revenue_drop_percent > 20
+  do:
+    alert: "Revenue drop"

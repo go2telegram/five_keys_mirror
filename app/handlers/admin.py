@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.config import settings
 from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
+from bot.admin_governor import render_governor_status
 
 router = Router()
 
@@ -105,3 +106,11 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+
+
+@router.message(Command("governor_status"))
+async def governor_status(m: Message):
+    if m.from_user.id != settings.ADMIN_ID:
+        return
+    await m.answer(render_governor_status())
+
