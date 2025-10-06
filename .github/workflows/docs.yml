@@ -1,0 +1,22 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install documentation dependencies
+        run: pip install mkdocs mkdocs-material pdoc
+      - name: Generate API reference
+        run: pdoc -o docs/api app
+      - name: Build MkDocs site
+        run: mkdocs build
+      # TODO: add deployment to GitHub Pages or artifacts storage if needed

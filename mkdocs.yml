@@ -1,0 +1,23 @@
+site_name: Five Keys Bot Docs
+site_description: "Операционная документация и API для five_keys_bot"
+site_url: ""
+repo_url: "https://github.com/example/five_keys_bot"
+theme:
+  name: material
+nav:
+  - Главная: index.md
+  - Эксплуатация:
+      - SLO и Runbook: ops.md
+      - Disaster Recovery: disaster_recovery.md
+      - События и аудит: events.md
+      - Фича-флаги: flags.md
+      - Канарейка: canary.md
+  - API:
+      - Обзор: api/index.html
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+extra:
+  generator: "mkdocs"

@@ -27,3 +27,6 @@ Thumbs.db
 # Logs
 logs/
 *.log
+# Documentation build artifacts
+site/
+docs/api/
