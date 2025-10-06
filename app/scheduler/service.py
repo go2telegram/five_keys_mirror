@@ -3,6 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
+from app.jobs.anomaly_report import register_anomaly_jobs
 from app.config import settings
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -29,5 +30,6 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    register_anomaly_jobs(scheduler, bot)
     scheduler.start()
     return scheduler

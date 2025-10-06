@@ -6,6 +6,7 @@ from io import StringIO
 from datetime import datetime
 
 from app.config import settings
+from app.jobs.anomaly_report import get_anomaly_report
 from app.storage import USERS, EVENTS, get_leads_last, get_leads_all
 
 router = Router()
@@ -13,7 +14,7 @@ router = Router()
 
 @router.message(Command("stats"))
 async def stats(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
     total_users = len(USERS)
     subs = sum(1 for u in USERS.values() if u.get("subs"))
@@ -38,7 +39,7 @@ async def stats(m: Message):
 
 @router.message(Command("leads"))
 async def leads_list(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
 
     # /leads <N?>
@@ -73,7 +74,7 @@ async def leads_list(m: Message):
 
 @router.message(Command("leads_csv"))
 async def leads_csv(m: Message):
-    if m.from_user.id != settings.ADMIN_ID:
+    if not settings.is_admin(m.from_user.id):
         return
 
     # /leads_csv <N?>
@@ -105,3 +106,12 @@ async def leads_csv(m: Message):
 
     fname = f"leads_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     await m.answer_document(BufferedInputFile(csv_bytes, filename=fname), caption=f"Экспорт лидов ({len(items)})")
+
+
+@router.message(Command("anomaly_now"))
+async def anomaly_now(m: Message):
+    if not settings.is_admin(m.from_user.id):
+        return
+
+    text, _ = await get_anomaly_report()
+    await m.answer(text)

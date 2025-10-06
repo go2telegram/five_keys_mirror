@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from app.metrics import metrics_handler
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -61,6 +62,7 @@ async def main():
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
+    app_web.router.add_get("/metrics", metrics_handler)
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
     runner = web.AppRunner(app_web)
