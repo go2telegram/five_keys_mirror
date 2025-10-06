@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     TZ: str = "Europe/Moscow"
 
+    # Глобальная синхронизация знаний
+    ENABLE_GLOBAL_KNOWLEDGE_SYNC: bool = False
+    KNOWLEDGE_INDEX_DIR: str = "storage/knowledge"
+    GLOBAL_KNOWLEDGE_SYNC_PEERS: str = ""
+    GLOBAL_KNOWLEDGE_SYNC_TIMEOUT: float = 30.0
+    GLOBAL_KNOWLEDGE_SYNC_INTERVAL_MINUTES: int = 5
+
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""

@@ -1,9 +1,12 @@
 # app/scheduler/service.py
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from aiogram import Bot
 from app.scheduler.jobs import send_nudges
 from app.config import settings
+from jobs.knowledge_sync import sync_global_knowledge
+from knowledge.sync import is_enabled as knowledge_sync_enabled
 
 def _parse_weekdays(csv: str | None) -> set[str]:
     # Пример: "Mon,Thu" -> {"Mon","Thu"}
@@ -29,5 +32,16 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if knowledge_sync_enabled():
+        interval_minutes = max(1, int(getattr(settings, "GLOBAL_KNOWLEDGE_SYNC_INTERVAL_MINUTES", 5)))
+        scheduler.add_job(
+            sync_global_knowledge,
+            trigger=IntervalTrigger(minutes=interval_minutes),
+            name="global_knowledge_sync",
+            misfire_grace_time=300,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler

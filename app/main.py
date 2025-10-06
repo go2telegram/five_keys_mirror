@@ -5,6 +5,7 @@ from aiohttp import web
 
 from app.config import settings
 from app.scheduler.service import start_scheduler
+from knowledge.sync import handle_knowledge_sync, is_enabled as knowledge_sync_enabled
 
 # существующие роутеры
 from app.handlers import start as h_start
@@ -63,6 +64,8 @@ async def main():
     app_web = web.Application()
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    if knowledge_sync_enabled():
+        app_web.router.add_post("/knowledge_sync", handle_knowledge_sync)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
