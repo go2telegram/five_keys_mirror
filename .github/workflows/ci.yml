@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install jsonschema==4.* python-slugify==8.* beautifulsoup4==4.* lxml==5.* requests
+
+      - name: Build catalog
+        run: make build-products
+
+      - name: Validate schema
+        run: make validate-products
+
+      - name: Upload products.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: products-json-${{ github.sha }}
+          path: app/data/products.json

@@ -1,100 +1,79 @@
-# app/products.py
+"""Utilities for working with the product catalog."""
+from __future__ import annotations
 
-BASE = "https://raw.githubusercontent.com/go2telegram/media/main/media/products"
+import json
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List
 
-PRODUCTS = {
-    "T8_EXTRA": {
-        "title": "T8 EXTRA",
-        "bullets": [
-            "Полипренолы 90% для мембран митохондрий",
-            "Больше АТФ, меньше утомляемости",
-        ],
-        "image_url": f"{BASE}/extra.jpg",
-    },
-    "T8_BLEND": {
-        "title": "T8 BLEND",
-        "bullets": [
-            "6 таёжных ягод + SibXP",
-            "Антиоксидантная поддержка каждый день",
-        ],
-        "image_url": f"{BASE}/blend.jpg",
-    },
-    "VITEN": {
-        "title": "NASH ViTEN",
-        "bullets": [
-            "Природный индуктор интерферона",
-            "Поддержка иммунитета в сезон простуд",
-        ],
-        "image_url": f"{BASE}/viten.jpg",
-    },
-    "TEO_GREEN": {
-        "title": "T8 TEO GREEN",
-        "bullets": [
-            "Растворимая/нерастворимая клетчатка",
-            "Питает микробиом и ЖКТ",
-        ],
-        "image_url": f"{BASE}/teogreen.jpg",
-    },
-    "MOBIO": {
-        "title": "MOBIO+",
-        "bullets": [
-            "Метабиотик с высокой биодоступностью",
-            "После антибиотиков/стрессов — восстановление",
-        ],
-        "image_url": f"{BASE}/mobio.jpg",
-    },
-    "OMEGA3": {
-        "title": "NASH Омега-3",
-        "bullets": [
-            "Высокая концентрация EPA/DHA",
-            "Сосуды, мозг, противовоспалительно",
-        ],
-        "image_url": f"{BASE}/omega3.jpg",
-    },
-    "MAG_B6": {
-        "title": "Magnesium + B6",
-        "bullets": [
-            "Антистресс и мышечное расслабление",
-            "Поддержка качества сна",
-        ],
-        # оставляю текущее имя файла, как у тебя в репо
-        "image_url": f"{BASE}/magniyb6.jpg",
-    },
-    "D3": {
-        "title": "Vitamin D3",
-        "bullets": [
-            "Иммунитет, кости, настроение",
-            "Осенне-зимняя поддержка",
-        ],
-        "image_url": f"{BASE}/d3.jpg",
-    },
-    "ERA_MIT_UP": {
-        "title": "T8 ERA MIT UP",
-        "bullets": [
-            "Коллаген + Уролитин A + SibXP",
-            "Кожа/связки и энергия митохондрий",
-        ],
-        "image_url": f"{BASE}/mitup.jpg",
-    },
-}
+CATALOG_PATH = Path(__file__).resolve().parent / "data" / "products.json"
+SCHEMA_PATH = Path(__file__).resolve().parent / "data" / "products.schema.json"
 
-# Прямые ссылки на покупку (кнопки «Купить …»)
-BUY_URLS = {
-    "T8_EXTRA":   "https://shop.vilavi.com/Item/47086?ref=735861",  # T8 EXTRA
-    "T8_BLEND":   "https://shop.vilavi.com/Item/79666?ref=735861",  # T8 BLEND
-    "VITEN":      "https://shop.vilavi.com/Item/28146?ref=735861",  # NASH ViTEN
-    "TEO_GREEN":  "https://shop.vilavi.com/Item/56176?ref=735861",  # T8 TEO GREEN
-    "MOBIO":      "https://shop.vilavi.com/Item/53056?ref=735861",  # MOBIO+
-    "OMEGA3":     "https://shop.vilavi.com/Item/49596?ref=735861",  # NASH Омега-3
-    "MAG_B6":     "https://shop.vilavi.com/Item/49576?ref=735861",  # Magnesium + B6
-    "D3":         "https://shop.vilavi.com/Item/49586?ref=735861",  # Vitamin D3
-    "ERA_MIT_UP": "https://shop.vilavi.com/Item/39176?ref=735861",  # T8 ERA MIT UP
-}
 
-GOAL_MAP = {
-    "energy": ["T8_EXTRA", "T8_BLEND"],
-    "immunity": ["VITEN", "T8_BLEND", "D3"],
-    "gut": ["TEO_GREEN", "MOBIO"],
-    "sleep": ["MAG_B6", "OMEGA3", "D3"],
-    "beauty_joint": ["ERA_MIT_UP", "OMEGA3"],
-}
+def _load_catalog() -> List[dict]:
+    try:
+        data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:  # pragma: no cover - deployment misconfiguration
+        raise RuntimeError(
+            f"Catalog file not found: {CATALOG_PATH}. Run `make build-products`."
+        ) from exc
+    except json.JSONDecodeError as exc:  # pragma: no cover - corrupt file
+        raise RuntimeError(f"Invalid JSON in {CATALOG_PATH}: {exc}") from exc
+
+    if not isinstance(data, list):
+        raise RuntimeError(f"Catalog must be a list, got {type(data).__name__}")
+    return data
+
+
+def _build_products(raw: List[dict]) -> Dict[str, dict]:
+    products: Dict[str, dict] = {}
+    for item in raw:
+        pid = item.get("id")
+        if not pid:
+            continue
+        name = item.get("name", pid)
+        short = item.get("short", "")
+        usage = item.get("usage", "")
+        bullets: List[str] = []
+        if short:
+            bullets.append(short)
+        if usage:
+            bullets.append(usage)
+        if not bullets:
+            bullets = [""]
+
+        product = {
+            "id": pid,
+            "title": name,
+            "name": name,
+            "short": short,
+            "description": item.get("description", ""),
+            "usage": usage,
+            "contra": item.get("contra", ""),
+            "buy_url": item.get("buy_url", ""),
+            "category": item.get("category"),
+            "tags": item.get("tags", []),
+            "image": item.get("image", ""),
+            "image_url": item.get("image", ""),
+            "bullets": bullets,
+        }
+        products[pid] = product
+    return products
+
+
+def _build_goal_map(raw: List[dict]) -> Dict[str, List[str]]:
+    goal_map: Dict[str, List[str]] = defaultdict(list)
+    for item in raw:
+        category = item.get("category")
+        pid = item.get("id")
+        if category and pid:
+            goal_map[category].append(pid)
+    return dict(goal_map)
+
+
+_RAW_PRODUCTS = _load_catalog()
+PRODUCTS = _build_products(_RAW_PRODUCTS)
+BUY_URLS = {pid: data.get("buy_url", "") for pid, data in PRODUCTS.items() if data.get("buy_url")}
+GOAL_MAP = _build_goal_map(_RAW_PRODUCTS)
+
+__all__ = ["PRODUCTS", "BUY_URLS", "GOAL_MAP", "CATALOG_PATH", "SCHEMA_PATH"]

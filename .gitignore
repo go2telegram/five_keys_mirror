@@ -27,3 +27,13 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# media/artifacts (do not commit)
+assets/
+media/
+artifacts/
+models/*.pkl
+data/*.parquet
+*.npz
+*.onnx
+*.bin

@@ -1,0 +1,137 @@
+[
+  {
+    "id": "D3",
+    "name": "Vitamin D3",
+    "short": "Иммунитет, кости, настроение",
+    "description": "Vitamin D3 поддерживает иммунитет, здоровье костей и настроение в осенне-зимний период.",
+    "usage": "По 1 капле в день с пищей.",
+    "contra": "Не использовать при гипервитаминозе D.",
+    "buy_url": "https://shop.vilavi.com/Item/49586?ref=735861",
+    "category": "immunity",
+    "tags": [
+      "иммунитет",
+      "кости"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/d3.png"
+  },
+  {
+    "id": "ERA_MIT_UP",
+    "name": "T8 ERA MIT UP",
+    "short": "Коллаген + Уролитин A + SibXP",
+    "description": "ERA MIT UP поддерживает кожу, суставы и уровень энергии за счёт коллагена и уролитина A.",
+    "usage": "Растворить 1 стик в воде и принимать утром.",
+    "contra": "Не использовать при непереносимости компонентов.",
+    "buy_url": "https://shop.vilavi.com/Item/39176?ref=735861",
+    "category": "beauty_joint",
+    "tags": [
+      "коллаген",
+      "энергия"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/era_mit_up.png"
+  },
+  {
+    "id": "MAG_B6",
+    "name": "Magnesium + B6",
+    "short": "Антистресс и мышечное расслабление",
+    "description": "Комплекс магния и витамина B6 помогает расслабиться и поддерживает качество сна.",
+    "usage": "По 1 капсуле вечером.",
+    "contra": "Не использовать при выраженной почечной недостаточности.",
+    "buy_url": "https://shop.vilavi.com/Item/49576?ref=735861",
+    "category": "sleep",
+    "tags": [
+      "сон",
+      "расслабление"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/mag_b6.png"
+  },
+  {
+    "id": "MOBIO",
+    "name": "MOBIO+",
+    "short": "Метабиотик с высокой биодоступностью",
+    "description": "MOBIO+ помогает восстановиться после антибиотиков и стрессов, поддерживает кишечник.",
+    "usage": "По 1 капсуле два раза в день во время еды.",
+    "contra": "Не рекомендуется при непереносимости компонентов.",
+    "buy_url": "https://shop.vilavi.com/Item/53056?ref=735861",
+    "category": "gut",
+    "tags": [
+      "микробиом",
+      "восстановление"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/mobio.png"
+  },
+  {
+    "id": "OMEGA3",
+    "name": "NASH Омега-3",
+    "short": "Высокая концентрация EPA/DHA",
+    "description": "Омега-3 поддерживает сердечно-сосудистую систему, мозг и помогает снизить воспаление.",
+    "usage": "По 2 капсулы в день во время еды.",
+    "contra": "Индивидуальная непереносимость рыбьего жира.",
+    "buy_url": "https://shop.vilavi.com/Item/49596?ref=735861",
+    "category": "beauty_joint",
+    "tags": [
+      "сердце",
+      "мозг"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/omega3.png"
+  },
+  {
+    "id": "T8_BLEND",
+    "name": "T8 BLEND",
+    "short": "6 таёжных ягод + SibXP",
+    "description": "Комплекс ягод с SibXP обеспечивает антиоксидантную поддержку и помогает поддерживать иммунную систему.",
+    "usage": "Развести 20 мл концентрата в воде. Курс 30 дней.",
+    "contra": "Беременность и кормление грудью — по согласованию с врачом.",
+    "buy_url": "https://shop.vilavi.com/Item/79666?ref=735861",
+    "category": "immunity",
+    "tags": [
+      "антиоксиданты",
+      "иммунитет"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/t8_blend.png"
+  },
+  {
+    "id": "T8_EXTRA",
+    "name": "T8 EXTRA",
+    "short": "Полипренолы 90% для мембран митохондрий",
+    "description": "T8 EXTRA поддерживает выработку АТФ и помогает бороться с утомляемостью. Формула на основе полипренолов подходит для ежедневной поддержки.",
+    "usage": "По 1 капсуле утром с едой. Курс 30 дней.",
+    "contra": "Не использовать при индивидуальной непереносимости компонентов.",
+    "buy_url": "https://shop.vilavi.com/Item/47086?ref=735861",
+    "category": "energy",
+    "tags": [
+      "энергия",
+      "тонус"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/t8_extra.png"
+  },
+  {
+    "id": "TEO_GREEN",
+    "name": "T8 TEO GREEN",
+    "short": "Растворимая и нерастворимая клетчатка",
+    "description": "TEO GREEN питает микробиом и поддерживает здоровье ЖКТ, способствует мягкому очищению.",
+    "usage": "Развести 1 мерную ложку в стакане воды, принимать во время еды.",
+    "contra": "Ограничения при заболеваниях ЖКТ — проконсультируйтесь со специалистом.",
+    "buy_url": "https://shop.vilavi.com/Item/56176?ref=735861",
+    "category": "gut",
+    "tags": [
+      "клетчатка",
+      "микробиом"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/teo_green.png"
+  },
+  {
+    "id": "VITEN",
+    "name": "NASH ViTEN",
+    "short": "Природный индуктор интерферона",
+    "description": "ViTEN помогает иммунитету реагировать на сезонные вызовы и поддерживает восстановление после простуд.",
+    "usage": "По 1 пакетику в день. Растворить в воде.",
+    "contra": "Индивидуальная непереносимость компонентов.",
+    "buy_url": "https://shop.vilavi.com/Item/28146?ref=735861",
+    "category": "immunity",
+    "tags": [
+      "иммунитет",
+      "поддержка"
+    ],
+    "image": "https://raw.githubusercontent.com/go2telegram/media/main/media/products/viten.png"
+  }
+]
