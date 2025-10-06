@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     SUB_BASIC_PRICE: str = "299 ₽/мес"
     SUB_PRO_PRICE: str = "599 ₽/мес"
+    ENABLE_KNOWLEDGE_CENTER: bool = True
     # --------------------------------------
 
     model_config = SettingsConfigDict(
