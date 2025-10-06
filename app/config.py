@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+
+    ENABLE_SEMANTIC_SEARCH: bool = True
+    SEMANTIC_SEARCH_TOP_K: int = 5
 
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
