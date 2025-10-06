@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+
+    # Внешние интеграции
+    ENABLE_EXTERNAL_INTEGRATIONS: bool = False
+    GDRIVE_CREDENTIALS: str | None = None
+    NOTION_TOKEN: str | None = None
+    WEBHOOK_SINK_URL: str | None = None
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""
     TRIBUTE_LINK_PRO: str = ""

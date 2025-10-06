@@ -24,6 +24,8 @@ from app.handlers import notify as h_notify
 from app.handlers import report as h_report
 from app.handlers import lead as h_lead
 
+from bot import admin_integrations as h_admin_integrations
+
 # новые
 from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
@@ -53,6 +55,7 @@ async def main():
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
     dp.include_router(h_lead.router)
+    dp.include_router(h_admin_integrations.router)
     dp.include_router(h_subscription.router)
     dp.include_router(h_premium.router)
     dp.include_router(h_referral.router)
