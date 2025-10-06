@@ -29,6 +29,8 @@ from app.handlers import subscription as h_subscription
 from app.handlers import premium as h_premium
 from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
+from bot import admin_orchestrator as h_admin_orchestrator
+from orchestrator.manager import orchestrator_manager
 
 
 async def main():
@@ -49,6 +51,7 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
+    dp.include_router(h_admin_orchestrator.router)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
@@ -61,8 +64,23 @@ async def main():
 
     # aiohttp сервер для Tribute
     app_web = web.Application()
+
+    async def orchestrator_status(_: web.Request) -> web.Response:
+        if not settings.ENABLE_META_ORCHESTRATOR:
+            return web.json_response(
+                {
+                    "enabled": False,
+                    "message": "meta orchestrator disabled",
+                },
+                status=503,
+            )
+
+        snapshot = await orchestrator_manager.get_status_snapshot()
+        return web.json_response({"enabled": True, **snapshot})
+
     app_web.router.add_post(
         settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web.router.add_get("/orchestrator_status", orchestrator_status)
     runner = web.AppRunner(app_web)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
