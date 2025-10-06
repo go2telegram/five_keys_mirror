@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     SUB_PRO_PRICE: str = "599 ₽/мес"
     # --------------------------------------
 
+    MEDIA_BASE_URL: str = "https://raw.githubusercontent.com/go2telegram/media/main"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -1,0 +1,16 @@
+name: Catalog schema check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  validate-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate catalog schema JSON
+        run: jq '.' app/data/products.schema.json >/dev/null

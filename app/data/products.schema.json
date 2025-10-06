@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "name", "image", "buy_url", "category", "short"],
+    "properties": {
+      "id": {"type": "string", "pattern": "^[a-z0-9_\\-]+$"},
+      "name": {"type": "string"},
+      "short": {"type": "string"},
+      "image": {"type": "string", "format": "uri"},
+      "buy_url": {"type": "string", "format": "uri"},
+      "category": {"type": "string"},
+      "description": {"type": "string"},
+      "usage": {"type": "string"},
+      "contra": {"type": "string"},
+      "tags": {"type": "array", "items": {"type": "string"}},
+      "available": {"type": "boolean", "default": true},
+      "rank": {"type": "number", "default": 0}
+    }
+  }
+}
