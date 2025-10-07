@@ -1,0 +1,90 @@
+Название: T8 Blend
+Кратко: Ежедневная поддержка энергии.
+Описание: Ягодный напиток.
+Применение:
+- 30 мл утром
+- Можно разбавлять водой
+Противопоказания: Индивидуальная непереносимость компонентов.
+Категория: Энергия
+Ссылка: https://shop.vilavi.com/Item/10001?ref=735861
+
+====
+
+Название: Omega 3 Premium
+ID: omega-3
+Tags: омега, сердце
+Ссылка на покупку: https://shop.vilavi.com/Item/10002?ref=735861
+Категория: Здоровье сердца
+
+----
+
+Название: Detox Mix
+id: detox_mix
+Кратко: Чистка организма.
+Применение: По 1 пакетику в день.
+Противопоказания:
+- Беременность
+- Индивидуальная непереносимость
+URL: https://shop.vilavi.com/Item/10003?ref=735861
+Категория: Детокс
+
+====
+
+Название: Fiber Joy
+ID: fiber_joy
+Ссылка: https://shop.vilavi.com/Item/10004?ref=735861
+Категория: Питание
+
+====
+
+Название: Night Calm
+ID: night_calm
+Коротко: Сон и восстановление.
+Ссылка: https://shop.vilavi.com/Item/10005?ref=735861
+Категория: Сон
+
+====
+
+Название: Immuno Guard
+ID: immuno_guard
+Кратко: Поддержка иммунитета.
+Применение: По 1 пакетику в день.
+Ссылка: https://shop.vilavi.com/Item/10006?ref=735861
+Категория: Иммунитет
+
+====
+
+Название: Active Move
+ID: active_move
+Применение:
+Рекомендуется при активных тренировках.
+Ссылка: https://shop.vilavi.com/Item/10007?ref=735861
+Категория: Суставы
+
+====
+
+Название: Slim Start
+ID: slim_start
+Ссылка: https://shop.vilavi.com/Item/10008?ref=735861
+Категория: Контроль веса
+
+====
+
+Название: Skin Glow
+ID: skin_glow
+Ссылка: https://shop.vilavi.com/Item/10009?ref=735861
+Категория: Красота
+
+====
+
+Название: Brain Focus
+ID: brain_focus
+Ссылка: https://shop.vilavi.com/Item/10010?ref=735861
+Категория: Фокус
+
+====
+
+Название: Missing Image Product
+ID: missing_image
+Ссылка: https://shop.vilavi.com/Item/10011?ref=735861
+Категория: Тест

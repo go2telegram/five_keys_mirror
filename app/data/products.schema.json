@@ -90,11 +90,11 @@
     }
   },
   "additionalProperties": false,
-  "x-required-utm": ["utm_source", "utm_medium", "utm_campaign"],
+  "x-required-utm": ["utm_source", "utm_medium", "utm_campaign", "utm_content"],
   "x-default-utm": {
-    "utm_source": "bot",
-    "utm_medium": "telegram",
-    "utm_campaign": "catalog",
+    "utm_source": "tg_bot",
+    "utm_medium": "catalog",
+    "utm_campaign": "{category}",
     "utm_content": "{product_id}"
   }
 }
