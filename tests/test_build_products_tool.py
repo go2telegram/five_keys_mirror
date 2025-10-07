@@ -1,77 +1,69 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from urllib.parse import parse_qsl, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
 from tools import build_products as bp
 
 
-def test_slugify_variants():
-    assert bp._slugify("Omega 3") == "omega-3"
-    variants = bp._slug_variants("Omega-3")
-    assert "omega3" in variants
-    assert "omega_3" in variants
+DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
+IMAGES_DIR = Path("app/static/images/products")
 
 
-@pytest.fixture(scope="module")
-def fixture_paths() -> dict[str, Path]:
-    base = Path(__file__).parent / "fixtures" / "catalog"
-    return {
-        "descriptions": base / "descriptions",
-        "images": base / "images",
-    }
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (
+            "https://example.com/путь/страница 1?ключ=значение&param=a b",
+            "https://example.com/%D0%BF%D1%83%D1%82%D1%8C/%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0%201?%D0%BA%D0%BB%D1%8E%D1%87=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5&param=a+b",
+        ),
+        (
+            "https://example.com/a path/?q=знач",
+            "https://example.com/a%20path/?q=%D0%B7%D0%BD%D0%B0%D1%87",
+        ),
+    ],
+)
+def test_quote_url_normalizes_path_and_query(raw: str, expected: str) -> None:
+    assert bp.quote_url(raw) == expected
 
 
-def test_build_and_validate_catalog(tmp_path: Path, fixture_paths: dict[str, Path]):
+def test_choose_image_fallbacks() -> None:
+    files = [
+        "omega3_main.jpg",
+        "brain-coffee_main.jpg",
+        "misc/file.png",
+        "omega3_pack.webp",
+    ]
+    image = bp._choose_image("nash-omega-3", files)
+    assert image == "omega3_main.jpg"
+    image = bp._choose_image("t8-era-brain-coffee", files)
+    assert image == "brain-coffee_main.jpg"
+
+
+def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
-    count, path = bp.build_catalog(
-        descriptions_url=str(fixture_paths["descriptions"]),
-        images_base=str(fixture_paths["images"]),
+    count, generated = bp.build_catalog(
+        descriptions_path=str(DESCRIPTIONS_PATH),
+        images_mode="local",
+        images_dir=str(IMAGES_DIR),
         output=output,
     )
-
-    assert path == output
-    assert count > 9
+    assert generated == output
+    assert count >= 20
 
     data = json.loads(output.read_text(encoding="utf-8"))
     assert len(data["products"]) == count
 
-    missing_images = 0
     for product in data["products"]:
         link = product["order"]["velavie_link"]
-        parsed = urlparse(link)
-        params = dict(parse_qsl(parsed.query))
-        assert params["utm_source"] == "tg_bot"
-        assert params["utm_medium"] == "catalog"
-        assert params["utm_campaign"]
-        assert params["utm_content"]
-        if not product.get("available", True):
-            missing_images += 1
-        else:
-            assert product.get("images"), product["id"]
-
-    assert missing_images == 1
+        params = parse_qs(urlparse(link).query)
+        assert params["utm_source"] == ["tg_bot"]
+        assert params["utm_medium"] == ["catalog"]
+        assert params["utm_content"] == [product["id"]]
+        assert product.get("images")
+        if product.get("image"):
+            assert product["image"].startswith("/static/") or product["image"].startswith("http")
 
     validated = bp.validate_catalog(output)
     assert validated == count
-
-
-def test_image_mapping_synonyms(fixture_paths: dict[str, Path]):
-    base, files = bp._load_image_index(str(fixture_paths["images"]))
-    lookup = bp._build_image_lookup(files)
-    assert base.endswith("fixtures/catalog/images")
-
-    slug = bp._slugify("omega-3")
-    image = bp._select_image(slug, lookup)
-    assert image and image.endswith("omega3_main.jpg")
-
-    slug = bp._slugify("Immuno Guard")
-    image = bp._select_image(slug, lookup)
-    assert image and image.endswith("immuno_guard-main.jpeg")
-
-    slug = bp._slugify("Slim Start")
-    image = bp._select_image(slug, lookup)
-    assert image and image.endswith("slimstart.png")

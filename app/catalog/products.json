@@ -1,180 +1,896 @@
 {
   "products": [
     {
-      "id": "active_move",
-      "code": "active_move",
-      "title": "Active Move",
-      "name": "Active Move",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10007?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=sustavy&utm_content=active-move"
-      },
-      "usage": "Рекомендуется при активных тренировках.",
-      "category": "Суставы",
-      "image": "tests/fixtures/catalog/images/active-move.jpg",
-      "images": [
-        "tests/fixtures/catalog/images/active-move.jpg"
-      ],
-      "available": true
-    },
-    {
-      "id": "brain_focus",
-      "code": "brain_focus",
-      "title": "Brain Focus",
-      "name": "Brain Focus",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10010?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=fokus&utm_content=brain-focus"
-      },
-      "category": "Фокус",
-      "image": "tests/fixtures/catalog/images/brain_focus.jpg",
-      "images": [
-        "tests/fixtures/catalog/images/brain_focus.jpg"
-      ],
-      "available": true
-    },
-    {
-      "id": "detox_mix",
-      "code": "detox_mix",
-      "title": "Detox Mix",
-      "name": "Detox Mix",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10003?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=detoks&utm_content=detox-mix"
-      },
-      "short": "Чистка организма.",
-      "usage": "По 1 пакетику в день.",
-      "contra": "- Беременность\n- Индивидуальная непереносимость",
-      "category": "Детокс",
-      "image": "tests/fixtures/catalog/images/detox-mix_01.png",
-      "images": [
-        "tests/fixtures/catalog/images/detox-mix_01.png"
-      ],
-      "available": true
-    },
-    {
-      "id": "fiber_joy",
-      "code": "fiber_joy",
-      "title": "Fiber Joy",
-      "name": "Fiber Joy",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10004?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=pitanie&utm_content=fiber-joy"
-      },
-      "category": "Питание",
-      "image": "tests/fixtures/catalog/images/fiber_joy.jpg",
-      "images": [
-        "tests/fixtures/catalog/images/fiber_joy.jpg"
-      ],
-      "available": true
-    },
-    {
-      "id": "immuno_guard",
-      "code": "immuno_guard",
-      "title": "Immuno Guard",
-      "name": "Immuno Guard",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10006?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=immunitet&utm_content=immuno-guard"
-      },
-      "short": "Поддержка иммунитета.",
-      "usage": "По 1 пакетику в день.",
-      "category": "Иммунитет",
-      "image": "tests/fixtures/catalog/images/immuno_guard-main.jpeg",
-      "images": [
-        "tests/fixtures/catalog/images/immuno_guard-main.jpeg"
-      ],
-      "available": true
-    },
-    {
-      "id": "missing_image",
-      "code": "missing_image",
-      "title": "Missing Image Product",
-      "name": "Missing Image Product",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10011?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=test&utm_content=missing-image"
-      },
-      "category": "Тест",
-      "available": false
-    },
-    {
-      "id": "night_calm",
-      "code": "night_calm",
-      "title": "Night Calm",
-      "name": "Night Calm",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10005?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=son&utm_content=night-calm"
-      },
-      "short": "Сон и восстановление.",
-      "category": "Сон",
-      "image": "tests/fixtures/catalog/images/night-calm.webp",
-      "images": [
-        "tests/fixtures/catalog/images/night-calm.webp"
-      ],
-      "available": true
-    },
-    {
-      "id": "omega-3",
-      "code": "omega-3",
-      "title": "Omega 3 Premium",
-      "name": "Omega 3 Premium",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10002?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=zdorove-serdtsa&utm_content=omega-3"
-      },
-      "category": "Здоровье сердца",
+      "id": "nash-viten",
+      "title": "NASH VITEN",
+      "name": "NASH VITEN",
+      "short": "Комплекс витаминов для поддержки иммунитета и энергии. Содержит витамины группы B и коферменты.",
+      "description": "Комплекс витаминов для поддержки иммунитета и энергии.\nСодержит витамины группы B и коферменты.",
+      "category": "supplements",
       "tags": [
-        "омега",
-        "сердце"
+        "viten"
       ],
-      "image": "tests/fixtures/catalog/images/omega3_main.jpg",
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/28146?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=nash-viten",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "nash-viten"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "NASH",
+        "NASH_VITEN",
+        "VITEN"
+      ],
+      "usage": "По 1 капсуле утром.",
+      "composition": "- витамины группы B\n- коэнзим Q10",
+      "image": "/static/images/products/viten_main.jpg",
       "images": [
-        "tests/fixtures/catalog/images/omega3_main.jpg"
-      ],
-      "available": true
+        "/static/images/products/viten_main.jpg"
+      ]
     },
     {
-      "id": "skin_glow",
-      "code": "skin_glow",
-      "title": "Skin Glow",
-      "name": "Skin Glow",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10009?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=krasota&utm_content=skin-glow"
-      },
-      "category": "Красота",
-      "image": "tests/fixtures/catalog/images/skin-glow_main.jpg",
-      "images": [
-        "tests/fixtures/catalog/images/skin-glow_main.jpg"
+      "id": "nash-vitamin-c",
+      "title": "NASH Витамин C",
+      "name": "NASH Витамин C",
+      "short": "Шипучие таблетки с высокой дозой витамина C. Поддерживает иммунитет в сезон нагрузок.",
+      "description": "Шипучие таблетки с высокой дозой витамина C.\nПоддерживает иммунитет в сезон нагрузок.",
+      "category": "supplements",
+      "tags": [
+        "c",
+        "vitamin"
       ],
-      "available": true
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/50010?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=nash-vitamin-c",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "nash-vitamin-c"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "C",
+        "NASH",
+        "NASH_C",
+        "NASH_VITAMIN_C"
+      ],
+      "usage": "Растворить 1 таблетку в стакане воды.",
+      "composition": "- витамин C\n- экстракт шиповника",
+      "image": "/static/images/products/vitamin-d3_main.png",
+      "images": [
+        "/static/images/products/vitamin-d3_main.png"
+      ]
     },
     {
-      "id": "slim_start",
-      "code": "slim_start",
-      "title": "Slim Start",
-      "name": "Slim Start",
-      "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10008?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=kontrol-vesa&utm_content=slim-start"
-      },
-      "category": "Контроль веса",
-      "image": "tests/fixtures/catalog/images/slimstart.png",
-      "images": [
-        "tests/fixtures/catalog/images/slimstart.png"
+      "id": "nash-vitamin-d3",
+      "title": "NASH Витамин D3",
+      "name": "NASH Витамин D3",
+      "short": "Ежедневная доза витамина D3 для иммунитета и костной системы. Повышает усвоение кальция и поддерживает тонус организма.",
+      "description": "Ежедневная доза витамина D3 для иммунитета и костной системы.\nПовышает усвоение кальция и поддерживает тонус организма.",
+      "category": "supplements",
+      "tags": [
+        "d3",
+        "vitamin"
       ],
-      "available": true
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/49586?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=nash-vitamin-d3",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "nash-vitamin-d3"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "D3",
+        "NASH",
+        "NASH_D3",
+        "NASH_VITAMIN_D3"
+      ],
+      "usage": "По 1 капсуле в день во время еды.",
+      "contra": "Беременность, кормление грудью, индивидуальная непереносимость компонентов.",
+      "composition": "- витамин D3 (холекальциферол)\n- масло подсолнечное",
+      "image": "/static/images/products/vitamin-d3_main.png",
+      "images": [
+        "/static/images/products/vitamin-d3_main.png"
+      ]
     },
     {
-      "id": "t8-blend",
-      "code": "t8-blend",
-      "title": "T8 Blend",
-      "name": "T8 Blend",
+      "id": "nash-omega-3-150",
+      "title": "NASH Омега-3 (150 капсул)",
+      "name": "NASH Омега-3 (150 капсул)",
+      "short": "Большая упаковка омега-3 кислот для длительной поддержки здоровья. Формула помогает работе мозга, зрению и сердцу.",
+      "description": "Большая упаковка омега-3 кислот для длительной поддержки здоровья.\nФормула помогает работе мозга, зрению и сердцу.",
+      "category": "supplements",
+      "tags": [
+        "150",
+        "3",
+        "omega"
+      ],
       "order": {
-        "velavie_link": "https://shop.vilavi.com/Item/10001?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=energiya&utm_content=t8-blend"
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/75726?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=nash-omega-3-150",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "nash-omega-3-150"
+        }
       },
-      "short": "Ежедневная поддержка энергии.",
-      "description": "Ягодный напиток.",
-      "usage": "- 30 мл утром\n- Можно разбавлять водой",
+      "available": true,
+      "aliases": [
+        "150",
+        "3",
+        "NASH",
+        "NASH_3",
+        "NASH_3_150",
+        "NASH_OMEGA_3_150"
+      ],
+      "usage": "По 1-2 капсулы в день во время приема пищи.",
       "contra": "Индивидуальная непереносимость компонентов.",
-      "category": "Энергия",
-      "image": "tests/fixtures/catalog/images/t8-blend_main.jpg",
+      "composition": "- омега-3 из дикой рыбы\n- витамин Е",
+      "image": "/static/images/products/omega3_main.jpg",
       "images": [
-        "tests/fixtures/catalog/images/t8-blend_main.jpg"
+        "/static/images/products/omega3_main.jpg"
+      ]
+    },
+    {
+      "id": "nash-omega-3",
+      "title": "NASH Омега-3 (30 капсул)",
+      "name": "NASH Омега-3 (30 капсул)",
+      "short": "Полный комплекс омега-3 кислот для поддержки сердца и сосудов. Глубоководные рыбы, чистые технологии и биодоступная формула помогают поддерживать ежедневный уровень энергии.",
+      "description": "Полный комплекс омега-3 кислот для поддержки сердца и сосудов.\nГлубоководные рыбы, чистые технологии и биодоступная формула помогают поддерживать ежедневный уровень энергии.",
+      "category": "supplements",
+      "tags": [
+        "3",
+        "omega"
       ],
-      "available": true
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/49596?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=nash-omega-3",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "nash-omega-3"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "3",
+        "30",
+        "NASH",
+        "NASH_3",
+        "NASH_3_30",
+        "NASH_OMEGA_3"
+      ],
+      "usage": "Принимать по 1 капсуле утром во время еды.",
+      "contra": "Индивидуальная непереносимость компонентов.",
+      "composition": "- омега-3 из рыбьего жира\n- витамин Е",
+      "image": "/static/images/products/omega3_main.jpg",
+      "images": [
+        "/static/images/products/omega3_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-antistress-smoothie",
+      "title": "T8 ANTISTRESS SMOOTHIE",
+      "name": "T8 ANTISTRESS SMOOTHIE",
+      "short": "Функциональный смузи с магнием для спокойствия. Поддерживает нервную систему и вкусно насыщает.",
+      "description": "Функциональный смузи с магнием для спокойствия.\nПоддерживает нервную систему и вкусно насыщает.",
+      "category": "drinks",
+      "tags": [
+        "antistress",
+        "smoothie"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/15/41010?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-antistress-smoothie",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-antistress-smoothie"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "ANTISTRESS",
+        "SMOOTHIE",
+        "T8",
+        "T8_ANTISTRESS",
+        "T8_ANTISTRESS_SMOOTHIE"
+      ],
+      "usage": "Взболтать и выпить охлажденным.",
+      "composition": "- банан\n- шпинат\n- магний цитрат",
+      "image": "/static/images/products/antistress-smoothie.jpg",
+      "images": [
+        "/static/images/products/antistress-smoothie.jpg"
+      ]
+    },
+    {
+      "id": "t8-balance-probiotic",
+      "title": "T8 BALANCE PROBIOTIC",
+      "name": "T8 BALANCE PROBIOTIC",
+      "short": "Пробиотический комплекс для микрофлоры. Содержит полезные бактерии и пребиотики.",
+      "description": "Пробиотический комплекс для микрофлоры.\nСодержит полезные бактерии и пребиотики.",
+      "category": "supplements",
+      "tags": [
+        "balance",
+        "probiotic"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/20/47070?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=t8-balance-probiotic",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "t8-balance-probiotic"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "BALANCE",
+        "PROBIOTIC",
+        "T8",
+        "T8_BALANCE",
+        "T8_BALANCE_PROBIOTIC"
+      ],
+      "usage": "По 1 капсуле утром натощак.",
+      "composition": "- Lactobacillus acidophilus\n- инулин",
+      "image": "/static/images/products/balance-probiotic.jpg",
+      "images": [
+        "/static/images/products/balance-probiotic.jpg"
+      ]
+    },
+    {
+      "id": "t8-beet-shot",
+      "title": "T8 BEET SHOT",
+      "name": "T8 BEET SHOT",
+      "short": "Свекольный шот для выносливости и тонуса. Содержит природные нитраты для поддержки тренировок.",
+      "description": "Свекольный шот для выносливости и тонуса.\nСодержит природные нитраты для поддержки тренировок.",
+      "category": "drinks",
+      "tags": [
+        "beet",
+        "shot"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/14/56166?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-beet-shot",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-beet-shot"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "BEET",
+        "SHOT",
+        "T8",
+        "T8_BEET",
+        "T8_BEET_SHOT"
+      ],
+      "usage": "Принимать за 30 минут до активности.",
+      "contra": "Индивидуальная непереносимость свеклы.",
+      "composition": "- свекольный сок\n- экстракт граната",
+      "image": "/static/images/products/t8-beet-shot.jpg",
+      "images": [
+        "/static/images/products/t8-beet-shot.jpg"
+      ]
+    },
+    {
+      "id": "t8-blend-90",
+      "title": "T8 BLEND 90%",
+      "name": "T8 BLEND 90%",
+      "short": "Высокопротеиновый коктейль для восстановления. Поддерживает мышечную массу и чувство сытости.",
+      "description": "Высокопротеиновый коктейль для восстановления.\nПоддерживает мышечную массу и чувство сытости.",
+      "category": "general",
+      "tags": [
+        "90",
+        "blend"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/18/39090?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-blend-90",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-blend-90"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "90",
+        "BLEND",
+        "T8",
+        "T8_BLEND",
+        "T8_BLEND_90"
+      ],
+      "usage": "Смешать 2 мерные ложки с водой или молоком.",
+      "composition": "- сывороточный протеин\n- экстракт какао",
+      "image": "/static/images/products/blend-90_main.jpg",
+      "images": [
+        "/static/images/products/blend-90_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-detox-mix",
+      "title": "T8 DETOX MIX",
+      "name": "T8 DETOX MIX",
+      "short": "Питательный смузи для детокса. Помогает поддерживать пищеварение и чувство легкости.",
+      "description": "Питательный смузи для детокса.\nПомогает поддерживать пищеварение и чувство легкости.",
+      "category": "drinks",
+      "tags": [
+        "detox",
+        "mix"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/15/50001?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-detox-mix",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-detox-mix"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "DETOX",
+        "MIX",
+        "T8",
+        "T8_DETOX",
+        "T8_DETOX_MIX"
+      ],
+      "usage": "Смешать 1 порцию с водой или растительным молоком.",
+      "composition": "- семена чиа\n- экстракт спирулины\n- клетчатка яблочная",
+      "image": "/static/images/products/detox-mix_01.png",
+      "images": [
+        "/static/images/products/detox-mix_01.png"
+      ]
+    },
+    {
+      "id": "t8-energy-gel",
+      "title": "T8 ENERGY GEL",
+      "name": "T8 ENERGY GEL",
+      "short": "Энергетический гель для спорта. Быстро восполняет углеводы и электролиты.",
+      "description": "Энергетический гель для спорта.\nБыстро восполняет углеводы и электролиты.",
+      "category": "supplements",
+      "tags": [
+        "energy",
+        "gel"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/14/45045?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=t8-energy-gel",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "t8-energy-gel"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "ENERGY",
+        "GEL",
+        "T8",
+        "T8_ENERGY",
+        "T8_ENERGY_GEL"
+      ],
+      "usage": "Принимать 1 гель за 10 минут до нагрузки.",
+      "composition": "- глюкоза\n- натрий\n- калий",
+      "image": "/static/images/products/energy-gel.jpg",
+      "images": [
+        "/static/images/products/energy-gel.jpg"
+      ]
+    },
+    {
+      "id": "t8-era-brain-coffee",
+      "title": "T8 ERA BRAIN COFFEE",
+      "name": "T8 ERA BRAIN COFFEE",
+      "short": "Растворимый кофе с ноотропным комплексом для концентрации. Сочетает арабику и экстракты гриба льва.",
+      "description": "Растворимый кофе с ноотропным комплексом для концентрации.\nСочетает арабику и экстракты гриба льва.",
+      "category": "drinks",
+      "tags": [
+        "brain",
+        "coffee"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/25/23096?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-era-brain-coffee",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-era-brain-coffee"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "BRAIN",
+        "COFFEE",
+        "ERA",
+        "T8",
+        "T8_ERA",
+        "T8_ERA_BRAIN",
+        "T8_ERA_BRAIN_COFFEE"
+      ],
+      "usage": "Растворить 1 пакет в 200 мл горячей воды.",
+      "composition": "- молотый кофе арабика\n- экстракт гриба львиная грива\n- L-теанин",
+      "image": "/static/images/products/brain-coffee_main.jpg",
+      "images": [
+        "/static/images/products/brain-coffee_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-era-lchf-cocoa",
+      "title": "T8 ERA LCHF-COCOA",
+      "name": "T8 ERA LCHF-COCOA",
+      "short": "Какао с МСТ-маслами для кеторациона. Поддерживает сытость и ментальную концентрацию.",
+      "description": "Какао с МСТ-маслами для кеторациона.\nПоддерживает сытость и ментальную концентрацию.",
+      "category": "drinks",
+      "tags": [
+        "cocoa",
+        "lchf"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/25/51466?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-era-lchf-cocoa",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-era-lchf-cocoa"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "COCOA",
+        "ERA",
+        "LCHF",
+        "T8",
+        "T8_ERA",
+        "T8_ERA_LCHF",
+        "T8_ERA_LCHF_COCOA"
+      ],
+      "usage": "Растворить 1 пакет в 150 мл горячей воды или молока.",
+      "contra": "Индивидуальная непереносимость компонентов.",
+      "composition": "- какао-порошок\n- МСТ масло\n- сливки кокосовые",
+      "image": "/static/images/products/t8-era-lchf-cocoa.png",
+      "images": [
+        "/static/images/products/t8-era-lchf-cocoa.png"
+      ]
+    },
+    {
+      "id": "t8-era-mit-up",
+      "title": "T8 ERA MIT UP",
+      "name": "T8 ERA MIT UP",
+      "short": "Коллагеновое желе для упругости кожи и поддержки суставов. Легкий ягодный вкус и удобные стики.",
+      "description": "Коллагеновое желе для упругости кожи и поддержки суставов.\nЛегкий ягодный вкус и удобные стики.",
+      "category": "general",
+      "tags": [
+        "mit",
+        "up"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/14/39176?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-era-mit-up",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-era-mit-up"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "ERA",
+        "MIT",
+        "T8",
+        "T8_ERA",
+        "T8_ERA_MIT",
+        "T8_ERA_MIT_UP",
+        "UP"
+      ],
+      "usage": "По 1 стику в день. Встряхнуть перед употреблением.",
+      "composition": "гидролизованный коллаген, витамин C, гиалуроновая кислота.",
+      "image": "/static/images/products/mitup_main.png",
+      "images": [
+        "/static/images/products/mitup_main.png"
+      ]
+    },
+    {
+      "id": "t8-extra",
+      "title": "T8 EXTRA",
+      "name": "T8 EXTRA",
+      "short": "Энергетический комплекс в удобных стиках. Помогает поддерживать концентрацию и уровень энергии в течение дня.",
+      "description": "Энергетический комплекс в удобных стиках.\nПомогает поддерживать концентрацию и уровень энергии в течение дня.",
+      "category": "supplements",
+      "tags": [
+        "extra"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/14/42042?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=t8-extra",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "t8-extra"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "EXTRA",
+        "T8",
+        "T8_EXTRA"
+      ],
+      "usage": "По 1 стику утром или перед нагрузкой.",
+      "composition": "- экстракт гуараны\n- таурин\n- витамин B12",
+      "image": "/static/images/products/t8-extra.jpg",
+      "images": [
+        "/static/images/products/t8-extra.jpg"
+      ]
+    },
+    {
+      "id": "t8-herbal-elixir",
+      "title": "T8 HERBAL ELIXIR",
+      "name": "T8 HERBAL ELIXIR",
+      "short": "Фитоэликсир с адаптогенами. Повышает устойчивость к стрессу и поддерживает тонус.",
+      "description": "Фитоэликсир с адаптогенами.\nПовышает устойчивость к стрессу и поддерживает тонус.",
+      "category": "general",
+      "tags": [
+        "elixir",
+        "herbal"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/12/56060?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-herbal-elixir",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-herbal-elixir"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "ELIXIR",
+        "HERBAL",
+        "T8",
+        "T8_HERBAL",
+        "T8_HERBAL_ELIXIR"
+      ],
+      "usage": "По 1 чайной ложке 2 раза в день.",
+      "composition": "- родиола розовая\n- элеутерококк",
+      "image": "/static/images/products/t8-herbal-elixir.jpg",
+      "images": [
+        "/static/images/products/t8-herbal-elixir.jpg"
+      ]
+    },
+    {
+      "id": "t8-kids-vitamins",
+      "title": "T8 KIDS VITAMINS",
+      "name": "T8 KIDS VITAMINS",
+      "short": "Витаминный комплекс для детей. Вкусные жевательные пастилки.",
+      "description": "Витаминный комплекс для детей.\nВкусные жевательные пастилки.",
+      "category": "supplements",
+      "tags": [
+        "kids",
+        "vitamins"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/46060?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=t8-kids-vitamins",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "t8-kids-vitamins"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "KIDS",
+        "T8",
+        "T8_KIDS",
+        "T8_KIDS_VITAMINS",
+        "VITAMINS"
+      ],
+      "usage": "По 1 пастилке в день детям от 3 лет.",
+      "composition": "- витамины A, C, D, E\n- экстракт облепихи",
+      "image": "/static/images/products/kids-vitamins.png",
+      "images": [
+        "/static/images/products/kids-vitamins.png"
+      ]
+    },
+    {
+      "id": "t8-night-calm-tea",
+      "title": "T8 NIGHT CALM TEA",
+      "name": "T8 NIGHT CALM TEA",
+      "short": "Травяной чай для расслабления и спокойного сна. Содержит мелиссу и лаванду.",
+      "description": "Травяной чай для расслабления и спокойного сна.\nСодержит мелиссу и лаванду.",
+      "category": "drinks",
+      "tags": [
+        "calm",
+        "night",
+        "tea"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/16/41001?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=drinks&utm_content=t8-night-calm-tea",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "drinks",
+          "utm_content": "t8-night-calm-tea"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "CALM",
+        "NIGHT",
+        "T8",
+        "T8_NIGHT",
+        "T8_NIGHT_CALM",
+        "T8_NIGHT_CALM_TEA",
+        "TEA"
+      ],
+      "usage": "Заварить 1 пакет на 200 мл горячей воды, настоять 5 минут.",
+      "composition": "- мелисса\n- лаванда\n- ромашка",
+      "image": "/static/images/products/night-tea_main.jpg",
+      "images": [
+        "/static/images/products/night-tea_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-night-mask",
+      "title": "T8 NIGHT MASK",
+      "name": "T8 NIGHT MASK",
+      "short": "Ночная маска для интенсивного увлажнения. Обновляет кожу и восстанавливает барьер.",
+      "description": "Ночная маска для интенсивного увлажнения.\nОбновляет кожу и восстанавливает барьер.",
+      "category": "cosmetics",
+      "tags": [
+        "mask",
+        "night"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/30/54040?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=cosmetics&utm_content=t8-night-mask",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "cosmetics",
+          "utm_content": "t8-night-mask"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "MASK",
+        "NIGHT",
+        "T8",
+        "T8_NIGHT",
+        "T8_NIGHT_MASK"
+      ],
+      "usage": "Наносить на кожу лица перед сном 2-3 раза в неделю.",
+      "composition": "- гиалуроновая кислота\n- ниацинамид",
+      "image": "/static/images/products/night-tea_main.jpg",
+      "images": [
+        "/static/images/products/night-tea_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-skin-glow-serum",
+      "title": "T8 SKIN GLOW SERUM",
+      "name": "T8 SKIN GLOW SERUM",
+      "short": "Сыворотка для сияния кожи. Увлажняет и выравнивает тон.",
+      "description": "Сыворотка для сияния кожи.\nУвлажняет и выравнивает тон.",
+      "category": "general",
+      "tags": [
+        "glow",
+        "serum",
+        "skin"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/30/53030?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-skin-glow-serum",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-skin-glow-serum"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "GLOW",
+        "SERUM",
+        "SKIN",
+        "T8",
+        "T8_SKIN",
+        "T8_SKIN_GLOW",
+        "T8_SKIN_GLOW_SERUM"
+      ],
+      "usage": "Наносить на очищенную кожу утром и вечером.",
+      "composition": "- гиалуроновая кислота\n- витамин C",
+      "image": "/static/images/products/skin-glow_main.jpg",
+      "images": [
+        "/static/images/products/skin-glow_main.jpg"
+      ]
+    },
+    {
+      "id": "t8-slim-mix",
+      "title": "T8 SLIM MIX",
+      "name": "T8 SLIM MIX",
+      "short": "Коктейль для контроля аппетита. Помогает поддерживать баланс углеводов.",
+      "description": "Коктейль для контроля аппетита.\nПомогает поддерживать баланс углеводов.",
+      "category": "general",
+      "tags": [
+        "mix",
+        "slim"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/18/40015?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-slim-mix",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-slim-mix"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "MIX",
+        "SLIM",
+        "T8",
+        "T8_SLIM",
+        "T8_SLIM_MIX"
+      ],
+      "usage": "Смешать 30 г порошка с 200 мл воды.",
+      "composition": "- белок гороха\n- гуаровая камедь",
+      "image": "/static/images/products/slim-mix_main.png",
+      "images": [
+        "/static/images/products/slim-mix_main.png"
+      ]
+    },
+    {
+      "id": "t8-smart-shaker",
+      "title": "T8 SMART SHAKER",
+      "name": "T8 SMART SHAKER",
+      "short": "Умный шейкер с отделением для добавок. Удобен для спорта и поездок.",
+      "description": "Умный шейкер с отделением для добавок.\nУдобен для спорта и поездок.",
+      "category": "accessories",
+      "tags": [
+        "shaker",
+        "smart"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/22/55050?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=accessories&utm_content=t8-smart-shaker",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "accessories",
+          "utm_content": "t8-smart-shaker"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "SHAKER",
+        "SMART",
+        "T8",
+        "T8_SMART",
+        "T8_SMART_SHAKER"
+      ],
+      "usage": "Использовать для приготовления коктейлей и смузи.",
+      "image": "/static/images/products/t8-smart-shaker.jpg",
+      "images": [
+        "/static/images/products/t8-smart-shaker.jpg"
+      ]
+    },
+    {
+      "id": "t8-sport-mix",
+      "title": "T8 SPORT MIX",
+      "name": "T8 SPORT MIX",
+      "short": "Протеиновый коктейль с аминокислотами. Поддерживает восстановление после тренировок.",
+      "description": "Протеиновый коктейль с аминокислотами.\nПоддерживает восстановление после тренировок.",
+      "category": "general",
+      "tags": [
+        "mix",
+        "sport"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/18/48080?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=general&utm_content=t8-sport-mix",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "general",
+          "utm_content": "t8-sport-mix"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "MIX",
+        "SPORT",
+        "T8",
+        "T8_SPORT",
+        "T8_SPORT_MIX"
+      ],
+      "usage": "Смешать 1 мерную ложку с водой.",
+      "composition": "- сывороточный протеин\n- BCAA",
+      "image": "/static/images/products/t8-sport-mix.jpg",
+      "images": [
+        "/static/images/products/t8-sport-mix.jpg"
+      ]
+    },
+    {
+      "id": "t8-stekla-black-96",
+      "title": "T8 STЁKLA BLACK (96%)",
+      "name": "T8 STЁKLA BLACK (96%)",
+      "short": "Очки для вечернего режима и защиты от синего света. Легкая оправа и комфортные дужки.",
+      "description": "Очки для вечернего режима и защиты от синего света.\nЛегкая оправа и комфортные дужки.",
+      "category": "accessories",
+      "tags": [
+        "96",
+        "black",
+        "stekla"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/22/37416?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=accessories&utm_content=t8-stekla-black-96",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "accessories",
+          "utm_content": "t8-stekla-black-96"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "96",
+        "BLACK",
+        "KLA",
+        "ST",
+        "T8",
+        "T8_ST",
+        "T8_STEKLA_BLACK_96",
+        "T8_ST_KLA",
+        "T8_ST_KLA_BLACK",
+        "T8_ST_KLA_BLACK_96"
+      ],
+      "usage": "Надевать за 2 часа до сна.",
+      "contra": "Нет.",
+      "image": "/static/images/products/t8-stekla-black-96.webp",
+      "images": [
+        "/static/images/products/t8-stekla-black-96.webp"
+      ]
+    },
+    {
+      "id": "t8-vision-care",
+      "title": "T8 VISION CARE",
+      "name": "T8 VISION CARE",
+      "short": "Комплекс для поддержки зрения. Содержит чернику и цинк для защиты глаз.",
+      "description": "Комплекс для поддержки зрения.\nСодержит чернику и цинк для защиты глаз.",
+      "category": "supplements",
+      "tags": [
+        "care",
+        "vision"
+      ],
+      "order": {
+        "velavie_link": "https://vlv-shop.ru/ru-ru/app/catalog/28/42020?ref=735861&utm_source=tg_bot&utm_medium=catalog&utm_campaign=supplements&utm_content=t8-vision-care",
+        "utm": {
+          "utm_source": "tg_bot",
+          "utm_medium": "catalog",
+          "utm_campaign": "supplements",
+          "utm_content": "t8-vision-care"
+        }
+      },
+      "available": true,
+      "aliases": [
+        "CARE",
+        "T8",
+        "T8_VISION",
+        "T8_VISION_CARE",
+        "VISION"
+      ],
+      "usage": "По 1 капсуле 2 раза в день.",
+      "composition": "- экстракт черники\n- цинк",
+      "image": "/static/images/products/vision-care_glasses.png",
+      "images": [
+        "/static/images/products/vision-care_glasses.png"
+      ]
     }
   ]
 }
