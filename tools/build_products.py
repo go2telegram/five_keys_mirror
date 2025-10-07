@@ -94,7 +94,8 @@ def quote_url(url: str) -> str:
 
     parts = urlsplit(url)
     path = quote(parts.path)
-    query = urlencode(parse_qsl(parts.query, keep_blank_values=True))
+    query_items = parse_qsl(parts.query, keep_blank_values=True)
+    query = urlencode(query_items, doseq=True)
     return urlunsplit((parts.scheme, parts.netloc, path, query, parts.fragment))
 
 
@@ -646,22 +647,40 @@ def _resolve_image(
 
 def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str, str]]:
     parsed = urlsplit(url)
-    params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query_items = parse_qsl(parsed.query, keep_blank_values=True)
     utm_defaults = {
         "utm_source": "tg_bot",
         "utm_medium": "catalog",
         "utm_campaign": _slug(category or "catalog"),
         "utm_content": product_id,
     }
-    changed = False
-    for key, value in utm_defaults.items():
-        if not params.get(key):
-            params[key] = value
-            changed = True
-    if changed:
-        parsed = parsed._replace(query=urlencode(params, doseq=True))
-        url = urlunsplit(parsed)
-    return quote_url(url), utm_defaults
+
+    def _ensure_item(key: str, value: str) -> None:
+        for index, (existing_key, existing_value) in enumerate(query_items):
+            if existing_key != key:
+                continue
+            if existing_value:
+                return
+            query_items[index] = (existing_key, value)
+            return
+        query_items.append((key, value))
+
+    for key, default_value in utm_defaults.items():
+        _ensure_item(key, default_value)
+
+    normalized_query = urlencode(query_items, doseq=True)
+    normalized_url = urlunsplit(
+        parsed._replace(path=quote(parsed.path), query=normalized_query)
+    )
+
+    utm_values: dict[str, str] = {}
+    for key in utm_defaults:
+        for existing_key, existing_value in query_items:
+            if existing_key == key:
+                utm_values[key] = existing_value
+                break
+
+    return normalized_url, utm_values
 
 
 def build_catalog(
@@ -739,11 +758,24 @@ def validate_catalog(path: Path | None = None) -> int:
         order = product.get("order")
         if not isinstance(order, dict) or "velavie_link" not in order:
             raise CatalogBuildError(f"{product_id}: missing order.velavie_link")
-        url = str(order["velavie_link"])
+        url = order["velavie_link"]
+        if not isinstance(url, str) or not url.strip():
+            raise CatalogBuildError(f"{product_id}: order.velavie_link must be a non-empty string")
         params = dict(parse_qsl(urlsplit(url).query, keep_blank_values=True))
         for key in ("utm_source", "utm_medium", "utm_campaign", "utm_content"):
             if not params.get(key):
                 raise CatalogBuildError(f"{product_id}: missing {key} utm parameter")
+        image = product.get("image")
+        images = product.get("images")
+        if image is not None and not isinstance(image, str):
+            raise CatalogBuildError(f"{product_id}: image must be a string")
+        if not isinstance(images, list) or not images:
+            raise CatalogBuildError(f"{product_id}: images must be a non-empty list")
+        first_image = images[0]
+        if not isinstance(first_image, str):
+            raise CatalogBuildError(f"{product_id}: images[0] must be a string")
+        if image is not None and first_image != image:
+            raise CatalogBuildError(f"{product_id}: image and images[0] must be identical")
     return len(products)
 
 
