@@ -44,6 +44,25 @@ def test_choose_image_fallbacks() -> None:
     assert image == "brain-coffee_main.jpg"
 
 
+@pytest.mark.parametrize(
+    "slug_value, candidate",
+    [
+        ("nash-omega-3", "omega3_main.jpg"),
+        ("t8-era-mit-up", "mitup_main.png"),
+        ("t8-stekla-black-96", "stёkla-main.jpg"),
+    ],
+)
+def test_match_image_alias_variants(slug_value: str, candidate: str) -> None:
+    match = bp._match_image(slug_value, [candidate])
+    assert match is not None
+    assert match.name == candidate
+    assert match.alias is not None
+
+
+def test_slug_transliterates_yo() -> None:
+    assert bp._slug("СТЁКЛА Black 96") == "stekla-black-96"
+
+
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
     count, generated = bp.build_catalog(
