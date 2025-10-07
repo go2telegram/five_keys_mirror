@@ -209,6 +209,30 @@ Tribute webhook поднимется только если в `.env` указа�
 хендлер отправляет приветствие даже при сбое БД. Для возврата домой из любого раздела используйте `kb_back_home()`, а команда
 `/ping` доступна только при `DEBUG_COMMANDS=true`.
 
+## Каталог продуктов
+Источник описаний: репозиторий `go2telegram/media` → `media/descriptions/*.txt`
+Картинки: `go2telegram/media` → `media/products/*`
+
+Сборка/валидация:
+```bash
+make build-products
+make validate-products
+```
+Каталог: `app/catalog/products.json` (валидируется схемой `app/data/products.schema.json`).
+CI автоматически собирает/валидирует каталог на каждом PR/commit.
+
+## Быстрый запуск (dev)
+```bash
+python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+export BOT_TOKEN="xxx" HEALTH_PORT=8080
+python run.py
+```
+Проверки:
+- `GET http://localhost:8080/ping` → ok
+- `GET http://localhost:8080/metrics` → Prometheus-метрики
+- В боте: `/version`, `/catalog`, `/product <id>`
+
 ## Главное меню
 
 Все разделы доступны из встроенной клавиатуры (`/start` → две колонки):

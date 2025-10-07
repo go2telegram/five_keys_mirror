@@ -27,6 +27,32 @@ jobs:
         run: make build-products
       - name: Validate catalog
         run: make validate-products
+      - name: HEAD-check product images (warning only)
+        run: |
+          python - <<'PY'
+          import json, requests
+          with open('app/catalog/products.json', encoding='utf-8') as f:
+              data = json.load(f)
+          urls = []
+          for p in (data.get('products', []) if isinstance(data, dict) else data):
+              img = p.get('image') or (p.get('images') or [None])[0]
+              if img:
+                  urls.append(img)
+          bad = []
+          for u in urls:
+              try:
+                  r = requests.head(u, timeout=6)
+                  if r.status_code != 200:
+                      bad.append((u, r.status_code))
+              except Exception:
+                  bad.append((u, 'ERR'))
+          if bad:
+              print('BAD images:', len(bad))
+              for u, c in bad[:20]:
+                  print('BAD', c, u)
+          else:
+              print('All product images are reachable (200).')
+          PY
       - name: Run tests
         run: pytest
       - name: Repository audit
