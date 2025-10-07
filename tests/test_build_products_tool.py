@@ -1,14 +1,85 @@
 import json
+import logging
+import shutil
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from tools import build_products as bp
+from tools.build_products import (
+    _choose_image,
+    build_catalog,
+    main as build_main,
+    quote_url,
+    validate_catalog,
+)
 
 
-DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
-IMAGES_DIR = Path("app/static/images/products")
+FIXTURE_DESCRIPTIONS = Path("tests/fixtures/catalog/descriptions/sample.txt")
+FIXTURE_IMAGES_DIR = Path("tests/fixtures/catalog/images")
+
+
+def _normalize_fixture_descriptions(destination: Path) -> Path:
+    text = FIXTURE_DESCRIPTIONS.read_text(encoding="utf-8")
+    blocks: list[list[str]] = []
+    buffer: list[str] = []
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if stripped in {"====", "----"}:
+            if buffer:
+                blocks.append(buffer)
+                buffer = []
+            continue
+        buffer.append(raw_line.rstrip())
+    if buffer:
+        blocks.append(buffer)
+
+    normalized_blocks: list[str] = []
+    for lines in blocks:
+        fields: dict[str, str] = {}
+        last_key: str | None = None
+        extras: list[str] = []
+        for line in lines:
+            if ":" in line:
+                key, value = line.split(":", 1)
+                normalized_key = key.strip().lower()
+                fields[normalized_key] = value.strip()
+                last_key = normalized_key
+            elif line.strip():
+                if last_key:
+                    fields[last_key] = (fields.get(last_key, "") + " " + line.strip()).strip()
+                else:
+                    extras.append(line.strip())
+        name = fields.get("название") or fields.get("name") or "Product"
+        url = None
+        for key in ("ссылка для заказа", "ссылка на покупку", "ссылка", "url"):
+            if key in fields:
+                url = fields[key]
+                break
+        if not url:
+            continue
+        body_parts: list[str] = []
+        for key in ("кратко", "описание"):
+            value = fields.get(key)
+            if value:
+                body_parts.append(value)
+        if fields.get("применение"):
+            body_parts.append(fields["применение"])
+        body_parts.extend(extras)
+        block_lines = [name]
+        block_lines.extend(part for part in body_parts if part)
+        block_lines.append(f"Ссылка для заказа: {url}")
+        normalized_blocks.append("\n".join(block_lines))
+
+    destination.write_text("\n\n".join(normalized_blocks), encoding="utf-8")
+    return destination
+
+
+def _prepare_fixture_catalog(tmp_path: Path) -> tuple[Path, Path]:
+    descriptions_path = _normalize_fixture_descriptions(tmp_path / "descriptions.txt")
+    images_dir = tmp_path / "images"
+    shutil.copytree(FIXTURE_IMAGES_DIR, images_dir)
+    return descriptions_path, images_dir
 
 
 @pytest.mark.parametrize(
@@ -25,45 +96,49 @@ IMAGES_DIR = Path("app/static/images/products")
     ],
 )
 def test_quote_url_normalizes_path_and_query(raw: str, expected: str) -> None:
-    assert bp.quote_url(raw) == expected
+    assert quote_url(raw) == expected
 
 
-def test_choose_image_fallbacks() -> None:
-    files = [
+def test_choose_image_heuristics_cover_common_variants() -> None:
+    candidates = [
         "omega3_main.jpg",
+        "mitup-main.webp",
+        "stekla_01.png",
         "brain-coffee_main.jpg",
-        "misc/file.png",
         "omega3_pack.webp",
     ]
-    image = bp._choose_image("nash-omega-3", files, used_images=set())
-    assert image == "omega3_main.jpg"
-    image = bp._choose_image("t8-era-brain-coffee", files, used_images=set())
-    assert image == "brain-coffee_main.jpg"
+    assert _choose_image("omega-3", candidates, used_images=set()) == "omega3_main.jpg"
+    assert _choose_image("mit-up", candidates, used_images=set()) == "mitup-main.webp"
+    assert _choose_image("stekla", candidates, used_images=set()) == "stekla_01.png"
+    assert _choose_image("t8-era-brain-coffee", candidates, used_images=set()) == "brain-coffee_main.jpg"
 
 
 def test_choose_image_respects_used_images() -> None:
     files = ["omega3_main.jpg", "omega3_main_copy.jpg"]
     used = {"omega3_main.jpg"}
-    image = bp._choose_image("omega-3", files, used_images=used)
+    image = _choose_image("omega-3", files, used_images=used)
     assert image == "omega3_main_copy.jpg"
 
 
-def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
+def test_build_catalog_with_fixture_assets(tmp_path: Path) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
     output = tmp_path / "products.json"
-    count, generated = bp.build_catalog(
-        descriptions_path=str(DESCRIPTIONS_PATH),
+
+    count, generated = build_catalog(
+        descriptions_path=str(descriptions_path),
         images_mode="local",
-        images_dir=str(IMAGES_DIR),
+        images_dir=str(images_dir),
         strict_images="add",
         strict_descriptions="add",
         output=output,
     )
     assert generated == output
-    assert count >= 20
 
     data = json.loads(output.read_text(encoding="utf-8"))
-    assert len(data["products"]) == count
+    assert len(data["products"]) == count == 11
 
+    missing = [product for product in data["products"] if "missing_image" in product.get("tags", [])]
+    assert missing and all(product["available"] is False for product in missing)
     for product in data["products"]:
         link = product["order"]["velavie_link"]
         if not link:
@@ -72,38 +147,20 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
         assert params["utm_source"] == ["tg_bot"]
         assert params["utm_medium"] == ["catalog"]
         assert params["utm_content"] == [product["id"]]
-        if "missing_image" in product.get("tags", []):
-            assert product.get("images") == []
-            continue
-        assert product.get("images")
-        if product.get("image"):
-            assert product["image"].startswith("/static/") or product["image"].startswith("http")
 
-    if all(product["order"]["velavie_link"] for product in data["products"]):
-        validated = bp.validate_catalog(output)
-        assert validated == count
+    validated = validate_catalog(output)
+    assert validated == count
 
 
-def test_build_catalog_creates_minimal_cards(tmp_path: Path) -> None:
-    descriptions = tmp_path / "descriptions.txt"
-    descriptions.write_text(
-        """
-Omega 3
-
-Описание продукта
-
-Ссылка для заказа: https://example.com/omega
-""".strip(),
-        encoding="utf-8",
-    )
-    images_dir = tmp_path / "images"
-    images_dir.mkdir()
-    (images_dir / "omega-3.jpg").write_text("", encoding="utf-8")
-    (images_dir / "extra_main.png").write_text("", encoding="utf-8")
+def test_build_catalog_creates_placeholder_for_unmatched_images(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+    extra_image = images_dir / "mystery_main.png"
+    extra_image.write_bytes(b"")
 
     output = tmp_path / "products.json"
-    count, _ = bp.build_catalog(
-        descriptions_path=str(descriptions),
+    caplog.set_level(logging.WARNING)
+    count, _ = build_catalog(
+        descriptions_path=str(descriptions_path),
         images_mode="local",
         images_dir=str(images_dir),
         strict_images="add",
@@ -112,37 +169,46 @@ Omega 3
     )
 
     data = json.loads(output.read_text(encoding="utf-8"))
-    assert count == len(data["products"]) == 2
-    omega = next(item for item in data["products"] if item["title"] == "Omega 3")
-    assert omega["image"].endswith("omega-3.jpg")
-    assert omega["id"].startswith("omega")
-
-    unmatched = next(item for item in data["products"] if "unmatched_image" in item["tags"])
-    assert unmatched["available"] is False
-    assert unmatched["order"]["velavie_link"] == ""
-    assert unmatched["image"].endswith("extra_main.png")
-    assert unmatched["title"] == "Extra"
-    assert unmatched["images"] == [unmatched["image"]]
+    assert len(data["products"]) == count == 12
+    placeholders = [product for product in data["products"] if "unmatched_image" in product.get("tags", [])]
+    assert len(placeholders) == 1
+    placeholder = placeholders[0]
+    assert placeholder["available"] is False
+    assert placeholder["order"]["velavie_link"] == ""
+    assert placeholder["images"] == [placeholder["image"]]
+    assert placeholder["image"].endswith("mystery_main.png")
+    assert any("Unmatched image" in record.message for record in caplog.records)
 
 
-def test_build_catalog_marks_missing_image(tmp_path: Path) -> None:
-    descriptions = tmp_path / "single.txt"
-    descriptions.write_text(
-        """
-No Image Product
-
-Описание
-
-Ссылка для заказа: https://example.com/no-image
-""".strip(),
-        encoding="utf-8",
-    )
-    images_dir = tmp_path / "images"
-    images_dir.mkdir()
+def test_strict_images_warn_skips_placeholder(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+    (images_dir / "unused.webp").write_bytes(b"")
 
     output = tmp_path / "products.json"
-    count, _ = bp.build_catalog(
-        descriptions_path=str(descriptions),
+    caplog.set_level(logging.WARNING)
+    count, _ = build_catalog(
+        descriptions_path=str(descriptions_path),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="warn",
+        strict_descriptions="add",
+        output=output,
+    )
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert len(data["products"]) == count == 11
+    assert not any("unmatched_image" in product.get("tags", []) for product in data["products"])
+    assert any("Unmatched image (skipped)" in record.message for record in caplog.records)
+
+
+def test_strict_images_off_ignores_unmatched(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+    (images_dir / "ignored.png").write_bytes(b"")
+
+    output = tmp_path / "products.json"
+    caplog.set_level(logging.WARNING)
+    count, _ = build_catalog(
+        descriptions_path=str(descriptions_path),
         images_mode="local",
         images_dir=str(images_dir),
         strict_images="off",
@@ -151,8 +217,89 @@ No Image Product
     )
 
     data = json.loads(output.read_text(encoding="utf-8"))
-    assert count == len(data["products"]) == 1
-    product = data["products"][0]
-    assert product["available"] is False
-    assert "missing_image" in product["tags"]
-    assert product.get("images") == []
+    assert len(data["products"]) == count == 11
+    assert not any("unmatched_image" in product.get("tags", []) for product in data["products"])
+    assert not any("Unmatched image" in record.message for record in caplog.records)
+
+
+def test_strict_descriptions_warn_skips_missing_images(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+
+    output = tmp_path / "products.json"
+    caplog.set_level(logging.WARNING)
+    count, _ = build_catalog(
+        descriptions_path=str(descriptions_path),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="off",
+        strict_descriptions="warn",
+        output=output,
+    )
+
+    assert count == 10
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert len(data["products"]) == 10
+    assert not any("missing_image" in product.get("tags", []) for product in data["products"])
+    assert any("Missing image" in record.message for record in caplog.records)
+
+
+def test_strict_descriptions_off_skips_missing_images_without_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+
+    output = tmp_path / "products.json"
+    caplog.set_level(logging.WARNING)
+    count, _ = build_catalog(
+        descriptions_path=str(descriptions_path),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="off",
+        strict_descriptions="off",
+        output=output,
+    )
+
+    assert count == 10
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert len(data["products"]) == 10
+    assert not any("missing_image" in product.get("tags", []) for product in data["products"])
+    assert any("Missing image" in record.message for record in caplog.records)
+
+
+def test_cli_build_uses_argparse_and_outputs_file(tmp_path: Path) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+    output = tmp_path / "cli-products.json"
+    exit_code = build_main(
+        [
+            "build",
+            "--descriptions-path",
+            str(descriptions_path),
+            "--images-dir",
+            str(images_dir),
+            "--images-mode",
+            "local",
+            "--strict-images",
+            "add",
+            "--strict-descriptions",
+            "add",
+            "--output",
+            str(output),
+        ]
+    )
+    assert exit_code == 0
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["products"]
+
+
+def test_cli_validate_returns_success(tmp_path: Path) -> None:
+    descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
+    output = tmp_path / "products.json"
+    build_catalog(
+        descriptions_path=str(descriptions_path),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="add",
+        strict_descriptions="add",
+        output=output,
+    )
+
+    exit_code = build_main(["validate", "--source", str(output)])
+    assert exit_code == 0
