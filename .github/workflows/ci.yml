@@ -23,10 +23,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Build catalog artifacts
-        run: make build-products
-      - name: Validate catalog
-        run: make validate-products
+      - name: Build catalog (strict)
+        run: |
+          python tools/build_products.py build \
+            --descriptions-path "app/catalog/descriptions" \
+            --images-dir "app/static/images/products" \
+            --expect-count from=catalog \
+            --fail-on-mismatch
+          python tools/build_products.py validate
       - name: HEAD-check product images (warning only)
         run: |
           python - <<'PY'

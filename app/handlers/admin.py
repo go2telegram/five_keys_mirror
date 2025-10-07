@@ -5,6 +5,8 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
+from app.catalog.loader import CatalogError, load_catalog
+from app.catalog.report import build_catalog_summary
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.repo import (
@@ -24,6 +26,34 @@ def _is_admin(user_id: int | None) -> bool:
     allowed = set(settings.ADMIN_USER_IDS or [])
     allowed.add(settings.ADMIN_ID)
     return user_id in allowed
+
+
+@router.message(Command("catalog_reload"))
+async def catalog_reload(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    try:
+        load_catalog(refresh=True)
+    except CatalogError as exc:
+        await m.answer(f"⚠️ Не удалось перезагрузить каталог: {exc}")
+        return
+
+    await m.answer("Каталог перезагружен.")
+
+
+@router.message(Command("catalog_report"))
+async def catalog_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    try:
+        summary = build_catalog_summary(refresh=False)
+    except CatalogError as exc:
+        await m.answer(f"⚠️ Не удалось прочитать каталог: {exc}")
+        return
+
+    await m.answer(summary.format())
 
 
 @router.message(Command("stats"))

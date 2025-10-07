@@ -43,14 +43,18 @@ def test_choose_image_fallbacks() -> None:
 
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
-    count, generated = bp.build_catalog(
+    result = bp.build_catalog(
         descriptions_path=str(DESCRIPTIONS_PATH),
         images_mode="local",
         images_dir=str(IMAGES_DIR),
         output=output,
     )
+    assert isinstance(result, bp.CatalogBuildResult)
+    count, generated = result
     assert generated == output
     assert count >= 20
+    assert result.stats.description_blocks >= count
+    assert result.stats.image_candidates >= count
 
     data = json.loads(output.read_text(encoding="utf-8"))
     assert len(data["products"]) == count

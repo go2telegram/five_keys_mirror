@@ -84,6 +84,27 @@ class ProductBlock:
     origin: str
 
 
+@dataclass
+class CatalogBuildStats:
+    """Additional information collected during the build."""
+
+    description_blocks: int
+    image_candidates: int
+
+
+@dataclass
+class CatalogBuildResult:
+    """Result of a catalog build with optional metadata."""
+
+    count: int
+    path: Path
+    stats: CatalogBuildStats
+
+    def __iter__(self) -> Iterator[object]:
+        yield self.count
+        yield self.path
+
+
 def quote_url(url: str) -> str:
     """Percent-encode the path and query components of a URL."""
 
@@ -584,12 +605,13 @@ def build_catalog(
     images_base: str | None = None,
     images_dir: str | None = None,
     output: Path | None = None,
-) -> tuple[int, Path]:
+) -> CatalogBuildResult:
     texts = _load_description_texts(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
     products = _load_products(texts)
+    description_blocks = len(products)
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -602,6 +624,7 @@ def build_catalog(
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
+    image_candidates = len(files)
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
     for product in products:
@@ -623,7 +646,14 @@ def build_catalog(
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return len(normalized), destination
+    return CatalogBuildResult(
+        count=len(normalized),
+        path=destination,
+        stats=CatalogBuildStats(
+            description_blocks=description_blocks,
+            image_candidates=image_candidates,
+        ),
+    )
 
 
 def validate_catalog(path: Path | None = None) -> int:
@@ -658,6 +688,52 @@ def validate_catalog(path: Path | None = None) -> int:
     return len(products)
 
 
+def _count_catalog_entries(path: Path) -> int:
+    if not path.exists():
+        raise CatalogBuildError(f"Catalog file {path} does not exist for expectation check")
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise CatalogBuildError(f"Cannot read catalog file {path}: {exc}") from exc
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise CatalogBuildError(f"Catalog file {path} is not valid JSON") from exc
+    products = payload.get("products") if isinstance(payload, dict) else None
+    if not isinstance(products, list):
+        raise CatalogBuildError("Existing catalog file must contain a 'products' list")
+    return len(products)
+
+
+def _resolve_expected_count(
+    value: str,
+    result: CatalogBuildResult,
+    *,
+    catalog_baseline: int | None,
+) -> tuple[int | None, str]:
+    value = value.strip()
+    if not value:
+        return None, ""
+    if value.startswith("from="):
+        source = value.split("=", 1)[1]
+        if source == "images":
+            return result.stats.image_candidates, "image candidates"
+        if source == "descriptions":
+            return result.stats.description_blocks, "description blocks"
+        if source == "catalog":
+            if catalog_baseline is None:
+                raise CatalogBuildError("Catalog baseline is unavailable for expectation check")
+            return catalog_baseline, "existing catalog"
+        raise CatalogBuildError(f"Unsupported expect-count source: {source}")
+    if value.startswith("fixed:"):
+        number = value.split(":", 1)[1]
+        try:
+            return int(number), "fixed"
+        except ValueError as exc:
+            raise CatalogBuildError(f"Invalid fixed expect-count value: {number}") from exc
+    raise CatalogBuildError(f"Unknown expect-count format: {value}")
+
+
 def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and validate the catalog products file")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -669,9 +745,25 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-base", default=None)
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
+    build_parser.add_argument(
+        "--expect-count",
+        default=None,
+        help=(
+            "Expected product count. Supported values: "
+            "from=images, from=descriptions, from=catalog, fixed:<n>"
+        ),
+    )
+    build_parser.add_argument(
+        "--fail-on-mismatch",
+        action="store_true",
+        help="Fail the build if the expected count does not match the result.",
+    )
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
     validate_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
+
+    summary_parser = subparsers.add_parser("summary", help="Print a summary of an existing catalog")
+    summary_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
 
     return parser.parse_args(argv)
 
@@ -681,7 +773,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         if args.command == "build":
-            count, path = build_catalog(
+            catalog_baseline = None
+            if args.expect_count and args.expect_count.startswith("from=catalog"):
+                target = args.output or CATALOG_PATH
+                catalog_baseline = _count_catalog_entries(target)
+
+            result = build_catalog(
                 descriptions_url=args.descriptions_url,
                 descriptions_path=args.descriptions_path,
                 images_mode=args.images_mode,
@@ -689,11 +786,36 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images_dir=args.images_dir,
                 output=args.output,
             )
+            count = result.count
+            path = result.path
+
+            if args.expect_count:
+                expected, label = _resolve_expected_count(
+                    args.expect_count,
+                    result,
+                    catalog_baseline=catalog_baseline,
+                )
+                if expected is not None and expected != count:
+                    message = (
+                        f"Built {count} products but expected {expected} ({label})."
+                    )
+                    if args.fail_on_mismatch:
+                        raise CatalogBuildError(message)
+                    logging.warning(message)
+                elif expected is not None:
+                    logging.info("Product count matches expected %s (%s)", expected, label)
+
             print(f"Built catalog with {count} products → {path}")
             return 0
         if args.command == "validate":
             count = validate_catalog(args.source)
             print(f"Catalog OK ({count} products)")
+            return 0
+        if args.command == "summary":
+            from app.catalog.report import build_catalog_summary_from_file
+
+            summary = build_catalog_summary_from_file(args.source)
+            print(summary.format())
             return 0
     except CatalogBuildError as exc:
         logging.error("%s", exc)
