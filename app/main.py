@@ -1,77 +1,316 @@
+"""Application entry point."""
+
+from __future__ import annotations
+
 import asyncio
-from aiogram import Bot, Dispatcher
+import logging
+import time
+from pathlib import Path
+from typing import Iterable, Optional
+
+from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
+from aiogram.types import CallbackQuery
 from aiohttp import web
 
+from app import build_info
 from app.config import settings
+from app.db.session import init_db
+from app.handlers import (
+    admin as h_admin,
+    admin_crud as h_admin_crud,
+    assistant as h_assistant,
+    calc as h_calc,
+    calc_kcal as h_calc_kcal,
+    calc_macros as h_calc_macros,
+    calc_water as h_calc_water,
+    lead as h_lead,
+    navigator as h_navigator,
+    notify as h_notify,
+    picker as h_picker,
+    premium as h_premium,
+    profile as h_profile,
+    quiz_deficits as h_quiz_deficits,
+    quiz_energy as h_quiz_energy,
+    quiz_gut as h_quiz_gut,
+    quiz_immunity as h_quiz_immunity,
+    quiz_menu as h_quiz_menu,
+    quiz_skin_joint as h_quiz_skin_joint,
+    quiz_sleep as h_quiz_sleep,
+    quiz_stress as h_quiz_stress,
+    quiz_stress2 as h_quiz_stress2,
+    referral as h_referral,
+    reg as h_reg,
+    report as h_report,
+    start as h_start,
+    subscription as h_subscription,
+    tribute_webhook as h_tw,
+)
+from app.logging_config import setup_logging
+from app.middlewares import AuditMiddleware
 from app.scheduler.service import start_scheduler
 
-# существующие роутеры
-from app.handlers import start as h_start
-from app.handlers import calc as h_calc
-from app.handlers import quiz_energy as h_quiz_energy
-from app.handlers import quiz_immunity as h_quiz_immunity
-from app.handlers import quiz_gut as h_quiz_gut
-from app.handlers import quiz_sleep as h_quiz_sleep
-from app.handlers import quiz_stress as h_quiz_stress
-from app.handlers import quiz_menu as h_quiz_menu
-from app.handlers import picker as h_picker
-from app.handlers import reg as h_reg
-from app.handlers import assistant as h_assistant
-from app.handlers import admin as h_admin
-from app.handlers import navigator as h_navigator
-from app.handlers import notify as h_notify
-from app.handlers import report as h_report
-from app.handlers import lead as h_lead
-
-# новые
-from app.handlers import subscription as h_subscription
-from app.handlers import premium as h_premium
-from app.handlers import tribute_webhook as h_tw
-from app.handlers import referral as h_referral
+try:
+    from app.handlers import health as h_health
+except ImportError:  # pragma: no cover - optional router
+    h_health = None
 
 
-async def main():
-    bot = Bot(token=settings.BOT_TOKEN,
-              default=DefaultBotProperties(parse_mode="HTML"))
+ALLOWED_UPDATES = ["message", "callback_query"]
+
+
+log_home = logging.getLogger("home")
+startup_log = logging.getLogger("startup")
+
+
+def _resolve_log_level(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        level = getattr(logging, str(value).upper(), logging.INFO)
+        if isinstance(level, int):
+            return level
+    except TypeError:
+        pass
+    return logging.INFO
+
+
+async def home_main(c: CallbackQuery) -> None:
+    log_home.info(
+        "HOME pressed uid=%s uname=%s",
+        getattr(c.from_user, "id", None),
+        getattr(c.from_user, "username", None),
+    )
+    try:
+        from app.handlers.start import GREETING  # local import to avoid cycles
+        from app.keyboards import kb_main
+
+        if c.message is None:
+            log_home.warning("home:main called without message")
+            return
+
+        try:
+            await c.message.edit_text(GREETING, reply_markup=kb_main())
+        except Exception:
+            log_home.warning("home:main edit failed; sending fresh message", exc_info=True)
+            await c.message.answer(GREETING, reply_markup=kb_main())
+    except Exception:
+        log_home.exception("home:main failed")
+    finally:
+        await c.answer()
+
+
+async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
+    if not settings.RUN_TRIBUTE_WEBHOOK:
+        logging.info("Tribute webhook server disabled (RUN_TRIBUTE_WEBHOOK=false)")
+        return None
+
+    app_web = web.Application()
+    app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+
+    runner = web.AppRunner(app_web)
+    await runner.setup()
+    site = web.TCPSite(
+        runner,
+        host=settings.WEB_HOST,
+        port=settings.TRIBUTE_PORT,
+    )
+    await site.start()
+    logging.info(
+        "Tribute webhook server at http://%s:%s%s",
+        settings.WEB_HOST,
+        settings.TRIBUTE_PORT,
+        settings.TRIBUTE_WEBHOOK_PATH,
+    )
+    return runner
+
+
+def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
+    """Register the audit middleware on every dispatcher layer."""
+
+    audit_middleware = AuditMiddleware()
+    dp.update.outer_middleware(audit_middleware)
+    dp.message.middleware(audit_middleware)
+    dp.callback_query.middleware(audit_middleware)
+    startup_log.info("S4: audit middleware registered")
+    return audit_middleware
+
+
+def _log_startup_metadata() -> None:
+    startup_log.info(
+        "build: branch=%s commit=%s time=%s",
+        getattr(build_info, "GIT_BRANCH", "unknown"),
+        getattr(build_info, "GIT_COMMIT", "unknown"),
+        getattr(build_info, "BUILD_TIME", "unknown"),
+    )
+    startup_log.info("cwd: %s", Path.cwd())
+    log_dir_path = Path(settings.LOG_DIR).resolve()
+    startup_log.info(
+        "log_paths dir=%s bot=%s errors=%s",
+        log_dir_path,
+        (log_dir_path / "bot.log").resolve(),
+        (log_dir_path / "errors.log").resolve(),
+    )
+    startup_log.info("log_config dir_param=%s level_param=%s", settings.LOG_DIR, settings.LOG_LEVEL)
+    startup_log.info("aiogram=%s", aiogram_version)
+
+
+def _log_router_overview(dp: Dispatcher, routers: list, allowed_updates: Iterable[str]) -> None:
+    router_names = [router.name or router.__class__.__name__ for router in routers]
+    startup_log.info("S5: routers attached count=%s names=%s", len(router_names), router_names)
+    resolved_updates = sorted(dp.resolve_used_update_types())
+    startup_log.info("resolve_used_update_types=%s", resolved_updates)
+
+
+def _create_startup_router(allowed_updates: Iterable[str]) -> Router:
+    startup_router = Router(name="startup")
+
+    @startup_router.startup()
+    async def on_startup(bot: Bot) -> None:  # pragma: no cover - covered via unit test
+        startup_log.info("S0: startup event fired")
+        await _notify_admin_startup(bot, allowed_updates)
+
+    return startup_router
+
+
+def _gather_admin_ids() -> set[int]:
+    admins: set[int] = set()
+    if settings.ADMIN_ID:
+        admins.add(int(settings.ADMIN_ID))
+    admins.update(int(item) for item in settings.ADMIN_USER_IDS or [])
+    return {admin for admin in admins if admin}
+
+
+async def _notify_admin_startup(bot: Bot, allowed_updates: Iterable[str]) -> None:
+    admins = _gather_admin_ids()
+    startup_log = logging.getLogger("startup")
+    if not admins:
+        startup_log.info("admin notification skipped: no admin ids configured")
+        return
+
+    message = (
+        "\u2705 \u0411\u043e\u0442 \u0437\u0430\u043f\u0443\u0449\u0435\u043d: "
+        f"branch={getattr(build_info, 'GIT_BRANCH', 'unknown')} "
+        f"commit={getattr(build_info, 'GIT_COMMIT', 'unknown')} "
+        f"aiogram={aiogram_version} "
+        f"allowed_updates={list(allowed_updates)}"
+    )
+
+    for admin_id in sorted(admins):
+        try:
+            await bot.send_message(admin_id, message)
+            startup_log.info("admin notified uid=%s", admin_id)
+        except Exception as exc:  # pragma: no cover - network/Telegram errors
+            startup_log.warning("failed to notify admin uid=%s: %s", admin_id, exc)
+
+
+async def main() -> None:
+    setup_logging(
+        log_dir=settings.LOG_DIR,
+        level=_resolve_log_level(settings.LOG_LEVEL),
+    )
+
+    t0 = time.perf_counter()
+
+    def mark(tag: str) -> None:
+        startup_log.info("%s (%.1f ms)", tag, (time.perf_counter() - t0) * 1000)
+
+    mark("S1: setup_logging done")
+
+    mark("S2-start: init_db")
+    revision: str | None = None
+    try:
+        revision = await init_db()
+    except Exception:
+        startup_log.exception("E!: init_db failed")
+    finally:
+        mark("S2-done: init_db")
+        logging.info("current alembic version: %s", revision or "unknown")
+
+    bot = Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode="HTML"),
+    )
     dp = Dispatcher()
+    mark("S3: bot/dispatcher created")
 
-    # роутеры
-    dp.include_router(h_start.router)
-    dp.include_router(h_calc.router)
-    dp.include_router(h_quiz_energy.router)
-    dp.include_router(h_quiz_immunity.router)
-    dp.include_router(h_quiz_gut.router)
-    dp.include_router(h_quiz_sleep.router)
-    dp.include_router(h_quiz_stress.router)
-    dp.include_router(h_quiz_menu.router)
-    dp.include_router(h_picker.router)
-    dp.include_router(h_reg.router)
-    dp.include_router(h_assistant.router)
-    dp.include_router(h_admin.router)
-    dp.include_router(h_navigator.router)
-    dp.include_router(h_notify.router)
-    dp.include_router(h_report.router)
-    dp.include_router(h_lead.router)
-    dp.include_router(h_subscription.router)
-    dp.include_router(h_premium.router)
-    dp.include_router(h_referral.router)
+    _register_audit_middleware(dp)
+    mark("S4: audit middleware registered")
+    _log_startup_metadata()
+
+    allowed_updates = list(ALLOWED_UPDATES)
+
+    routers = [
+        h_start.router,
+        h_calc.router,
+        h_calc_water.router,
+        h_calc_kcal.router,
+        h_calc_macros.router,
+        h_quiz_menu.router,
+        h_quiz_energy.router,
+        h_quiz_deficits.router,
+        h_quiz_immunity.router,
+        h_quiz_gut.router,
+        h_quiz_sleep.router,
+        h_quiz_stress.router,
+        h_quiz_stress2.router,
+        h_quiz_skin_joint.router,
+        h_picker.router,
+        h_reg.router,
+        h_premium.router,
+        h_profile.router,
+        h_referral.router,
+        h_subscription.router,
+        h_navigator.router,
+        h_report.router,
+        h_notify.router,
+        h_admin.router,
+        h_admin_crud.router,
+        h_assistant.router,
+        h_lead.router,
+    ]
+
+    if settings.DEBUG_COMMANDS and h_health is not None:
+        routers.append(h_health.router)
+
+    if settings.DEBUG_COMMANDS:
+        from app.handlers import _echo_debug as h_echo
+
+        routers.append(h_echo.router)
+        startup_log.info("S5b: echo_debug router attached")
+
+    startup_router = _create_startup_router(allowed_updates)
+    routers.insert(0, startup_router)
+
+    for router in routers:
+        dp.include_router(router)
+
+    dp.callback_query.register(home_main, F.data == "home:main")
+
+    _log_router_overview(dp, routers, allowed_updates)
+    mark(f"S5: routers attached count={len(routers)}")
+
+    mark(f"S6: allowed_updates={allowed_updates}")
 
     start_scheduler(bot)
 
-    # aiohttp сервер для Tribute
-    app_web = web.Application()
-    app_web.router.add_post(
-        settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
-    runner = web.AppRunner(app_web)
-    await runner.setup()
-    site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
-    print(
-        f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
-    await site.start()
+    runner = await _setup_tribute_webhook()
+    mark("S7: start_polling enter")
+    try:
+        await dp.start_polling(
+            bot,
+            allowed_updates=allowed_updates,
+        )
+        mark("S8: start_polling exited normally")
+    except Exception:
+        startup_log.exception("E!: start_polling crashed")
+        raise
+    finally:
+        mark("S9: shutdown sequence")
+        logging.info(">>> Polling stopped")
+        if runner is not None:
+            await runner.cleanup()
 
-    print("Bot is running…")
-    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())

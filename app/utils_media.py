@@ -1,13 +1,16 @@
-from typing import List, Tuple
-from aiogram import Bot
-from aiogram.types import InputMediaPhoto, BufferedInputFile
-from app.products import PRODUCTS
-import httpx
 from io import BytesIO
+from typing import List, Tuple
+
+import httpx
+from aiogram import Bot
+from aiogram.types import BufferedInputFile, InputMediaPhoto
+
 from app.config import settings
+from app.products import PRODUCTS
 
 try:
     from PIL import Image
+
     PIL_OK = True
 except Exception:
     PIL_OK = False
@@ -35,7 +38,7 @@ async def _download(url: str) -> bytes | None:
             follow_redirects=True,
             headers={"User-Agent": "TelegramBot/1.0"},
             trust_env=False,
-            proxies=proxies
+            proxies=proxies,
         ) as cli:
             r = await cli.get(url)
             r.raise_for_status()
@@ -82,8 +85,7 @@ async def _prepare_files(urls: List[str]) -> List[InputMediaPhoto]:
             continue
         name = u.split("/")[-1] or "image.jpg"
         data, name = _to_jpeg_bytes(data, name)
-        media.append(InputMediaPhoto(
-            media=BufferedInputFile(data, filename=name)))
+        media.append(InputMediaPhoto(media=BufferedInputFile(data, filename=name)))
         print(f"[media] prepared {name} ({len(data)} bytes)")
     return media
 

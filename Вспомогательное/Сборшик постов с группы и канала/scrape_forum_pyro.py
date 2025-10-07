@@ -22,28 +22,28 @@ MITO_INVITE=                 # при необходимости: инвайт
 TZ=Europe/Moscow
 """
 
-import os
 import csv
 import json
+import os
 import re
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
-from typing import List, Optional, Dict
-from dateutil import tz
+from pathlib import Path
+from typing import Dict, List, Optional
 
-from pyrogram import Client
-from pyrogram.types import Message
-from pyrogram.errors import PeerIdInvalid, UsernameInvalid, UsernameNotOccupied
-from tqdm import tqdm
+from dateutil import tz
 from dotenv import load_dotenv
+from pyrogram import Client
+from pyrogram.errors import PeerIdInvalid, UsernameInvalid, UsernameNotOccupied
+from pyrogram.types import Message
+from tqdm import tqdm
 
 load_dotenv()
 
 # ---------- ENV ----------
 API_ID = int(os.getenv("TG_API_ID", "0"))
 API_HASH = os.getenv("TG_API_HASH", "")
-CHAT = os.getenv("MITO_CHAT", "")        # -100..., @username или t.me/xxx
+CHAT = os.getenv("MITO_CHAT", "")  # -100..., @username или t.me/xxx
 # инвайт-ссылка (если приватная группа)
 INVITE = os.getenv("MITO_INVITE", "")
 TIMEZONE = os.getenv("TZ", "Europe/Moscow")
@@ -52,65 +52,65 @@ TIMEZONE = os.getenv("TZ", "Europe/Moscow")
 SESSION = "mito_pyro"
 EXPORT_DIR = Path("./mito_export")
 EXPORT_DIR.mkdir(exist_ok=True)
-TOTAL_LIMIT = 100_000         # глубокий проход по истории (можно увеличить)
-SAMPLES_PER = 5               # примеров на тему: "голова" и "хвост"
-URL_RE = re.compile(r'https?://\S+')
+TOTAL_LIMIT = 100_000  # глубокий проход по истории (можно увеличить)
+SAMPLES_PER = 5  # примеров на тему: "голова" и "хвост"
+URL_RE = re.compile(r"https?://\S+")
 
 # ---------- Маппинг названий тем по твоему списку ----------
 # Берём последний сегмент URL как topic_id и даём красивое имя
 TOPIC_TITLES: Dict[int, str] = {
     3331: "МИТОlife (новости)",
-    5:    "EXTRA (полипренолы)",
-    459:  "Экспертные эфиры",
-    16:   "МИТОХОНДРИИ",
-    17:   "ПОЛИПРЕНОЛЫ",
-    364:  "Напитки (кофе, шоколад, чай…)",
+    5: "EXTRA (полипренолы)",
+    459: "Экспертные эфиры",
+    16: "МИТОХОНДРИИ",
+    17: "ПОЛИПРЕНОЛЫ",
+    364: "Напитки (кофе, шоколад, чай…)",
     3332: "МИТОрост (про ментальность)",
-    1:    "Разное",
-    10:   "BLEND (полипренолы)",
+    1: "Разное",
+    10: "BLEND (полипренолы)",
     3745: "ERA Mitomatrix",
-    15:   "Серия NASH",
+    15: "Серия NASH",
     1031: "Сыворотка (уход)",
     1159: "BEET SHOT (оксид азота)",
-    8:    "STONE (детокс)",
-    513:  "Масло МСТ (мозг, энергия)",
-    359:  "Отзывы",
-    13:   "VITEN (иммунитет)",
-    275:  "Хвойный хлорофилл",
-    221:  "MITOпрограмма",
+    8: "STONE (детокс)",
+    513: "Масло МСТ (мозг, энергия)",
+    359: "Отзывы",
+    13: "VITEN (иммунитет)",
+    275: "Хвойный хлорофилл",
+    221: "MITOпрограмма",
     2728: "ViMi",
     3670: "IQ - код",
     4583: "Эфиры Олеси Халиной",
-    181:  "О! Тест (на омега-3)",
+    181: "О! Тест (на омега-3)",
     3343: "Мы в соц.сетях",
     1205: "TÉO GREEN (клетчатка, кишечник)",
-    11:   "MOBIO (метабиотик)",
-    701:  "drops (pH баланс)",
-    592:  "Протеин",
+    11: "MOBIO (метабиотик)",
+    701: "drops (pH баланс)",
+    592: "Протеин",
     3100: "Эфиры Натальи Дмитренко",
-    9:    "MIT UP (коллаген, уролитин A)",
-    383:  "Очки (сон)",
-    18:   "Маркетинг",
-    539:  "Вебинары доктора Ольги Анатольевны",
-    314:  "Онкология",
-    101:  "Низкоуглеводное питание",
+    9: "MIT UP (коллаген, уролитин A)",
+    383: "Очки (сон)",
+    18: "Маркетинг",
+    539: "Вебинары доктора Ольги Анатольевны",
+    314: "Онкология",
+    101: "Низкоуглеводное питание",
     3525: "Отзывы МИТОсообщество, бизнес",
     2667: "Эфиры Надежды Гурской",
     3076: "Вебинары доктора Яны Лопастейской",
     3456: "Эфиры Алины Хлебодаровой",
-    3:    "Вебинары доктора Марии Павловой",
+    3: "Вебинары доктора Марии Павловой",
     1614: "Дети",
     3342: "Материалы",
     3273: "Вебинары Юлии Хохолковой",
     1856: "Документы",
     2979: "T8 ERA TO GO",
     2043: "PARAKILL (антипаразитарка)",
-    261:  "EXO (кетоны)",
+    261: "EXO (кетоны)",
     1618: "Спорт",
-    637:  "Уход",
+    637: "Уход",
     1615: "Наборы",
-    415:  "Производство",
-    4:    "Исследования",
+    415: "Производство",
+    4: "Исследования",
 }
 
 
@@ -126,7 +126,7 @@ class TopicInfo:
 def to_local(dt: datetime, tzname: str) -> str:
     try:
         return dt.astimezone(tz.gettz(tzname)).strftime("%Y-%m-%d %H:%M")
-    except:
+    except Exception:
         return dt.strftime("%Y-%m-%d %H:%M")
 
 
@@ -140,8 +140,7 @@ def write_csv(path: Path, header: list, rows: list):
 def resolve_chat(app: Client, chat_ref: str, invite_link: str | None = None):
     """Пытается получить чат: int id / @username / t.me; при необходимости вступает по инвайту."""
     if not chat_ref:
-        raise SystemExit(
-            "Укажи MITO_CHAT в .env (например, -100..., @username или t.me/xxx)")
+        raise SystemExit("Укажи MITO_CHAT в .env (например, -100..., @username или t.me/xxx)")
     ref = chat_ref.split("/")[-1] if chat_ref.startswith("http") else chat_ref
     # 1) int id
     if ref.startswith("-100") or ref.lstrip("-").isdigit():
@@ -167,8 +166,7 @@ def resolve_chat(app: Client, chat_ref: str, invite_link: str | None = None):
         chat = app.join_chat(invite_link)
         print(f"[i] Вступил в {chat.title} (id {chat.id})")
         return chat
-    raise SystemExit(
-        "PEER_ID_INVALID: аккаунт не состоит в чате. Вступи вручную или укажи MITO_INVITE в .env.")
+    raise SystemExit("PEER_ID_INVALID: аккаунт не состоит в чате. Вступи вручную или укажи MITO_INVITE в .env.")
 
 
 def main():
@@ -186,15 +184,18 @@ def main():
     print(f"[i] Сканирую историю (до {TOTAL_LIMIT} сообщений)…")
 
     from collections import defaultdict, deque
-    by_tid: Dict[int, dict] = defaultdict(lambda: {
-        "title": None,
-        "count": 0,
-        "last": None,
-        "head": deque(maxlen=SAMPLES_PER),
-        "tail": deque(maxlen=SAMPLES_PER),
-        "links": set(),
-        "len_sum": 0,
-    })
+
+    by_tid: Dict[int, dict] = defaultdict(
+        lambda: {
+            "title": None,
+            "count": 0,
+            "last": None,
+            "head": deque(maxlen=SAMPLES_PER),
+            "tail": deque(maxlen=SAMPLES_PER),
+            "links": set(),
+            "len_sum": 0,
+        }
+    )
     title_by_tid: Dict[int, str] = {}
 
     scanned = 0
@@ -217,12 +218,12 @@ def main():
                 title_by_tid[tid_service] = name
 
         # Определяем тему
-        tid = m.message_thread_id if hasattr(
-            m, "message_thread_id") and m.message_thread_id else 0
+        tid = m.message_thread_id if hasattr(m, "message_thread_id") and m.message_thread_id else 0
 
         d = by_tid[tid]
 
-        # приоритет имён: 1) ручной маппинг TOPIC_TITLES, 2) сервисные события, 3) общий поток/дефолт
+        # приоритет имён: 1) ручной маппинг TOPIC_TITLES,
+        # 2) сервисные события, 3) общий поток/дефолт
         if d["title"] is None:
             if tid in TOPIC_TITLES:
                 d["title"] = TOPIC_TITLES[tid]
@@ -248,36 +249,39 @@ def main():
 
     # Добавим темы из ручного маппинга, даже если в видимой истории нет сообщений
     for tid, title in TOPIC_TITLES.items():
-        _ = by_tid.setdefault(tid, {"title": title, "count": 0, "last": None,
-                                    "head": [], "tail": [], "links": set(), "len_sum": 0})
+        _ = by_tid.setdefault(
+            tid, {"title": title, "count": 0, "last": None, "head": [], "tail": [], "links": set(), "len_sum": 0}
+        )
         if by_tid[tid].get("title") is None:
             by_tid[tid]["title"] = title
 
     # Формируем выход
     topics: List[TopicInfo] = []
-    rows_topics, rows_samples, rows_links, rows_stats = [], [], [], []
+    rows_samples, rows_links, rows_stats = [], [], []
 
     for tid, d in by_tid.items():
         # дефолтные имена
-        title = d.get("title") or (
-            "Общий поток" if tid == 0 else f"topic_{tid}")
+        title = d.get("title") or ("Общий поток" if tid == 0 else f"topic_{tid}")
         last_local = d.get("last") and to_local(d["last"], TIMEZONE) or ""
         topic_url = f"https://t.me/c/{abs_id}/{tid}" if (tid != 0) else ""
-        topics.append(TopicInfo(tid, title, d.get(
-            "count", 0), last_local, topic_url))
+        topics.append(TopicInfo(tid, title, d.get("count", 0), last_local, topic_url))
 
         # samples
         head = list(d.get("head", []))
         tail = list(d.get("tail", []))
         for mm in head + tail:
             msg_url = f"https://t.me/c/{abs_id}/{mm.id}"
-            rows_samples.append([
-                tid, title, mm.id, to_local(mm.date, TIMEZONE),
-                (mm.from_user and (
-                    mm.from_user.username or f"id{mm.from_user.id}")) or "",
-                (mm.text or mm.caption or "").replace("\n", " ")[:1500],
-                msg_url
-            ])
+            rows_samples.append(
+                [
+                    tid,
+                    title,
+                    mm.id,
+                    to_local(mm.date, TIMEZONE),
+                    (mm.from_user and (mm.from_user.username or f"id{mm.from_user.id}")) or "",
+                    (mm.text or mm.caption or "").replace("\n", " ")[:1500],
+                    msg_url,
+                ]
+            )
         # links
         for u in sorted(d.get("links", set()))[:200]:
             rows_links.append([tid, title, u])
@@ -291,26 +295,37 @@ def main():
     topics.sort(key=lambda x: (x.id == 0, -x.total_msgs, x.id))
 
     # Запись файлов
-    write_csv(EXPORT_DIR/"topics.csv",
-              ["topic_id", "title", "msgs_total", "last_date", "topic_url"],
-              [[t.id, t.title, t.total_msgs, t.last_date or "", t.topic_url] for t in topics])
+    write_csv(
+        EXPORT_DIR / "topics.csv",
+        ["topic_id", "title", "msgs_total", "last_date", "topic_url"],
+        [[t.id, t.title, t.total_msgs, t.last_date or "", t.topic_url] for t in topics],
+    )
 
-    write_csv(EXPORT_DIR/"samples.csv",
-              ["topic_id", "topic_title", "msg_id",
-                  "date", "author", "text", "message_url"],
-              rows_samples)
+    write_csv(
+        EXPORT_DIR / "samples.csv",
+        ["topic_id", "topic_title", "msg_id", "date", "author", "text", "message_url"],
+        rows_samples,
+    )
 
-    write_csv(EXPORT_DIR/"links.csv",
-              ["topic_id", "topic_title", "url"], rows_links)
+    write_csv(EXPORT_DIR / "links.csv", ["topic_id", "topic_title", "url"], rows_links)
 
-    write_csv(EXPORT_DIR/"stats.csv",
-              ["topic_id", "topic_title", "msgs_total", "last_date", "avg_text_len"], rows_stats)
+    write_csv(
+        EXPORT_DIR / "stats.csv", ["topic_id", "topic_title", "msgs_total", "last_date", "avg_text_len"], rows_stats
+    )
 
-    (EXPORT_DIR/"export.json").write_text(json.dumps({
-        "chat_id": chat.id, "title": chat.title,
-        "exported_at": datetime.utcnow().isoformat(),
-        "topics": [asdict(t) for t in topics]
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    (EXPORT_DIR / "export.json").write_text(
+        json.dumps(
+            {
+                "chat_id": chat.id,
+                "title": chat.title,
+                "exported_at": datetime.utcnow().isoformat(),
+                "topics": [asdict(t) for t in topics],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     print(f"[✓] Готово: {EXPORT_DIR.resolve()} (topics/samples/links/stats)")
     app.stop()

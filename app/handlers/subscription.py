@@ -1,56 +1,116 @@
-from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from aiogram import F, Router
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from datetime import datetime, timezone
 
 from app.config import settings
-from app.storage import USERS
+from app.db.session import session_scope
+from app.keyboards import kb_back_home
+from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
-router = Router()
-
-
-def _now():
-    return datetime.now(timezone.utc)
+router = Router(name="subscription")
 
 
-def _has_active_sub(user_id: int) -> tuple[bool, str]:
-    sub = USERS.get(user_id, {}).get("subscription")
-    if not sub:
-        return False, ""
-    until = datetime.fromisoformat(sub["until"])
-    return (until > _now(), sub["plan"])
+def _kb_sub_menu() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔁 Проверить статус", callback_data="sub:check")
+    if settings.TRIBUTE_LINK_BASIC:
+        kb.button(
+            text=f"💎 MITO Basic — {settings.SUB_BASIC_PRICE}",
+            url=settings.TRIBUTE_LINK_BASIC,
+        )
+    if settings.TRIBUTE_LINK_PRO:
+        kb.button(
+            text=f"💎 MITO Pro — {settings.SUB_PRO_PRICE}",
+            url=settings.TRIBUTE_LINK_PRO,
+        )
+    kb.button(text="ℹ️ Как продлить", callback_data="sub:renew")
+    kb.adjust(1)
+    markup = kb.as_markup()
+    markup.inline_keyboard.extend(kb_back_home("home:main").inline_keyboard)
+    return markup
 
 
-def _kb_sub_menu():
+def _kb_sub_renew() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if settings.TRIBUTE_LINK_BASIC:
         kb.button(
-            text=f"💎 MITO Basic — {settings.SUB_BASIC_PRICE}", url=settings.TRIBUTE_LINK_BASIC)
+            text=f"💎 MITO Basic — {settings.SUB_BASIC_PRICE}",
+            url=settings.TRIBUTE_LINK_BASIC,
+        )
     if settings.TRIBUTE_LINK_PRO:
         kb.button(
-            text=f"💎 MITO Pro — {settings.SUB_PRO_PRICE}", url=settings.TRIBUTE_LINK_PRO)
-    kb.button(text="🔁 Проверить подписку", callback_data="sub:check")
-    kb.button(text="🔓 Открыть Premium", callback_data="premium:menu")
-    kb.button(text="🏠 Домой", callback_data="home")
-    kb.adjust(1, 1, 1, 1)
+            text=f"💎 MITO Pro — {settings.SUB_PRO_PRICE}",
+            url=settings.TRIBUTE_LINK_PRO,
+        )
+    kb.adjust(1)
+    for row in kb_back_home("sub:menu").inline_keyboard:
+        kb.row(*row)
     return kb.as_markup()
+
+
+def _format_until(until: datetime) -> str:
+    try:
+        tz = ZoneInfo(settings.TIMEZONE) if settings.TIMEZONE else ZoneInfo("UTC")
+    except Exception:  # pragma: no cover - fallback for invalid tz data
+        tz = ZoneInfo("UTC")
+    return until.astimezone(tz).strftime("%d.%m.%Y")
 
 
 @router.callback_query(F.data == "sub:menu")
 async def sub_menu(c: CallbackQuery):
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        await events_repo.log(session, c.from_user.id, "subscription_menu", {})
+        await session.commit()
+    await c.answer()
+    markup = _kb_sub_menu()
     await c.message.edit_text(
-        "💎 <b>Подписка</b>\nОформите доступ и получите Premium-разделы МИТОсообщества.",
-        reply_markup=_kb_sub_menu()
+        "💎 <b>Подписка</b>\nПолучите доступ к Premium и закрытым материалам.",
+        reply_markup=markup,
     )
 
 
 @router.callback_query(F.data == "sub:check")
 async def sub_check(c: CallbackQuery):
-    ok, plan = _has_active_sub(c.from_user.id)
-    if ok:
-        await c.message.edit_text(f"✅ Подписка активна: <b>{plan.upper()}</b>")
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
+        plan = sub.plan if sub else None
+        until = sub.until.isoformat() if sub else None
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "subscription_check",
+            {"active": is_active, "plan": plan, "until": until},
+        )
+        await session.commit()
+
+    await c.answer()
+    if is_active and sub:
+        until_text = _format_until(sub.until)
+        text = (
+            "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until_text}</b>."
+        )
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🔁 Проверить снова", callback_data="sub:check")
+        builder.button(text="Открыть Premium", callback_data="premium:menu")
+        for row in kb_back_home("sub:menu").inline_keyboard:
+            builder.row(*row)
+        await c.message.edit_text(text, reply_markup=builder.as_markup())
     else:
         await c.message.edit_text(
-            "Пока подписка не найдена. Завершите оплату в Tribute и дождитесь подтверждения (вебхук).",
-            reply_markup=_kb_sub_menu()
+            "Подписка не найдена. Оплатите MITO в Tribute и дождитесь подтверждения вебхука.",
+            reply_markup=_kb_sub_menu(),
         )
+
+
+@router.callback_query(F.data == "sub:renew")
+async def sub_renew(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text(
+        "Выберите тариф MITO для продления доступа.",
+        reply_markup=_kb_sub_renew(),
+    )

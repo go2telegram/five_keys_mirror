@@ -1,20 +1,24 @@
 import httpx
+
 from app.config import settings
 
-async def ai_generate(prompt: str, sys: str = "Ты — эксперт по здоровью, пиши кратко и по делу на русском."):
+DEFAULT_SYSTEM_PROMPT = "Ты — эксперт по здоровью, пиши кратко и по делу на русском."
+
+
+async def ai_generate(prompt: str, sys: str = DEFAULT_SYSTEM_PROMPT):
     if not settings.OPENAI_API_KEY:
         return "⚠️ OpenAI API ключ не настроен."
     headers = {
         "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     body = {
         "model": settings.OPENAI_MODEL,
         "messages": [
             {"role": "system", "content": sys},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
         ],
-        "temperature": 0.7
+        "temperature": 0.7,
     }
     try:
         async with httpx.AsyncClient(timeout=60.0, base_url=settings.OPENAI_BASE) as client:

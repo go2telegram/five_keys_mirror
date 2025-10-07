@@ -1,0 +1,15 @@
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+combine-as-imports = true

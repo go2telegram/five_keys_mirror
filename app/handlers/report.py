@@ -1,11 +1,15 @@
 # app/handlers/report.py
-from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, BufferedInputFile
-from aiogram.filters import Command
 from datetime import datetime
 
-from app.storage import get_last_plan
+from aiogram import F, Router
+from aiogram.filters import Command
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
+
+from app.db.session import session_scope
+from app.keyboards import kb_back_home
 from app.pdf_report import build_pdf
+from app.repo import events as events_repo
+from app.storage import get_last_plan
 
 router = Router()
 
@@ -13,9 +17,7 @@ router = Router()
 def _clean_lines(lines: list[str]) -> list[str]:
     out = []
     for s in lines:
-        s = (s.replace("<b>", "").replace("</b>", "")
-             .replace("<i>", "").replace("</i>", "")
-             .replace("&nbsp;", " "))
+        s = s.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("&nbsp;", " ")
         out.append(s)
     return out
 
@@ -33,8 +35,10 @@ def _compose_pdf(plan: dict) -> bytes:
     intake_rows = plan.get("intake", [])
     order_url = plan.get("order_url")
 
-    footer = ("Отчёт носит образовательный характер и не заменяет консультацию врача. "
-              "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание.")
+    footer = (
+        "Отчёт носит образовательный характер и не заменяет консультацию врача. "
+        "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание."
+    )
 
     return build_pdf(
         title=title,
@@ -43,17 +47,33 @@ def _compose_pdf(plan: dict) -> bytes:
         products=products,
         notes=notes,
         footer=footer,
-        intake_rows=intake_rows,   # <— прокидываем
-        order_url=order_url
+        intake_rows=intake_rows,  # <— прокидываем
+        order_url=order_url,
+        recommended_products=list(plan.get("products", [])),
+        context=plan.get("context"),
     )
 
 
-@router.callback_query(F.data == "pdf:last")
+@router.callback_query(F.data.in_({"report:last", "pdf:last"}))
 async def pdf_last_cb(c: CallbackQuery):
-    plan = get_last_plan(c.from_user.id)
+    async with session_scope() as session:
+        plan = await get_last_plan(session, c.from_user.id)
+        if plan:
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "pdf_export",
+                {"context": plan.get("context"), "title": plan.get("title")},
+            )
+            await session.commit()
     if not plan:
         await c.answer("Нет данных для отчёта. Пройдите тест или калькулятор.", show_alert=True)
+        await c.message.answer(
+            "Сначала пройдите квиз или калькулятор, чтобы я собрал персональный план.",
+            reply_markup=kb_back_home(),
+        )
         return
+    await c.answer()
     pdf_bytes = _compose_pdf(plan)
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     await c.message.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
@@ -61,7 +81,16 @@ async def pdf_last_cb(c: CallbackQuery):
 
 @router.message(Command("pdf"))
 async def pdf_cmd(m: Message):
-    plan = get_last_plan(m.from_user.id)
+    async with session_scope() as session:
+        plan = await get_last_plan(session, m.from_user.id)
+        if plan:
+            await events_repo.log(
+                session,
+                m.from_user.id,
+                "pdf_export",
+                {"context": plan.get("context"), "title": plan.get("title")},
+            )
+            await session.commit()
     if not plan:
         await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
         return

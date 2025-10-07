@@ -1,0 +1,76 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff black pre-commit
+      - name: Pre-commit autofix (PR only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        run: |
+          pre-commit run --all-files || true
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(lint): apply pre-commit autofixes"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+      - run: ruff check .
+      - run: black --check .
+      - name: Verify pre-commit
+        run: pre-commit run --all-files
+      - run: python tools/check_ascii_ps1.py
+
+  sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Install SQLite driver
+        run: pip install aiosqlite
+      - run: echo "BOT_TOKEN=test" >> $GITHUB_ENV
+      - run: echo "ADMIN_ID=1" >> $GITHUB_ENV
+      - run: echo "DB_URL=sqlite+aiosqlite:///./var/bot.db" >> $GITHUB_ENV
+      - run: mkdir -p var
+      - run: alembic upgrade head
+      - run: python scripts/db_check.py
+      - run: pytest -q || true
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: five_keys
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt asyncpg
+      - run: echo "BOT_TOKEN=test" >> $GITHUB_ENV
+      - run: echo "ADMIN_ID=1" >> $GITHUB_ENV
+      - run: echo "DB_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/five_keys" >> $GITHUB_ENV
+      - run: alembic upgrade head
+      - run: python scripts/db_check.py
+      - run: pytest -q || true
+

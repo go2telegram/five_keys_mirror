@@ -1,43 +1,70 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from app.keyboards import kb_buylist_pdf
-from app.storage import SESSIONS, USERS, save_event, set_last_plan
-from app.utils_media import send_product_album
-from app.reco import product_lines
+from app.catalog.api import pick_for_context
 from app.config import settings
+from app.db.session import session_scope
+from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.reco import product_lines
+from app.repo import events as events_repo, users as users_repo
+from app.storage import SESSIONS, set_last_plan
 
 router = Router()
 
 IMMUNITY_QUESTIONS = [
-    ("Простужаетесь чаще 3 раз в год?", [
-     ("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
-    ("Болезни затягиваются дольше недели?", [
-     ("Нет", 0), ("Иногда", 2), ("Да", 4)]),
-    ("Есть постоянный стресс или недосып?", [
-     ("Нет", 0), ("Иногда", 2), ("Да", 4)]),
+    ("Простужаетесь чаще 3 раз в год?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
+    ("Болезни затягиваются дольше недели?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
+    ("Есть постоянный стресс или недосып?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
     ("Бывают аллергии или высыпания?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
 ]
 
 
 def kb_quiz_q(idx: int):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
+
     _, answers = IMMUNITY_QUESTIONS[idx]
     kb = InlineKeyboardBuilder()
     for label, score in answers:
         kb.button(text=label, callback_data=f"q:immunity:{idx}:{score}")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
+
+
+def _immunity_outcome(total: int) -> tuple[str, str, str, list[str]]:
+    if total <= 4:
+        return (
+            "mild",
+            "\u0425\u043e\u0440\u043e\u0448\u0438\u0439 \u0438\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442",
+            "immunity_good",
+            ["OMEGA3", "D3"],
+        )
+    if total <= 8:
+        return (
+            "moderate",
+            (
+                "\u0421\u0440\u0435\u0434\u043d\u0438\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c "
+                "\u0438\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442\u0430"
+            ),
+            "immunity_mid",
+            ["VITEN", "T8_BLEND"],
+        )
+    return (
+        "severe",
+        ("\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 " "\u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"),
+        "immunity_low",
+        ["VITEN", "T8_BLEND", "D3"],
+    )
 
 
 @router.callback_query(F.data == "quiz:immunity")
 async def quiz_immunity_start(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"quiz": "immunity", "idx": 0, "score": 0}
     qtext, _ = IMMUNITY_QUESTIONS[0]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Тест иммунитета 🛡\n\nВопрос 1/{len(IMMUNITY_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(0),
+        kb_quiz_q(0),
     )
 
 
@@ -55,21 +82,7 @@ async def quiz_immunity_step(c: CallbackQuery):
 
     if idx >= len(IMMUNITY_QUESTIONS):
         total = sess["score"]
-
-        if total <= 4:
-            level = "Хороший иммунитет"
-            rec_codes = ["OMEGA3", "D3"]
-            ctx = "immunity_good"
-        elif total <= 8:
-            level = "Средний уровень иммунитета"
-            rec_codes = ["VITEN", "T8_BLEND"]
-            ctx = "immunity_mid"
-        else:
-            level = "Иммунитет ослаблен"
-            rec_codes = ["VITEN", "T8_BLEND", "D3"]
-            ctx = "immunity_low"
-
-        await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
+        level_key, level_label, ctx, rec_codes = _immunity_outcome(total)
         lines = product_lines(rec_codes[:3], ctx)
 
         actions = [
@@ -79,38 +92,45 @@ async def quiz_immunity_step(c: CallbackQuery):
         ]
         notes = "В сезон простуд: тёплые напитки, влажность 40–60%, промывание носа."
 
-        set_last_plan(
-            c.from_user.id,
-            {
-                "title": "План: Иммунитет",
-                "context": "immunity",
-                "context_name": "Иммунитет",
-                "level": level,
-                "products": rec_codes[:3],
-                "lines": lines,
-                "actions": actions,
-                "notes": notes,
-                "order_url": settings.VILAVI_ORDER_NO_REG,
-            }
+        plan_payload = {
+            "title": "План: Иммунитет",
+            "context": "immunity",
+            "context_name": "Иммунитет",
+            "level": level_label,
+            "products": rec_codes[:3],
+            "lines": lines,
+            "actions": actions,
+            "notes": notes,
+            "order_url": settings.velavie_url,
+        }
+
+        async with session_scope() as session:
+            await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+            await set_last_plan(session, c.from_user.id, plan_payload)
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "quiz_finish",
+                {"quiz": "immunity", "score": total, "level": level_label},
+            )
+            await session.commit()
+
+        cards = pick_for_context("immunity", level_key, rec_codes[:3])
+        await send_product_cards(
+            c,
+            f"Итог: {level_label}",
+            cards,
+            bullets=actions,
+            headline=notes,
+            back_cb="quiz:menu",
         )
 
-        msg = [
-            f"Итог: <b>{level}</b>\n",
-            "Что важно делать:",
-            "• Сон 7–9 часов",
-            "• Сбалансированное питание",
-            "• Больше движения на свежем воздухе\n",
-            "Поддержка:\n" + "\n".join(lines),
-        ]
-        await c.message.answer("\n".join(msg), reply_markup=kb_buylist_pdf("quiz:immunity", rec_codes[:3]))
-
-        save_event(c.from_user.id, USERS[c.from_user.id].get("source"), "quiz_finish",
-                   {"quiz": "immunity", "score": total, "level": level})
         SESSIONS.pop(c.from_user.id, None)
         return
 
     qtext, _ = IMMUNITY_QUESTIONS[idx]
-    await c.message.edit_text(
+    await safe_edit(
+        c,
         f"Вопрос {idx + 1}/{len(IMMUNITY_QUESTIONS)}:\n{qtext}",
-        reply_markup=kb_quiz_q(idx),
+        kb_quiz_q(idx),
     )

@@ -1,74 +1,103 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+"""Start command handlers."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from aiogram import F, Router
 from aiogram.filters import CommandStart
+from aiogram.types import CallbackQuery, Message
 
-from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
+from app.db.session import session_scope
 from app.keyboards import kb_main, kb_yes_no
-from app.storage import USERS, save_event
+from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
+from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON
 
-router = Router()
+logger = logging.getLogger(__name__)
+log_start = logging.getLogger("start")
 
+router = Router(name="start")
 
-def _ensure_ref_fields(uid: int):
-    u = USERS.setdefault(uid, {})
-    u.setdefault("ref_code", str(uid))
-    u.setdefault("referred_by", None)
-    u.setdefault("ref_clicks", 0)
-    u.setdefault("ref_joins", 0)
-    u.setdefault("ref_conversions", 0)
-    u.setdefault("ref_users", set())
+GREETING = (
+    "\u041f\u0440\u0438\u0432\u0435\u0442! \u041d\u0430 \u0441\u0432\u044f\u0437\u0438 "
+    "\xab\u041f\u044f\u0442\u044c \u043a\u043b\u044e\u0447\u0435\u0439 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u044f"
+    "\xbb. "
+    "\u0412\u044b\u0431\u0438\u0440\u0430\u0439 \u0440\u0430\u0437\u0434\u0435\u043b "
+    "\u0432 \u043c\u0435\u043d\u044e \u043d\u0438\u0436\u0435:"
+)
 
 
 @router.message(CommandStart())
-async def start(message: Message):
-    tg_id = message.from_user.id
+async def start_safe(message: Message) -> None:
+    """Send the greeting immediately and schedule the heavy logic."""
+
     text = message.text or ""
     payload = text.split(" ", 1)[1] if " " in text else ""
 
-    USERS.setdefault(
-        tg_id, {"subs": False, "tz": "Europe/Moscow", "source": None})
-    save_event(tg_id, payload, "start")
-    _ensure_ref_fields(tg_id)
+    log_start.info(
+        "START uid=%s uname=%s",
+        getattr(message.from_user, "id", None),
+        getattr(message.from_user, "username", None),
+    )
 
-    # --- обработка реферального кода ---
-    if payload.startswith("ref_"):
-        try:
-            ref_id = int(payload.split("_", 1)[1])
-        except Exception:
-            ref_id = None
-        if ref_id and ref_id != tg_id:
-            _ensure_ref_fields(ref_id)
-            if tg_id not in USERS[ref_id]["ref_users"]:
-                USERS[ref_id]["ref_clicks"] += 1
-            if USERS[tg_id].get("referred_by") is None:
-                USERS[tg_id]["referred_by"] = ref_id
-                USERS[ref_id]["ref_users"].add(tg_id)
-                USERS[ref_id]["ref_joins"] += 1
-            save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+    await message.answer(GREETING, reply_markup=kb_main())
 
-    await message.answer(WELCOME, reply_markup=kb_main())
+    asyncio.create_task(_start_full(message, payload))
 
-    if not USERS[tg_id].get("asked_notify"):
-        USERS[tg_id]["asked_notify"] = True
-        await message.answer(ASK_NOTIFY, reply_markup=kb_yes_no("notify:yes", "notify:no"))
+
+async def _start_full(message: Message, payload: str) -> None:
+    """Execute the database-heavy part of the /start flow in the background."""
+
+    try:
+        tg_id = message.from_user.id
+        username = message.from_user.username
+
+        async with session_scope() as session:
+            await users_repo.get_or_create_user(session, tg_id, username)
+            await events_repo.log(session, tg_id, "start", {"payload": payload})
+
+            if payload.startswith("ref_"):
+                try:
+                    ref_id = int(payload.split("_", 1)[1])
+                except (ValueError, IndexError):
+                    ref_id = None
+                if ref_id and ref_id != tg_id:
+                    await users_repo.get_or_create_user(session, ref_id)
+                    existing_ref = await referrals_repo.get_by_invited(session, tg_id)
+                    if existing_ref is None:
+                        await referrals_repo.create(session, ref_id, tg_id)
+                    await users_repo.set_referrer(session, tg_id, ref_id)
+                    await events_repo.log(session, tg_id, "ref_join", {"referrer_id": ref_id})
+
+            already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
+            await session.commit()
+
+        if not already_prompted:
+            async with session_scope() as session:
+                await events_repo.log(session, tg_id, "notify_prompted", {})
+                await session.commit()
+            await message.answer(
+                ASK_NOTIFY,
+                reply_markup=kb_yes_no("notify:yes", "notify:no"),
+            )
+    except Exception:  # noqa: BLE001 - log unexpected issues without breaking /start
+        logger.exception("start_full failed")
 
 
 @router.callback_query(F.data == "notify:yes")
 async def notify_yes(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = True
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_on")
+    await c.answer()
+    async with session_scope() as session:
+        await events_repo.log(session, c.from_user.id, "notify_on", {})
+        await session.commit()
     await c.message.edit_text(NOTIFY_ON)
 
 
 @router.callback_query(F.data == "notify:no")
 async def notify_no(c: CallbackQuery):
-    USERS[c.from_user.id]["subs"] = False
-    save_event(c.from_user.id, USERS[c.from_user.id].get(
-        "source"), "notify_off")
+    await c.answer()
+    async with session_scope() as session:
+        await events_repo.log(session, c.from_user.id, "notify_off", {})
+        await session.commit()
     await c.message.edit_text(NOTIFY_OFF)
-
-
-@router.callback_query(F.data == "home")
-async def back_home(c: CallbackQuery):
-    await c.message.answer(WELCOME, reply_markup=kb_main())

@@ -1,44 +1,22 @@
-import datetime as dt
-from typing import Any, Dict, Optional, List
+"""Ephemeral in-memory helpers for FSM sessions only."""
 
-# tg_id -> {subs, tz, source, asked_notify, last_plan}
-USERS: Dict[int, Dict[str, Any]] = {}
-SESSIONS: Dict[int, Dict[str, Any]] = {}  # временное состояние (квизы/кальки)
-EVENTS: List[Dict[str, Any]] = []         # события атрибуции
+from __future__ import annotations
 
+from typing import Any, Dict
 
-def save_event(user_id: Optional[int], source: Optional[str], action: str, payload: Optional[dict] = None):
-    EVENTS.append({
-        "ts": dt.datetime.utcnow().isoformat(),
-        "user_id": user_id,
-        "source": source,
-        "action": action,
-        "payload": payload or {}
-    })
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# ---- Хелперы для PDF-плана ----
+from app.repo import events
+
+SESSIONS: Dict[int, Dict[str, Any]] = {}
 
 
-def set_last_plan(user_id: int, plan: dict):
-    u = USERS.setdefault(user_id, {})
-    u["last_plan"] = plan
+async def set_last_plan(session: AsyncSession, user_id: int, plan: Dict[str, Any]) -> None:
+    await events.log(session, user_id, "plan_generated", plan)
 
 
-def get_last_plan(user_id: int) -> dict | None:
-    return USERS.get(user_id, {}).get("last_plan")
-
-
-# ---- Лиды ----
-LEADS: list[dict] = []
-
-
-def add_lead(lead: dict):
-    LEADS.append(lead)
-
-
-def get_leads_last(n: int = 10) -> list[dict]:
-    return LEADS[-n:]
-
-
-def get_leads_all() -> list[dict]:
-    return LEADS[:]  # копия списка (для админ-экспорта)
+async def get_last_plan(session: AsyncSession, user_id: int) -> Dict[str, Any] | None:
+    event = await events.last_by(session, user_id, "plan_generated")
+    if event:
+        return event.meta
+    return None

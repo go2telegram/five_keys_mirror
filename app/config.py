@@ -1,18 +1,26 @@
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
 
 
 class Settings(BaseSettings):
-    BOT_TOKEN: str
-    ADMIN_ID: int
+    BOT_TOKEN: str = ""
+    ADMIN_ID: int = 0
+    ADMIN_USER_IDS: list[int] = Field(default_factory=list)
+    LEADS_CHAT_ID: int | None = None
 
-    DATABASE_URL: str | None = None
+    DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
+    DB_MIGRATE_ON_START: bool = True
     REDIS_URL: str | None = None
-    TZ: str = "Europe/Moscow"
+    TIMEZONE: str = "Europe/Moscow"
+
+    # Логи
+    LOG_LEVEL: str = "INFO"
+    LOG_DIR: str = "logs"
 
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
+    VELAVIE_URL: str = ""
 
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9
@@ -34,6 +42,10 @@ class Settings(BaseSettings):
     TRIBUTE_WEBHOOK_PATH: str = "/tribute/webhook"
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
+    RUN_TRIBUTE_WEBHOOK: bool = False
+    TRIBUTE_PORT: int = 8080
+
+    DEBUG_COMMANDS: bool = False
 
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"
@@ -43,19 +55,32 @@ class Settings(BaseSettings):
     SUB_PRO_PRICE: str = "599 ₽/мес"
     # --------------------------------------
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=False
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False)
 
     # пример «исправления» случайно оставленного leads_chat_id в окружении
     @field_validator("ADMIN_ID", mode="before")
     @classmethod
     def _fix_admin_id(cls, v):
         # просто показать приём — админ id должен быть int
+        if v in (None, ""):
+            return 0
         return int(v)
+
+    @field_validator("ADMIN_USER_IDS", mode="before")
+    @classmethod
+    def _parse_admin_ids(cls, v):
+        if v in (None, "", []):
+            return []
+        if isinstance(v, (list, tuple, set)):
+            return [int(item) for item in v]
+        parts = [part.strip() for part in str(v).split(",") if part.strip()]
+        return [int(part) for part in parts]
+
+    @property
+    def velavie_url(self) -> str:
+        """Return the primary Velavie landing URL used across menus."""
+
+        return self.VELAVIE_URL or self.VILAVI_REF_LINK_DISCOUNT or self.VILAVI_ORDER_NO_REG
 
 
 settings = Settings()

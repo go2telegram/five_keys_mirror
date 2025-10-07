@@ -1,18 +1,12 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from datetime import datetime, timezone
-from app.storage import USERS
 
-router = Router()
+from app.db.session import session_scope
+from app.keyboards import kb_back_home
+from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
-
-def _active(user_id: int) -> tuple[bool, str]:
-    sub = USERS.get(user_id, {}).get("subscription")
-    if not sub:
-        return False, ""
-    return (datetime.fromisoformat(sub["until"]) > datetime.now(timezone.utc), sub["plan"])
-
+router = Router(name="premium")
 
 BASIC_LINKS = [
     ("МИТОlife (новости)", "https://t.me/c/1858905974/3331"),
@@ -21,6 +15,7 @@ BASIC_LINKS = [
     ("TÉO GREEN (клетчатка)", "https://t.me/c/1858905974/1205"),
     ("MOBIO (метабиотик)", "https://t.me/c/1858905974/11"),
 ]
+
 PRO_LINKS = BASIC_LINKS + [
     ("Экспертные эфиры", "https://t.me/c/1858905974/459"),
     ("MITOпрограмма", "https://t.me/c/1858905974/221"),
@@ -33,18 +28,38 @@ def _kb_links(pairs):
     kb = InlineKeyboardBuilder()
     for title, url in pairs:
         kb.button(text=f"🔗 {title}", url=url)
-    kb.button(text="🏠 Домой", callback_data="home")
-    layout = [2] * (len(pairs)//2) + ([1] if len(pairs) % 2 else []) + [1]
+    for row in kb_back_home("sub:menu").inline_keyboard:
+        kb.row(*row)
+    layout = [2] * (len(pairs) // 2)
+    if len(pairs) % 2:
+        layout.append(1)
+    layout.extend([2])
     kb.adjust(*layout)
     return kb.as_markup()
 
 
 @router.callback_query(F.data == "premium:menu")
 async def premium_menu(c: CallbackQuery):
-    ok, plan = _active(c.from_user.id)
-    if not ok:
-        await c.message.edit_text("🔒 Premium недоступен. Оформите подписку в разделе «Подписка».")
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
+        plan = sub.plan if sub else None
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "premium_open",
+            {"active": is_active, "plan": plan},
+        )
+        await session.commit()
+
+    await c.answer()
+    if not is_active or plan is None:
+        await c.message.edit_text(
+            "🔒 Premium доступен только с активной подпиской.",
+            reply_markup=kb_back_home("sub:menu"),
+        )
         return
+
     if plan == "basic":
         await c.message.edit_text("💎 MITO Basic — доступ к разделам:", reply_markup=_kb_links(BASIC_LINKS))
     else:

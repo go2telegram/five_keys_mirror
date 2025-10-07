@@ -1,8 +1,7 @@
 # app/handlers/navigator.py
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from app.keyboards import kb_back_home, kb_main
 
 router = Router()
 
@@ -82,10 +81,9 @@ def kb_nav_root():
     kb.button(text="👩‍⚕️ Обо мне", callback_data="nav:cat:about")
     kb.button(text="🧬 Митохондрии", callback_data="nav:cat:mito")
     kb.button(text="💊 Продукты", callback_data="nav:cat:products")
-    kb.button(text="🥤 Функциональное питание",
-              callback_data="nav:cat:functional")
+    kb.button(text="🥤 Функциональное питание", callback_data="nav:cat:functional")
     kb.button(text="🌿 Образ жизни", callback_data="nav:cat:lifestyle")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 1, 1, 1, 1)
     return kb.as_markup()
 
@@ -97,15 +95,17 @@ def kb_nav_category(cat_key: str):
     for title, url in data["items"]:
         kb.button(text=title, url=url)
     kb.button(text="⬅️ Назад", callback_data="nav:root")
-    kb.button(text="🏠 Домой", callback_data="home")
+    kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2)  # 2 в ряд; последняя строка — две кнопки
     return kb.as_markup()
+
 
 # ====== Хендлеры ======
 
 
 @router.callback_query(F.data == "nav:root")
 async def nav_root(c: CallbackQuery):
+    await c.answer()
     await c.message.edit_text("🧭 Навигатор по каналу — выбери раздел:", reply_markup=kb_nav_root())
 
 
@@ -116,4 +116,6 @@ async def nav_category(c: CallbackQuery):
         await c.answer("Раздел не найден", show_alert=False)
         return
     title = NAV[cat_key]["title"]
-    await c.message.edit_text(f"{title}\nВыбери, что открыть:", reply_markup=kb_nav_category(cat_key))
+    body = f"{title}\nВыбери, что открыть:"
+    await c.answer()
+    await c.message.edit_text(body, reply_markup=kb_nav_category(cat_key))

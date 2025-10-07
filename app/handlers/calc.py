@@ -1,14 +1,27 @@
 import re
-from aiogram import Router, F
+
+from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
-from app.keyboards import kb_calc_menu, kb_back_home, kb_buylist_pdf
-from app.storage import SESSIONS, set_last_plan
-from app.utils_media import send_product_album
-from app.reco import product_lines
+from app.catalog.api import product_meta
 from app.config import settings
+from app.db.session import session_scope
+from app.handlers import calc_kcal, calc_macros, calc_water
+from app.handlers.quiz_common import send_product_cards
+from app.keyboards import kb_back_home, kb_calc_menu
+from app.reco import CTX, product_lines
+from app.repo import events as events_repo, users as users_repo
+from app.storage import SESSIONS, set_last_plan
 
 router = Router()
+
+MSD_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s*(?P<sex>[МмЖж])\s*$")
+BMI_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s+(?P<weight>\d{2,3}(?:\.\d+)?)\s*$")
+
+MSD_PROMPT = "Не удалось распознать ввод. Пример: <code>165 Ж</code>." "\nУкажи рост в сантиметрах и пол (М/Ж)."
+BMI_PROMPT = (
+    "Не удалось распознать ввод. Пример: <code>183 95</code>." "\nУкажи рост в сантиметрах и вес в килограммах."
+)
 
 # --- Наборы рекомендаций под калькуляторы ---
 
@@ -33,12 +46,36 @@ def bmi_recommendations(bmi: float):
     else:
         return ["T8_EXTRA", "TEO_GREEN"], "bmi_obese"
 
+
+def _cards_with_overrides(codes: list[str], context_key: str) -> list[dict]:
+    overrides = CTX.get(context_key, {})
+    cards: list[dict] = []
+    for code in codes:
+        meta = product_meta(code)
+        if not meta:
+            continue
+        cards.append(
+            {
+                "code": meta["code"],
+                "name": meta.get("name", meta["code"]),
+                "short": meta.get("short", ""),
+                "props": meta.get("props", []),
+                "images": meta.get("images", []),
+                "order_url": meta.get("order_url"),
+                "helps_text": overrides.get(code),
+            }
+        )
+    return cards
+
+
 # --- Меню ---
 
 
 @router.callback_query(F.data == "calc:menu")
 async def calc_menu(c: CallbackQuery):
+    await c.answer()
     await c.message.edit_text("Выбери калькулятор:", reply_markup=kb_calc_menu())
+
 
 # --- MSD (идеальный вес по росту) ---
 
@@ -46,61 +83,72 @@ async def calc_menu(c: CallbackQuery):
 @router.callback_query(F.data == "calc:msd")
 async def calc_msd(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "msd"}
+    await c.answer()
     await c.message.edit_text(
         "Введи рост в сантиметрах и пол (М/Ж), например: <code>165 Ж</code>",
-        reply_markup=kb_back_home("calc:menu")
+        reply_markup=kb_back_home("calc:menu"),
     )
 
 
-@router.message(F.text.regexp(r"^\s*\d{2,3}\s*[МмЖж]\s*$"))
-async def handle_msd(m: Message):
-    sess = SESSIONS.get(m.from_user.id, {})
-    if sess.get("calc") != "msd":
+async def _process_msd(message: Message) -> None:
+    text = (message.text or "").strip()
+    match = MSD_INPUT_RE.fullmatch(text)
+    if not match:
+        await message.answer(MSD_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
-    h_cm, sex = re.findall(r"(\d{2,3})\s*([МмЖж])", m.text.strip())[0]
-    h = int(h_cm) / 100.0
-    k = 23.0 if sex.lower().startswith("м") else 21.5
-    ideal = round(h*h*k, 1)
+    height_cm = int(match.group("height"))
+    sex = match.group("sex")
+    height_m = height_cm / 100.0
+    coeff = 23.0 if sex.lower().startswith("м") else 21.5
+    ideal = round(height_m * height_m * coeff, 1)
 
-    # рекомендации + фото
     rec_codes = msd_recommendations()
-    await send_product_album(m.bot, m.chat.id, rec_codes)
-
-    # карточка
+    cards = _cards_with_overrides(rec_codes, "msd")
     lines = product_lines(rec_codes, "msd")
-    actions = [
+    bullets = [
         "Белок в каждом приёме пищи (1.2–1.6 г/кг).",
         "Ежедневная клетчатка (TEO GREEN) + вода 30–35 мл/кг.",
-        "30 минут ходьбы в день + 2 силовые тренировки в неделю.",
+        "30 минут ходьбы + 2 силовые тренировки в неделю.",
     ]
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
-    # для PDF
-    set_last_plan(
-        m.from_user.id,
-        {
-            "title": "План: Идеальный вес (MSD)",
-            "context": "msd",
-            "context_name": "Калькулятор MSD",
-            "level": None,
-            "products": rec_codes,
-            "lines": lines,
-            "actions": actions,
-            "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG
-        }
-    )
+    plan_payload = {
+        "title": "План: Идеальный вес (MSD)",
+        "context": "msd",
+        "context_name": "Калькулятор MSD",
+        "level": None,
+        "products": rec_codes,
+        "lines": lines,
+        "actions": bullets,
+        "notes": notes,
+        "order_url": settings.velavie_url,
+    }
 
-    text = (
-        f"Ориентир по формуле MSD: <b>{ideal} кг</b>.\n\n"
-        "Что это значит:\n"
-        "• Формула даёт <u>ориентир</u> для цели по весу.\n"
-        "• Важнее не просто число, а <b>состав тела</b> (мышцы ≠ жир).\n\n"
-        "Поддержка:\n" + "\n".join(lines)
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        await set_last_plan(session, message.from_user.id, plan_payload)
+        await events_repo.log(
+            session,
+            message.from_user.id,
+            "calc_finish",
+            {"calc": "msd", "ideal_weight": ideal},
+        )
+        await session.commit()
+
+    headline = (
+        f"Ориентир по формуле MSD: <b>{ideal} кг</b>." "\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     )
-    await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
-    SESSIONS.pop(m.from_user.id, None)
+    await send_product_cards(
+        message,
+        "Итог: идеальный вес по MSD",
+        cards,
+        headline=headline,
+        bullets=bullets,
+        back_cb="calc:menu",
+    )
+    SESSIONS.pop(message.from_user.id, None)
+
 
 # --- ИМТ (индекс массы тела) ---
 
@@ -108,25 +156,25 @@ async def handle_msd(m: Message):
 @router.callback_query(F.data == "calc:bmi")
 async def calc_bmi(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "bmi"}
+    await c.answer()
     await c.message.edit_text(
         "Введи рост и вес, например: <code>183 95</code>",
-        reply_markup=kb_back_home("calc:menu")
+        reply_markup=kb_back_home("calc:menu"),
     )
 
 
-@router.message(F.text.regexp(r"^\s*\d{2,3}\s+\d{2,3}(\.\d+)?\s*$"))
-async def handle_bmi(m: Message):
-    sess = SESSIONS.get(m.from_user.id, {})
-    if sess.get("calc") != "bmi":
+async def _process_bmi(message: Message) -> None:
+    text = (message.text or "").strip()
+    match = BMI_INPUT_RE.fullmatch(text)
+    if not match:
+        await message.answer(BMI_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
-    nums = re.findall(r"\d+(?:\.\d+)?", m.text)
-    h_cm = float(nums[0])
-    w = float(nums[1])
-    h = h_cm / 100.0
-    bmi = round(w / (h*h), 1)
+    height_cm = float(match.group("height"))
+    weight = float(match.group("weight"))
+    height_m = height_cm / 100.0
+    bmi = round(weight / (height_m * height_m), 1)
 
-    # категория
     if bmi < 18.5:
         cat, hint = "дефицит", "Набираем «правильный» вес: белок, клетчатка, мягкая коррекция ЖКТ."
     elif bmi < 25:
@@ -137,38 +185,68 @@ async def handle_bmi(m: Message):
         cat, hint = "ожирение", "Системно: микробиом + митохондрии + режим сна/движения."
 
     rec_codes, ctx = bmi_recommendations(bmi)
-    await send_product_album(m.bot, m.chat.id, rec_codes)
-
+    cards = _cards_with_overrides(rec_codes, ctx)
     lines = product_lines(rec_codes, ctx)
-    actions = [
+    bullets = [
         "Сон 7–9 часов, ужин за 3 часа до сна.",
         "10 минут утреннего света, 30 минут ходьбы ежедневно.",
         "Клетчатка + белок в каждом приёме пищи.",
     ]
     notes = "Если есть ЖКТ-жалобы — начни с TEO GREEN + MOBIO и режима питания."
 
-    set_last_plan(
-        m.from_user.id,
-        {
-            "title": "План: Индекс массы тела (ИМТ)",
-            "context": "bmi",
-            "context_name": "Калькулятор ИМТ",
-            "level": cat,
-            "products": rec_codes,
-            "lines": lines,
-            "actions": actions,
-            "notes": notes,
-            "order_url": settings.VILAVI_ORDER_NO_REG
-        }
-    )
+    plan_payload = {
+        "title": "План: Индекс массы тела (ИМТ)",
+        "context": "bmi",
+        "context_name": "Калькулятор ИМТ",
+        "level": cat,
+        "products": rec_codes,
+        "lines": lines,
+        "actions": bullets,
+        "notes": notes,
+        "order_url": settings.velavie_url,
+    }
 
-    text = (
-        f"ИМТ: <b>{bmi}</b> — {cat}.\n\n"
-        "Что такое ИМТ:\n"
-        "• Индекс массы тела оценивает соотношение веса и роста.\n"
-        "• Это <u>не</u> показывает состав тела (мышцы/жир), но даёт общий ориентир по рискам.\n\n"
-        f"{hint}\n\n"
-        "Поддержка:\n" + "\n".join(lines)
+    async with session_scope() as session:
+        await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        await set_last_plan(session, message.from_user.id, plan_payload)
+        await events_repo.log(
+            session,
+            message.from_user.id,
+            "calc_finish",
+            {"calc": "bmi", "bmi": bmi, "category": cat},
+        )
+        await session.commit()
+
+    headline = (
+        f"ИМТ: <b>{bmi}</b> — {cat}."
+        "\nИМТ оценивает соотношение роста и веса, но не показывает состав тела."
+        f"\n{hint}"
     )
-    await m.answer(text, reply_markup=kb_buylist_pdf("calc:menu", rec_codes))
-    SESSIONS.pop(m.from_user.id, None)
+    await send_product_cards(
+        message,
+        "Итог: индекс массы тела",
+        cards,
+        headline=headline,
+        bullets=bullets,
+        back_cb="calc:menu",
+    )
+    SESSIONS.pop(message.from_user.id, None)
+
+
+@router.message(F.text)
+async def handle_calc_message(message: Message):
+    sess = SESSIONS.get(message.from_user.id)
+    if not sess:
+        return
+
+    calc_kind = sess.get("calc")
+    if calc_kind == "msd":
+        await _process_msd(message)
+    elif calc_kind == "bmi":
+        await _process_bmi(message)
+    elif calc_kind == "water":
+        await calc_water.handle_message(message)
+    elif calc_kind == "kcal":
+        await calc_kcal.handle_message(message)
+    elif calc_kind == "macros":
+        await calc_macros.handle_message(message)

@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: five_keys
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: bot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      DB_URL: postgresql+asyncpg://bot:bot@db:5432/five_keys
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./var:/app/var
+
+volumes:
+  pgdata:
