@@ -209,23 +209,48 @@ def _github_contents(
     return entries
 
 
+def _coerce_sources(value: str | Sequence[str] | None) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        items = value
+    else:
+        items = [value]
+    normalized: list[str] = []
+    for item in items:
+        if item is None:
+            continue
+        stripped = str(item).strip()
+        if stripped:
+            normalized.append(stripped)
+    return normalized
+
+
 def _load_description_texts(
-    *, descriptions_url: str | None, descriptions_path: str | None
+    *, descriptions_url: str | Sequence[str] | None, descriptions_path: str | Sequence[str] | None
 ) -> list[tuple[str, str]]:
-    if descriptions_path:
-        return _list_local_texts(Path(descriptions_path))
-    if descriptions_url:
-        if _is_file_url(descriptions_url):
-            return _list_local_texts(_file_url_to_path(descriptions_url))
-        if descriptions_url.lower().endswith(".txt"):
-            text = _http_get(descriptions_url).decode("utf-8")
-            return [(descriptions_url, text)]
-        owner, repo, ref, path = _parse_github_tree(descriptions_url)
+    items: list[tuple[str, str]] = []
+
+    for path_value in _coerce_sources(descriptions_path):
+        items.extend(_list_local_texts(Path(path_value)))
+
+    for url_value in _coerce_sources(descriptions_url):
+        if _is_file_url(url_value):
+            items.extend(_list_local_texts(_file_url_to_path(url_value)))
+            continue
+        if url_value.lower().endswith(".txt"):
+            text = _http_get(url_value).decode("utf-8")
+            items.append((url_value, text))
+            continue
+        owner, repo, ref, path = _parse_github_tree(url_value)
         entries = _github_contents(owner, repo, path, ref, extensions={".txt"})
-        return [
-            (item["download_url"], _http_get(item["download_url"]).decode("utf-8"))
-            for item in entries
-        ]
+        for entry in entries:
+            download_url = entry["download_url"]
+            items.append((download_url, _http_get(download_url).decode("utf-8")))
+
+    if items:
+        return items
+
     if DEFAULT_DESCRIPTIONS_PATH:
         local_path = Path(DEFAULT_DESCRIPTIONS_PATH)
         if local_path.exists():
@@ -454,6 +479,33 @@ def _load_products(texts: list[tuple[str, str]]) -> list[dict[str, object]]:
     return products
 
 
+def _dedupe_products(
+    products: Iterable[dict[str, object]], *, dedupe: bool = True
+) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+    for product in products:
+        title = str(product.get("title", "")).strip()
+        order = product.get("order") if isinstance(product.get("order"), dict) else None
+        url = ""
+        if isinstance(order, dict):
+            url = str(order.get("velavie_link", "")).strip()
+        if not title or not url:
+            continue
+        product["title"] = title
+        product["name"] = title
+        if isinstance(order, dict):
+            order["velavie_link"] = url
+        key = (title.lower(), url)
+        if dedupe and key in seen:
+            continue
+        seen.add(key)
+        normalized.append(product)
+    if not normalized:
+        raise CatalogBuildError("No products parsed from descriptions")
+    return normalized
+
+
 def _list_remote_images(images_base: str) -> tuple[str, list[str]]:
     if images_base.endswith("/"):
         images_base = images_base[:-1]
@@ -578,18 +630,19 @@ def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str,
 
 def build_catalog(
     *,
-    descriptions_url: str | None = None,
-    descriptions_path: str | None = None,
+    descriptions_url: str | Sequence[str] | None = None,
+    descriptions_path: str | Sequence[str] | None = None,
     images_mode: str | None = None,
     images_base: str | None = None,
     images_dir: str | None = None,
     output: Path | None = None,
+    dedupe: bool = True,
 ) -> tuple[int, Path]:
     texts = _load_description_texts(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
-    products = _load_products(texts)
+    products = _dedupe_products(_load_products(texts), dedupe=dedupe)
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -663,12 +716,13 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     build_parser = subparsers.add_parser("build", help="Fetch descriptions and build the catalog")
-    build_parser.add_argument("--descriptions-url", default=None)
-    build_parser.add_argument("--descriptions-path", default=None)
+    build_parser.add_argument("--descriptions-url", action="append", default=None)
+    build_parser.add_argument("--descriptions-path", action="append", default=None)
     build_parser.add_argument("--images-mode", choices=("remote", "local"), default=None)
     build_parser.add_argument("--images-base", default=None)
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
+    build_parser.add_argument("--dedupe", choices=("on", "off"), default="on")
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
     validate_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
@@ -688,6 +742,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images_base=args.images_base,
                 images_dir=args.images_dir,
                 output=args.output,
+                dedupe=args.dedupe != "off",
             )
             print(f"Built catalog with {count} products → {path}")
             return 0

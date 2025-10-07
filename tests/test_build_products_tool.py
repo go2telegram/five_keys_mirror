@@ -7,6 +7,9 @@ import pytest
 from tools import build_products as bp
 
 
+DESCRIPTIONS_DIR = Path("tests/fixtures/catalog/descriptions_multi")
+
+
 DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
 IMAGES_DIR = Path("app/static/images/products")
 
@@ -67,3 +70,58 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
 
     validated = bp.validate_catalog(output)
     assert validated == count
+
+
+def test_load_description_texts_combines_multiple_sources(monkeypatch: pytest.MonkeyPatch) -> None:
+    remote_api = "https://api.github.com/repos/example/repo/contents/descriptions?ref=main"
+    remote_files = {
+        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote1.txt": "Продукт Эхо\nСсылка для заказа: https://shop.example.com/e",
+        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote2.txt": "Продукт Фокстрот\nСсылка для заказа: https://shop.example.com/f",
+    }
+
+    def fake_http_get(url: str, *, accept: str | None = None) -> bytes:
+        if url == remote_api:
+            payload = [
+                {
+                    "type": "file",
+                    "path": "descriptions/remote1.txt",
+                    "download_url": "https://raw.githubusercontent.com/example/repo/main/descriptions/remote1.txt",
+                },
+                {
+                    "type": "file",
+                    "path": "descriptions/remote2.txt",
+                    "download_url": "https://raw.githubusercontent.com/example/repo/main/descriptions/remote2.txt",
+                },
+            ]
+            return json.dumps(payload).encode("utf-8")
+        if url in remote_files:
+            return remote_files[url].encode("utf-8")
+        raise AssertionError(f"Unexpected URL {url}")
+
+    monkeypatch.setattr(bp, "_http_get", fake_http_get)
+
+    texts = bp._load_description_texts(
+        descriptions_path=str(DESCRIPTIONS_DIR),
+        descriptions_url="https://github.com/example/repo/tree/main/descriptions",
+    )
+
+    origins = [origin for origin, _ in texts]
+    assert len(texts) == 5
+    assert any(origin.endswith("first.txt") for origin in origins)
+    assert any(origin.endswith("second.txt") for origin in origins)
+    assert any(origin.endswith("third.txt") for origin in origins)
+    assert remote_files.keys() <= set(origins)
+
+
+def test_dedupe_products_removes_duplicates() -> None:
+    base_products = [
+        {"title": " Product Alpha ", "name": " Product Alpha ", "order": {"velavie_link": " https://shop.example.com/a "}},
+        {"title": "Product Alpha", "name": "Product Alpha", "order": {"velavie_link": "https://shop.example.com/a"}},
+        {"title": "Product Bravo", "name": "Product Bravo", "order": {"velavie_link": "https://shop.example.com/b"}},
+    ]
+
+    deduped = bp._dedupe_products([product.copy() for product in base_products], dedupe=True)
+    assert [item["title"] for item in deduped] == ["Product Alpha", "Product Bravo"]
+
+    without_dedupe = bp._dedupe_products([product.copy() for product in base_products], dedupe=False)
+    assert [item["title"] for item in without_dedupe] == ["Product Alpha", "Product Alpha", "Product Bravo"]
