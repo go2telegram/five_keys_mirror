@@ -84,6 +84,16 @@ class ProductBlock:
     origin: str
 
 
+@dataclass(frozen=True)
+class CatalogBuildSummary:
+    built: int
+    path: Path
+    found_descriptions: int
+    found_images: int
+    unmatched_images: list[str]
+    missing_images: list[str]
+
+
 def quote_url(url: str) -> str:
     """Percent-encode the path and query components of a URL."""
 
@@ -537,13 +547,13 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
-) -> None:
+) -> str | None:
     product_id = str(product["id"])
     image_name = _choose_image(product_id, image_files)
     if not image_name:
         logging.warning("No image for %s", product_id)
         product["available"] = False
-        return
+        return None
     if image_mode == "remote":
         base = image_base if image_base.endswith("/") else image_base + "/"
         url = urljoin(base, image_name)
@@ -554,6 +564,7 @@ def _resolve_image(
         rel_path = image_name.replace("\\", "/")
         product["image"] = base + rel_path
         product["images"] = [product["image"]]
+    return image_name
 
 
 def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str, str]]:
@@ -584,12 +595,13 @@ def build_catalog(
     images_base: str | None = None,
     images_dir: str | None = None,
     output: Path | None = None,
-) -> tuple[int, Path]:
+) -> CatalogBuildSummary:
     texts = _load_description_texts(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
     products = _load_products(texts)
+    found_descriptions = len(products)
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -602,8 +614,11 @@ def build_catalog(
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
+    found_images = len(files)
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
+    used_images: set[str] = set()
+    missing_images: list[str] = []
     for product in products:
         product_id = str(product["id"])
         if product_id in unique_ids:
@@ -616,14 +631,31 @@ def build_catalog(
             "velavie_link": quoted_url,
             "utm": utm,
         }
-        _resolve_image(product, image_files=files, image_mode=mode, image_base=image_base)
+        image_name = _resolve_image(
+            product,
+            image_files=files,
+            image_mode=mode,
+            image_base=image_base,
+        )
+        if image_name:
+            used_images.add(image_name)
+        else:
+            missing_images.append(product_id)
         normalized.append(product)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return len(normalized), destination
+    unmatched_images = [name for name in files if name not in used_images]
+    return CatalogBuildSummary(
+        built=len(normalized),
+        path=destination,
+        found_descriptions=found_descriptions,
+        found_images=found_images,
+        unmatched_images=list(unmatched_images),
+        missing_images=list(missing_images),
+    )
 
 
 def validate_catalog(path: Path | None = None) -> int:
@@ -669,6 +701,8 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-base", default=None)
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
+    build_parser.add_argument("--expect-count", default=None)
+    build_parser.add_argument("--fail-on-mismatch", action="store_true")
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
     validate_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
@@ -676,12 +710,43 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _resolve_expectation(
+    expect: str | None, summary: CatalogBuildSummary
+) -> tuple[str, int] | None:
+    if not expect:
+        return None
+    value = expect.strip()
+    if not value:
+        return None
+    if value.startswith("from="):
+        source = value.split("=", 1)[1]
+        if source == "images":
+            return "images", summary.found_images
+        if source == "descriptions":
+            return "descriptions", summary.found_descriptions
+        raise CatalogBuildError(
+            "--expect-count from= must be 'images' or 'descriptions'"
+        )
+    if value.startswith("fixed:"):
+        raw = value.split(":", 1)[1]
+        try:
+            expected = int(raw)
+        except ValueError as exc:  # pragma: no cover - validation
+            raise CatalogBuildError("--expect-count fixed:<N> must be an integer") from exc
+        if expected < 0:
+            raise CatalogBuildError("--expect-count fixed:<N> must be non-negative")
+        return "fixed", expected
+    raise CatalogBuildError(
+        "--expect-count must be from=images, from=descriptions, or fixed:<N>"
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_cli(argv or sys.argv[1:])
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         if args.command == "build":
-            count, path = build_catalog(
+            summary = build_catalog(
                 descriptions_url=args.descriptions_url,
                 descriptions_path=args.descriptions_path,
                 images_mode=args.images_mode,
@@ -689,7 +754,33 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images_dir=args.images_dir,
                 output=args.output,
             )
-            print(f"Built catalog with {count} products → {path}")
+            print(f"Built catalog with {summary.built} products → {summary.path}")
+            expectation = _resolve_expectation(args.expect_count, summary)
+            mismatch = False
+            if expectation:
+                source, expected = expectation
+                if summary.built != expected:
+                    mismatch = True
+                    logging.error(
+                        "built count mismatch: built=%s expected=%s (%s)",
+                        summary.built,
+                        expected,
+                        source,
+                    )
+                else:
+                    logging.info(
+                        "built count matches expected %s (%s)", expected, source
+                    )
+            print(
+                "found_descriptions="
+                f"{summary.found_descriptions}, "
+                f"found_images={summary.found_images}, "
+                f"built={summary.built}, "
+                f"unmatched_images={summary.unmatched_images}, "
+                f"missing_images={summary.missing_images}"
+            )
+            if mismatch and args.fail_on_mismatch:
+                return 1
             return 0
         if args.command == "validate":
             count = validate_catalog(args.source)

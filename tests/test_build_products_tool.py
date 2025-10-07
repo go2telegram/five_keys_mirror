@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from textwrap import dedent
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -9,6 +10,7 @@ from tools import build_products as bp
 
 DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
 IMAGES_DIR = Path("app/static/images/products")
+FIXTURE_IMAGES = Path("tests/fixtures/catalog/images")
 
 
 @pytest.mark.parametrize(
@@ -43,17 +45,17 @@ def test_choose_image_fallbacks() -> None:
 
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
-    count, generated = bp.build_catalog(
+    summary = bp.build_catalog(
         descriptions_path=str(DESCRIPTIONS_PATH),
         images_mode="local",
         images_dir=str(IMAGES_DIR),
         output=output,
     )
-    assert generated == output
-    assert count >= 20
+    assert summary.path == output
+    assert summary.built >= 20
 
     data = json.loads(output.read_text(encoding="utf-8"))
-    assert len(data["products"]) == count
+    assert len(data["products"]) == summary.built
 
     for product in data["products"]:
         link = product["order"]["velavie_link"]
@@ -66,4 +68,50 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
             assert product["image"].startswith("/static/") or product["image"].startswith("http")
 
     validated = bp.validate_catalog(output)
-    assert validated == count
+    assert validated == summary.built
+
+
+def test_build_cli_expect_count_fixed_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    output = tmp_path / "products.json"
+    description_file = tmp_path / "descriptions.txt"
+    description_file.write_text(
+        dedent(
+            """
+            T8 Blend
+            Ссылка для заказа: https://shop.vilavi.com/Item/10001?ref=735861
+
+            ====
+
+            Slim Start
+            Ссылка для заказа: https://shop.vilavi.com/Item/10002?ref=735861
+
+            ====
+
+            Missing Image Product
+            Ссылка для заказа: https://shop.vilavi.com/Item/10003?ref=735861
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    exit_code = bp.main(
+        [
+            "build",
+            "--descriptions-path",
+            str(description_file),
+            "--images-mode",
+            "local",
+            "--images-dir",
+            str(FIXTURE_IMAGES),
+            "--output",
+            str(output),
+            "--expect-count",
+            "fixed:38",
+            "--fail-on-mismatch",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "found_descriptions=" in captured.out
+    assert "built=" in captured.out
+    assert "missing_images=['missing-image-product']" in captured.out
