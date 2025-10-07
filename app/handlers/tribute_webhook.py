@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+from app.storage import commit_safely
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot
@@ -9,7 +10,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiohttp import web
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.repo import (
     events as events_repo,
     referrals as referrals_repo,
@@ -114,7 +115,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
             return web.json_response({"ok": False, "reason": "no_telegram_id"}, status=400)
 
         until = _parse_until(expires)
-        async with session_scope() as session:
+        async with compat_session(session_scope) as session:
             await users_repo.get_or_create_user(session, tg_id_int, None)
             await subscriptions_repo.set_plan(session, tg_id_int, plan, until=until)
             referral = await referrals_repo.get_by_invited(session, tg_id_int)
@@ -132,7 +133,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 "subscription_activated",
                 {"plan": plan, "until": until.isoformat()},
             )
-            await session.commit()
+            await commit_safely(session)
 
         if LOG:
             print(f"[TRIBUTE] activated: user={tg_id_int} plan={plan} until={until.isoformat()}")
@@ -152,7 +153,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
         except Exception:
             until = _now()
 
-        async with session_scope() as session:
+        async with compat_session(session_scope) as session:
             sub = await subscriptions_repo.get(session, tg_id_int)
             if sub:
                 sub.until = until
@@ -162,7 +163,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                     "subscription_cancelled",
                     {"until": until.isoformat()},
                 )
-                await session.commit()
+                await commit_safely(session)
 
         if NOTIFY:
             await _notify_cancel(tg_id_int, until)

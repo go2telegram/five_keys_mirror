@@ -12,7 +12,7 @@ from aiogram.types import Message
 
 from app import ALLOWED_UPDATES, build_info
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.repo import events as events_repo
 
 router = Router(name="health")
@@ -59,7 +59,7 @@ if settings.DEBUG_COMMANDS:
 
         recent: Sequence[str] = []
         try:
-            async with session_scope() as session:
+            async with compat_session(session_scope) as session:
                 events_result = events_repo.recent_events(session, limit=3)
                 if inspect.isawaitable(events_result):
                     events = await events_result

@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import (
     events as events_repo,
@@ -63,7 +63,7 @@ def _plan_lines(events) -> list[str]:
 @router.callback_query(F.data == "profile:open")
 async def profile_open(c: CallbackQuery) -> None:
     await c.answer()
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         user = await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, subscription = await subscriptions_repo.is_active(session, user.id)
         invited, converted = await referrals_repo.stats_for_referrer(session, user.id)

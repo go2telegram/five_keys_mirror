@@ -67,8 +67,8 @@ class Referral(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    referrer_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    invited_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    referrer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    invited_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     bonus_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
@@ -83,7 +83,7 @@ class PromoUsage(Base):
     __table_args__ = (UniqueConstraint("user_id", "code", name="uq_promo_usage"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     BOT_TOKEN: str = ""
     ADMIN_ID: int = 0
-    ADMIN_USER_IDS: list[int] = Field(default_factory=list)
+    ADMIN_USER_IDS: list[int] | str = Field(default_factory=list)
     LEADS_CHAT_ID: int | None = None
 
     DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
@@ -55,7 +55,12 @@ class Settings(BaseSettings):
     SUB_PRO_PRICE: str = "599 ₽/мес"
     # --------------------------------------
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
 
     # пример «исправления» случайно оставленного leads_chat_id в окружении
     @field_validator("ADMIN_ID", mode="before")

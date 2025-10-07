@@ -112,13 +112,29 @@ def _intake_table(data_rows: list[dict], body_style: ParagraphStyle) -> Table:
         return "✓" if x else "—"
 
     for r in data_rows:
+        if isinstance(r, dict):
+            row = r
+        elif isinstance(r, (list, tuple)):
+            time_label = str(r[0]).lower() if r else ""
+            name = str(r[1]) if len(r) > 1 else ""
+            note = str(r[2]) if len(r) > 2 else ""
+            row = {
+                "name": name,
+                "morning": "утро" in time_label,
+                "day": "день" in time_label,
+                "evening": "вечер" in time_label,
+                "note": note,
+            }
+        else:
+            row = {"name": str(r)}
+
         table_data.append(
             [
-                Paragraph(r.get("name", ""), body_style),
-                mark(r.get("morning")),
-                mark(r.get("day")),
-                mark(r.get("evening")),
-                Paragraph(r.get("note", ""), body_style),
+                Paragraph(row.get("name", ""), body_style),
+                mark(row.get("morning")),
+                mark(row.get("day")),
+                mark(row.get("evening")),
+                Paragraph(row.get("note", ""), body_style),
             ]
         )
     t = Table(table_data, colWidths=[5.5 * cm, 1.5 * cm, 1.5 * cm, 1.8 * cm, 6.2 * cm])
