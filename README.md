@@ -25,6 +25,36 @@ cp .env.example .env
 поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
 Включение Tribute webhook-а опционально: задайте `RUN_TRIBUTE_WEBHOOK=true`, если нужен приём уведомлений от Tribute.
 
+## Каталог продуктов
+
+Исходники: `go2telegram/media` → `media/descriptions/*.txt` (описания) и `media/products/*` (картинки).
+
+Сборка/валидация:
+
+```bash
+make build-products
+make validate-products
+```
+
+Каталог: `app/catalog/products.json` (валидируется схемой `app/data/products.schema.json`).
+
+CI автоматически собирает/валидирует каталог на PR/commit.
+
+## Быстрый запуск (dev)
+
+```bash
+python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+export BOT_TOKEN="xxx" HEALTH_PORT=8080
+python run.py
+```
+
+Проверки:
+
+- `GET http://localhost:8080/ping` → ok
+- `GET http://localhost:8080/metrics` → Prometheus-метрики
+- В боте: `/version`, `/catalog`, `/product <id>`
+
 ## Офлайн установка (Windows, Python 3.11)
 
 1) В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (*Actions → Build offline wheels → Run workflow*), скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels` или любую другую папку (её можно передать через `-WheelsDir` или переменную окружения `WHEELS_DIR`).
