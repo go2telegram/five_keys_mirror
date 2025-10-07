@@ -1,0 +1,7 @@
+Продукт Браво
+Ссылка для заказа: https://shop.example.com/b
+
+====
+
+Продукт Чарли
+Ссылка для заказа: https://shop.example.com/c
