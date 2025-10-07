@@ -35,10 +35,17 @@ def test_choose_image_fallbacks() -> None:
         "misc/file.png",
         "omega3_pack.webp",
     ]
-    image = bp._choose_image("nash-omega-3", files)
+    image = bp._choose_image("nash-omega-3", files, used_images=set())
     assert image == "omega3_main.jpg"
-    image = bp._choose_image("t8-era-brain-coffee", files)
+    image = bp._choose_image("t8-era-brain-coffee", files, used_images=set())
     assert image == "brain-coffee_main.jpg"
+
+
+def test_choose_image_respects_used_images() -> None:
+    files = ["omega3_main.jpg", "omega3_main_copy.jpg"]
+    used = {"omega3_main.jpg"}
+    image = bp._choose_image("omega-3", files, used_images=used)
+    assert image == "omega3_main_copy.jpg"
 
 
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
@@ -47,6 +54,8 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
         descriptions_path=str(DESCRIPTIONS_PATH),
         images_mode="local",
         images_dir=str(IMAGES_DIR),
+        strict_images="add",
+        strict_descriptions="add",
         output=output,
     )
     assert generated == output
@@ -57,13 +66,93 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
 
     for product in data["products"]:
         link = product["order"]["velavie_link"]
+        if not link:
+            continue
         params = parse_qs(urlparse(link).query)
         assert params["utm_source"] == ["tg_bot"]
         assert params["utm_medium"] == ["catalog"]
         assert params["utm_content"] == [product["id"]]
+        if "missing_image" in product.get("tags", []):
+            assert product.get("images") == []
+            continue
         assert product.get("images")
         if product.get("image"):
             assert product["image"].startswith("/static/") or product["image"].startswith("http")
 
-    validated = bp.validate_catalog(output)
-    assert validated == count
+    if all(product["order"]["velavie_link"] for product in data["products"]):
+        validated = bp.validate_catalog(output)
+        assert validated == count
+
+
+def test_build_catalog_creates_minimal_cards(tmp_path: Path) -> None:
+    descriptions = tmp_path / "descriptions.txt"
+    descriptions.write_text(
+        """
+Omega 3
+
+Описание продукта
+
+Ссылка для заказа: https://example.com/omega
+""".strip(),
+        encoding="utf-8",
+    )
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    (images_dir / "omega-3.jpg").write_text("", encoding="utf-8")
+    (images_dir / "extra_main.png").write_text("", encoding="utf-8")
+
+    output = tmp_path / "products.json"
+    count, _ = bp.build_catalog(
+        descriptions_path=str(descriptions),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="add",
+        strict_descriptions="add",
+        output=output,
+    )
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert count == len(data["products"]) == 2
+    omega = next(item for item in data["products"] if item["title"] == "Omega 3")
+    assert omega["image"].endswith("omega-3.jpg")
+    assert omega["id"].startswith("omega")
+
+    unmatched = next(item for item in data["products"] if "unmatched_image" in item["tags"])
+    assert unmatched["available"] is False
+    assert unmatched["order"]["velavie_link"] == ""
+    assert unmatched["image"].endswith("extra_main.png")
+    assert unmatched["title"] == "Extra"
+    assert unmatched["images"] == [unmatched["image"]]
+
+
+def test_build_catalog_marks_missing_image(tmp_path: Path) -> None:
+    descriptions = tmp_path / "single.txt"
+    descriptions.write_text(
+        """
+No Image Product
+
+Описание
+
+Ссылка для заказа: https://example.com/no-image
+""".strip(),
+        encoding="utf-8",
+    )
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    output = tmp_path / "products.json"
+    count, _ = bp.build_catalog(
+        descriptions_path=str(descriptions),
+        images_mode="local",
+        images_dir=str(images_dir),
+        strict_images="off",
+        strict_descriptions="add",
+        output=output,
+    )
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert count == len(data["products"]) == 1
+    product = data["products"][0]
+    assert product["available"] is False
+    assert "missing_image" in product["tags"]
+    assert product.get("images") == []

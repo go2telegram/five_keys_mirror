@@ -37,6 +37,7 @@ DEFAULT_IMAGES_BASE = "https://raw.githubusercontent.com/go2telegram/media/main/
 DEFAULT_IMAGES_DIR = str(ROOT / "app" / "static" / "images" / "products")
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+IMAGE_PRIORITY_SUFFIXES = ("_main", "-main", "_01", "-01")
 ORDER_KEYWORDS = ("ссылка", "заказ")
 SECTION_KEYWORDS: Mapping[str, tuple[str, ...]] = {
     "usage": (
@@ -362,6 +363,39 @@ def _slug_variants(slug_value: str) -> list[str]:
     return [variant for variant in variants if variant]
 
 
+def _sanitize_token(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def _strip_image_suffix(stem: str) -> str:
+    for suffix in IMAGE_PRIORITY_SUFFIXES:
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
+def _titleize_slug(slug_value: str) -> str:
+    parts = [part for part in re.split(r"[-_]+", slug_value) if part]
+    if not parts:
+        return slug_value
+    return " ".join(part.capitalize() for part in parts)
+
+
+def _image_slug_from_path(image_path: str) -> str:
+    stem = Path(image_path).stem
+    lowered = stem.lower()
+    base = _strip_image_suffix(lowered)
+    normalized = base.replace("_", " ")
+    candidate = _refine_slug(_slug(normalized))
+    if candidate:
+        return candidate
+    sanitized = _sanitize_token(base)
+    if sanitized:
+        return sanitized
+    fallback = re.sub(r"[^a-z0-9]+", "-", lowered).strip("-")
+    return fallback or lowered
+
+
 def _build_aliases(name: str, product_id: str) -> list[str]:
     base = re.sub(r"[^0-9A-Z]+", "_", name.upper()).strip("_")
     parts = [part for part in base.split("_") if part]
@@ -492,36 +526,47 @@ def _local_web_base(images_dir: Path) -> str:
     return web_base
 
 
-def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
+def _choose_image(
+    slug_value: str, candidates: list[str], *, used_images: set[str] | None = None
+) -> str | None:
     slug_lower = slug_value.lower()
-    variants = _slug_variants(slug_lower)
-    sanitized_slug = re.sub(r"[^a-z0-9]", "", slug_lower)
+    slug_variants = _slug_variants(slug_lower)
+    sanitized_slug = _sanitize_token(slug_lower)
+    sanitized_variants = {
+        token for token in (_sanitize_token(variant) for variant in slug_variants) if token
+    }
+    if sanitized_slug:
+        sanitized_variants.add(sanitized_slug)
     prioritized: list[tuple[int, str]] = []
+    used = used_images or set()
     for candidate in candidates:
+        if candidate in used:
+            continue
         stem = Path(candidate).stem.lower()
         suffix = Path(candidate).suffix.lower()
         if suffix not in IMAGE_EXTENSIONS:
             continue
-        sanitized = re.sub(r"[^a-z0-9]", "", stem)
+        sanitized = _sanitize_token(stem)
+        stripped = _strip_image_suffix(stem)
+        sanitized_stripped = _sanitize_token(stripped)
         score: int | None = None
         if stem == slug_lower:
             score = 0
-        elif stem.startswith(slug_lower) and "main" in stem[len(slug_lower):]:
+        elif stripped == slug_lower:
             score = 1
-        elif sanitized_slug and sanitized == sanitized_slug:
+        elif sanitized and sanitized == sanitized_slug:
             score = 2
-        elif sanitized_slug and sanitized.startswith(sanitized_slug) and "main" in sanitized[len(sanitized_slug):]:
+        elif sanitized_stripped and sanitized_stripped == sanitized_slug:
             score = 3
-        elif any(
-            variant
-            and sanitized.startswith(variant)
-            and "main" in sanitized[len(variant) :]
-            for variant in variants
-        ):
+        elif sanitized and sanitized in sanitized_variants:
             score = 4
-        elif any(variant and sanitized == variant for variant in variants):
+        elif sanitized_stripped and sanitized_stripped in sanitized_variants:
             score = 5
-        elif any(variant and sanitized.startswith(variant) for variant in variants):
+        elif any(
+            sanitized and sanitized.startswith(variant)
+            for variant in sanitized_variants
+            if variant
+        ):
             score = 6
         if score is not None:
             prioritized.append((score, candidate))
@@ -537,13 +582,29 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
+    used_images: set[str],
+    strict_descriptions: str,
 ) -> None:
     product_id = str(product["id"])
-    image_name = _choose_image(product_id, image_files)
+    image_name = _choose_image(product_id, image_files, used_images=used_images)
     if not image_name:
-        logging.warning("No image for %s", product_id)
-        product["available"] = False
+        logging.warning("Missing image for %s", product_id)
+        tags = [tag for tag in product.get("tags", []) if isinstance(tag, str)]
+        if strict_descriptions == "add":
+            product["available"] = False
+            if "missing_image" not in tags:
+                tags.append("missing_image")
+            product["tags"] = sorted(set(tags))
+            product.setdefault("images", [])
+            return
+        if strict_descriptions == "warn":
+            product["_skip"] = True
+            return
+        if strict_descriptions == "off":
+            product["_skip"] = True
+            return
         return
+    used_images.add(image_name)
     if image_mode == "remote":
         base = image_base if image_base.endswith("/") else image_base + "/"
         url = urljoin(base, image_name)
@@ -554,6 +615,48 @@ def _resolve_image(
         rel_path = image_name.replace("\\", "/")
         product["image"] = base + rel_path
         product["images"] = [product["image"]]
+
+
+def _build_minimal_product(
+    image_name: str,
+    *,
+    image_mode: str,
+    image_base: str,
+    existing_ids: set[str],
+    used_images: set[str],
+) -> dict[str, object]:
+    slug_value = _image_slug_from_path(image_name)
+    base_slug = slug_value or _sanitize_token(Path(image_name).stem)
+    if not base_slug:
+        base_slug = Path(image_name).stem.lower() or "product"
+    slug = base_slug
+    counter = 2
+    while slug in existing_ids:
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    title = _titleize_slug(slug)
+    base = image_base if image_base.endswith("/") else image_base + "/"
+    if image_mode == "remote":
+        image_url = urljoin(base, image_name)
+    else:
+        rel_path = image_name.replace("\\", "/")
+        image_url = base + rel_path
+    used_images.add(image_name)
+    product: dict[str, object] = {
+        "id": slug,
+        "title": title,
+        "name": title,
+        "short": "",
+        "description": "",
+        "category": "general",
+        "tags": ["unmatched_image"],
+        "order": {"velavie_link": ""},
+        "available": False,
+        "image": image_url,
+        "images": [image_url],
+    }
+    existing_ids.add(slug)
+    return product
 
 
 def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str, str]]:
@@ -583,6 +686,8 @@ def build_catalog(
     images_mode: str | None = None,
     images_base: str | None = None,
     images_dir: str | None = None,
+    strict_images: str | None = None,
+    strict_descriptions: str | None = None,
     output: Path | None = None,
 ) -> tuple[int, Path]:
     texts = _load_description_texts(
@@ -595,6 +700,13 @@ def build_catalog(
     if mode not in {"remote", "local"}:
         raise CatalogBuildError("images-mode must be 'remote' or 'local'")
 
+    strict_images_mode = (strict_images or "add").lower()
+    strict_descriptions_mode = (strict_descriptions or "add").lower()
+    if strict_images_mode not in {"add", "warn", "off"}:
+        raise CatalogBuildError("strict-images must be 'add', 'warn' or 'off'")
+    if strict_descriptions_mode not in {"add", "warn", "off"}:
+        raise CatalogBuildError("strict-descriptions must be 'add', 'warn' or 'off'")
+
     if mode == "remote":
         base = images_base or DEFAULT_IMAGES_BASE
         image_base, files = _list_remote_images(base)
@@ -603,21 +715,47 @@ def build_catalog(
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
     unique_ids: set[str] = set()
+    used_images: set[str] = set()
     normalized: list[dict[str, object]] = []
     for product in products:
         product_id = str(product["id"])
         if product_id in unique_ids:
             logging.warning("Duplicate product id %s", product_id)
             continue
-        unique_ids.add(product_id)
         url = str(product["order"]["velavie_link"])
         quoted_url, utm = _merge_utm(url, product_id, str(product.get("category", "")))
         product["order"] = {
             "velavie_link": quoted_url,
             "utm": utm,
         }
-        _resolve_image(product, image_files=files, image_mode=mode, image_base=image_base)
+        _resolve_image(
+            product,
+            image_files=files,
+            image_mode=mode,
+            image_base=image_base,
+            used_images=used_images,
+            strict_descriptions=strict_descriptions_mode,
+        )
+        if product.pop("_skip", False):
+            continue
+        unique_ids.add(product_id)
         normalized.append(product)
+
+    unmatched_images = [file for file in files if file not in used_images]
+    if strict_images_mode == "add":
+        for image_name in unmatched_images:
+            logging.warning("Unmatched image (added minimal card): %s", image_name)
+            minimal = _build_minimal_product(
+                image_name,
+                image_mode=mode,
+                image_base=image_base,
+                existing_ids=unique_ids,
+                used_images=used_images,
+            )
+            normalized.append(minimal)
+    elif strict_images_mode == "warn":
+        for image_name in unmatched_images:
+            logging.warning("Unmatched image (skipped): %s", image_name)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
@@ -668,6 +806,12 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-mode", choices=("remote", "local"), default=None)
     build_parser.add_argument("--images-base", default=None)
     build_parser.add_argument("--images-dir", default=None)
+    build_parser.add_argument(
+        "--strict-images", choices=("add", "warn", "off"), default="add"
+    )
+    build_parser.add_argument(
+        "--strict-descriptions", choices=("add", "warn", "off"), default="add"
+    )
     build_parser.add_argument("--output", type=Path, default=None)
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
@@ -687,6 +831,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images_mode=args.images_mode,
                 images_base=args.images_base,
                 images_dir=args.images_dir,
+                strict_images=args.strict_images,
+                strict_descriptions=args.strict_descriptions,
                 output=args.output,
             )
             print(f"Built catalog with {count} products → {path}")
