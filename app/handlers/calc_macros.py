@@ -8,11 +8,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.catalog.api import pick_for_context
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
-from app.storage import SESSIONS, set_last_plan
+from app.storage import SESSIONS, commit_safely, set_last_plan
 
 router = Router(name="calc_macros")
 
@@ -147,7 +147,7 @@ async def _finalize(
         "order_url": settings.velavie_url,
     }
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         await set_last_plan(session, c.from_user.id, plan_payload)
         await events_repo.log(
@@ -165,7 +165,7 @@ async def _finalize(
                 "weight": weight,
             },
         )
-        await session.commit()
+        await commit_safely(session)
 
     await send_product_cards(
         c,

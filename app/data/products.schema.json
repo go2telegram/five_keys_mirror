@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Five Keys Bot catalog products",
+  "description": "Normalized schema for catalog products used to generate product cards and catalog menu.",
+  "type": "object",
+  "required": ["products"],
+  "properties": {
+    "products": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "order"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "short": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "benefits": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "how_it_helps": {
+            "type": ["object", "string"],
+            "additionalProperties": {
+              "type": ["object", "string"]
+            }
+          },
+          "order": {
+            "type": "object",
+            "required": ["velavie_link"],
+            "properties": {
+              "velavie_link": {
+                "type": "string",
+                "format": "uri"
+              },
+              "utm": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false,
+  "x-required-utm": ["utm_source", "utm_medium", "utm_campaign"],
+  "x-default-utm": {
+    "utm_source": "bot",
+    "utm_medium": "telegram",
+    "utm_campaign": "catalog",
+    "utm_content": "{product_id}"
+  }
+}

@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.repo import (
     events as events_repo,
     leads as leads_repo,
@@ -31,7 +31,7 @@ async def stats(m: Message):
     if not _is_admin(m.from_user.id if m.from_user else None):
         return
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         total_users = await users_repo.count(session)
         active_subs = await subscriptions_repo.count_active(session)
         quiz_finishes = await events_repo.stats(session, name="quiz_finish")
@@ -66,7 +66,7 @@ async def leads_list(m: Message):
     except Exception:
         limit = 10
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         items = await leads_repo.list_last(session, limit)
 
     if not items:
@@ -102,7 +102,7 @@ async def leads_csv(m: Message):
     except Exception:
         limit = 100
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         items = await leads_repo.list_last(session, limit)
 
     if not items:

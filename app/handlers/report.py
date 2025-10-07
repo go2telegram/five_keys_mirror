@@ -5,11 +5,11 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.pdf_report import build_pdf
 from app.repo import events as events_repo
-from app.storage import get_last_plan
+from app.storage import commit_safely, get_last_plan
 
 router = Router()
 
@@ -56,7 +56,7 @@ def _compose_pdf(plan: dict) -> bytes:
 
 @router.callback_query(F.data.in_({"report:last", "pdf:last"}))
 async def pdf_last_cb(c: CallbackQuery):
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         plan = await get_last_plan(session, c.from_user.id)
         if plan:
             await events_repo.log(
@@ -65,7 +65,7 @@ async def pdf_last_cb(c: CallbackQuery):
                 "pdf_export",
                 {"context": plan.get("context"), "title": plan.get("title")},
             )
-            await session.commit()
+            await commit_safely(session)
     if not plan:
         await c.answer("Нет данных для отчёта. Пройдите тест или калькулятор.", show_alert=True)
         await c.message.answer(
@@ -81,7 +81,7 @@ async def pdf_last_cb(c: CallbackQuery):
 
 @router.message(Command("pdf"))
 async def pdf_cmd(m: Message):
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         plan = await get_last_plan(session, m.from_user.id)
         if plan:
             await events_repo.log(
@@ -90,7 +90,7 @@ async def pdf_cmd(m: Message):
                 "pdf_export",
                 {"context": plan.get("context"), "title": plan.get("title")},
             )
-            await session.commit()
+            await commit_safely(session)
     if not plan:
         await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
         return

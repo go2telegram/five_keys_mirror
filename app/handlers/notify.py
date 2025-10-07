@@ -2,12 +2,13 @@
 
 import logging
 
+from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo
 
@@ -27,13 +28,13 @@ def _status_keyboard(enabled: bool):
 
 
 async def _set_event(user_id: int, event_name: str) -> None:
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await events_repo.log(session, user_id, event_name, {})
-        await session.commit()
+        await commit_safely(session)
 
 
 async def _is_enabled(user_id: int) -> bool:
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         last_on = await events_repo.last_by(session, user_id, "notify_on")
         last_off = await events_repo.last_by(session, user_id, "notify_off")
     return bool(last_on and (not last_off or last_on.ts > last_off.ts))

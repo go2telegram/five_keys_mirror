@@ -15,6 +15,7 @@ def kb_main() -> InlineKeyboardMarkup:
     kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
     kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
     kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
+    kb.button(text="🛍 Каталог", callback_data="catalog:menu")
     kb.button(text="🎁 Регистрация", callback_data="reg:open")
     kb.button(text="💎 Премиум", callback_data="premium:menu")
     kb.button(text="👤 Профиль", callback_data="profile:open")
@@ -24,7 +25,7 @@ def kb_main() -> InlineKeyboardMarkup:
     kb.button(text="🧾 PDF отчёт", callback_data="report:last")
     kb.button(text="🔔 Уведомления", callback_data="notify:help")
 
-    kb.adjust(2, 2, 2, 2, 2, 1)
+    kb.adjust(2, 2, 2, 2, 2, 1, 1)
     return kb.as_markup()
 
 

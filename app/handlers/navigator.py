@@ -12,7 +12,10 @@ NAV = {
         "items": [
             ("Обо мне", "https://t.me/c/1780036611/2606"),
             ("Написать мне", "https://t.me/Nat988988"),
-            ("Заказать продукт", "https://shop.vilavi.com/?ref=985920"),
+            (
+                "Заказать продукт",
+                "https://shop.vilavi.com/?ref=985920&utm_source=bot&utm_medium=telegram&utm_campaign=navigator&utm_content=nav_root",
+            ),
             ("Партнёрская ссылка", "https://t.me/c/1780036611/4380"),
             ("МИТОсообщество", "https://t.me/c/1780036611/4364"),
             ("Английский", "https://t.me/c/1780036611/4745"),

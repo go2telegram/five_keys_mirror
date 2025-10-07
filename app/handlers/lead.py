@@ -1,5 +1,6 @@
 # app/handlers/lead.py
 import re
+from app.storage import commit_safely
 from contextlib import suppress
 
 from aiogram import F, Router
@@ -9,7 +10,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_cancel_home, kb_main
 from app.repo import events as events_repo, leads as leads_repo, users as users_repo
 
@@ -85,7 +86,7 @@ async def lead_done(m: Message, state: FSMContext):
 
     username = m.from_user.username
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, m.from_user.id, username)
         lead = await leads_repo.add(
             session,
@@ -104,7 +105,7 @@ async def lead_done(m: Message, state: FSMContext):
                 "name": name,
             },
         )
-        await session.commit()
+        await commit_safely(session)
 
     # уведомление администратору/в чат
     admin_chat = settings.LEADS_CHAT_ID or settings.ADMIN_ID

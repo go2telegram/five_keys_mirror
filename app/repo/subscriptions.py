@@ -9,6 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Subscription
 
 
+def _ensure_aware(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 async def get(session: AsyncSession, user_id: int) -> Optional[Subscription]:
     return await session.get(Subscription, user_id)
 
@@ -26,9 +32,11 @@ async def set_plan(
         if days is None:
             raise ValueError("either days or until must be provided")
         base = now
-        if subscription is not None and subscription.until > now:
-            base = subscription.until
-        until = base + timedelta(days=days)
+        if subscription is not None and _ensure_aware(subscription.until) > now:
+            base = _ensure_aware(subscription.until)
+        until = _ensure_aware(base + timedelta(days=days))
+    else:
+        until = _ensure_aware(until)
 
     if subscription is None:
         subscription = Subscription(user_id=user_id, plan=plan, since=now, until=until)
@@ -48,7 +56,7 @@ async def is_active(session: AsyncSession, user_id: int) -> Tuple[bool, Optional
         return False, None
 
     now = datetime.now(timezone.utc)
-    return subscription.until > now, subscription
+    return _ensure_aware(subscription.until) > now, subscription
 
 
 async def count_active(session: AsyncSession) -> int:

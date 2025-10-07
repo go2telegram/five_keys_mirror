@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -91,6 +92,58 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
         ) from _ENGINE_IMPORT_ERROR
     async with async_session_factory() as session:
         yield session
+
+
+@asynccontextmanager
+async def compat_session(scope_factory) -> AsyncIterator[Any]:
+    """Adapt patched session_scope replacements used in tests."""
+
+    cm = scope_factory()
+    aenter = getattr(cm, "__aenter__", None)
+    aexit = getattr(cm, "__aexit__", None)
+    if callable(aenter) and callable(aexit):
+        try:
+            session = await aenter()
+        except TypeError as exc:
+            gen = getattr(cm, "gen", None)
+            if gen is None or "async iterator" not in str(exc):
+                raise
+            try:
+                session = next(gen)
+            except StopIteration as stop:
+                raise RuntimeError("session_scope stub yielded no session") from stop
+
+            try:
+                yield session
+            finally:
+                try:
+                    next(gen)
+                except StopIteration:
+                    pass
+            return
+
+        try:
+            yield session
+        finally:
+            await aexit(None, None, None)
+        return
+
+    if hasattr(cm, "__enter__") and hasattr(cm, "__exit__"):
+        with cm as session:
+            yield session
+        return
+
+    if inspect.isawaitable(cm):
+        session = await cm
+        try:
+            yield session
+        finally:
+            close = getattr(session, "close", None)
+            if callable(close):
+                close()
+        return
+
+    raise TypeError("Unsupported session_scope replacement")
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

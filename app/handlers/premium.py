@@ -1,8 +1,9 @@
+from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
@@ -40,7 +41,7 @@ def _kb_links(pairs):
 
 @router.callback_query(F.data == "premium:menu")
 async def premium_menu(c: CallbackQuery):
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
         plan = sub.plan if sub else None
@@ -50,7 +51,7 @@ async def premium_menu(c: CallbackQuery):
             "premium_open",
             {"active": is_active, "plan": plan},
         )
-        await session.commit()
+        await commit_safely(session)
 
     await c.answer()
     if not is_active or plan is None:

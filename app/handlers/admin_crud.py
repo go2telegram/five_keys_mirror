@@ -11,9 +11,10 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import referrals as referrals_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.storage import commit_safely
 
 router = Router(name="admin_crud")
 
@@ -120,14 +121,14 @@ async def _render_users(page: int, query: str):
     if page < 1:
         page = 1
     offset = (page - 1) * _PAGE_SIZE
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         total = await users_repo.count(session, query or None)
         users = await users_repo.find(session, query or None, _PAGE_SIZE, offset)
     total_pages = max(math.ceil(total / _PAGE_SIZE), 1)
     if page > total_pages:
         page = total_pages
         offset = (page - 1) * _PAGE_SIZE
-        async with session_scope() as session:
+        async with compat_session(session_scope) as session:
             users = await users_repo.find(session, query or None, _PAGE_SIZE, offset)
     lines = [f"Users page {page}/{total_pages} (total {total})"]
     if query:
@@ -205,7 +206,7 @@ async def user_card(message: Message) -> None:
     if user_id is None:
         await message.answer("Bad arguments")
         return
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         user = await users_repo.get_by_id(session, user_id)
         if user is None:
             await message.answer("User not found", reply_markup=kb_back_home("home:main"))
@@ -241,7 +242,7 @@ async def sub_get(message: Message) -> None:
     if user_id is None:
         await message.answer("Bad arguments")
         return
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         subscription = await subscriptions_repo.get(session, user_id)
     if subscription is None:
         text = "No active subscription"
@@ -269,10 +270,10 @@ async def sub_set(message: Message) -> None:
         await message.answer("Bad arguments")
         return
     try:
-        async with session_scope() as session:
+        async with compat_session(session_scope) as session:
             await users_repo.get_or_create_user(session, user_id)
             subscription = await subscriptions_repo.set_plan(session, user_id, plan, days=days)
-            await session.commit()
+            await commit_safely(session)
         text = f"Plan {subscription.plan} until {_format_date(subscription.until)}"
         await message.answer(text, reply_markup=kb_back_home("home:main"))
     except Exception as exc:  # pragma: no cover
@@ -291,9 +292,9 @@ async def sub_del(message: Message) -> None:
     if user_id is None:
         await message.answer("Bad arguments")
         return
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await subscriptions_repo.delete(session, user_id)
-        await session.commit()
+        await commit_safely(session)
     await message.answer("Subscription removed", reply_markup=kb_back_home("home:main"))
 
 
@@ -323,14 +324,14 @@ async def _render_referrals(user_id: int, page: int, period: str):
     if page < 1:
         page = 1
     offset = (page - 1) * _PAGE_SIZE
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         total = await referrals_repo.count_for(session, user_id, period)
         items = await referrals_repo.list_for(session, user_id, _PAGE_SIZE, offset, period)
     total_pages = max(math.ceil(total / _PAGE_SIZE), 1)
     if page > total_pages:
         page = total_pages
         offset = (page - 1) * _PAGE_SIZE
-        async with session_scope() as session:
+        async with compat_session(session_scope) as session:
             items = await referrals_repo.list_for(session, user_id, _PAGE_SIZE, offset, period)
     lines = [f"Referrals page {page}/{total_pages} (total {total})"]
     lines.append(f"Period: {period}")
@@ -362,7 +363,7 @@ async def ref_convert(message: Message) -> None:
     if invited_id is None or bonus_days is None or bonus_days < 0:
         await message.answer("Bad arguments")
         return
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         referral = await referrals_repo.convert(session, invited_id, bonus_days)
         if referral is None:
             await message.answer("User not found", reply_markup=kb_back_home("home:main"))
@@ -372,5 +373,5 @@ async def ref_convert(message: Message) -> None:
             plan = current_sub.plan if current_sub else "trial"
             await users_repo.get_or_create_user(session, referral.referrer_id)
             await subscriptions_repo.set_plan(session, referral.referrer_id, plan, days=bonus_days)
-        await session.commit()
+        await commit_safely(session)
     await message.answer("Referral updated", reply_markup=kb_back_home("home:main"))

@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable
 
 from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
@@ -16,6 +16,7 @@ from aiohttp import web
 from app import build_info
 from app.config import settings
 from app.db.session import init_db
+from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
     admin_crud as h_admin_crud,
@@ -62,6 +63,8 @@ ALLOWED_UPDATES = ["message", "callback_query"]
 log_home = logging.getLogger("home")
 startup_log = logging.getLogger("startup")
 
+SERVICE_START_TS = time.time()
+
 
 def _resolve_log_level(value: str) -> int:
     try:
@@ -100,29 +103,47 @@ async def home_main(c: CallbackQuery) -> None:
         await c.answer()
 
 
-async def _setup_tribute_webhook() -> Optional[web.AppRunner]:
-    if not settings.RUN_TRIBUTE_WEBHOOK:
-        logging.info("Tribute webhook server disabled (RUN_TRIBUTE_WEBHOOK=false)")
-        return None
+async def _handle_ping(_: web.Request) -> web.Response:
+    return web.json_response({"status": "ok"})
 
+
+async def _handle_metrics(_: web.Request) -> web.Response:
+    uptime = max(0.0, time.time() - SERVICE_START_TS)
+    lines = [
+        "# HELP five_keys_bot_uptime_seconds Application uptime in seconds",
+        "# TYPE five_keys_bot_uptime_seconds gauge",
+        f"five_keys_bot_uptime_seconds {uptime:.0f}",
+    ]
+    branch = getattr(build_info, "GIT_BRANCH", "unknown")
+    commit = getattr(build_info, "GIT_COMMIT", "unknown")
+    lines.append(f'five_keys_bot_build_info{{branch="{branch}",commit="{commit}"}} 1')
+    return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
+
+
+async def _setup_service_app() -> web.AppRunner:
     app_web = web.Application()
-    app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web.router.add_get("/ping", _handle_ping)
+    app_web.router.add_get("/metrics", _handle_metrics)
+    if settings.RUN_TRIBUTE_WEBHOOK:
+        app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
 
     runner = web.AppRunner(app_web)
     await runner.setup()
-    site = web.TCPSite(
-        runner,
-        host=settings.WEB_HOST,
-        port=settings.TRIBUTE_PORT,
-    )
+    port = settings.TRIBUTE_PORT if settings.RUN_TRIBUTE_WEBHOOK else settings.WEB_PORT
+    site = web.TCPSite(runner, host=settings.WEB_HOST, port=port)
     await site.start()
     logging.info(
-        "Tribute webhook server at http://%s:%s%s",
+        "Service server at http://%s:%s (webhook=%s)",
         settings.WEB_HOST,
-        settings.TRIBUTE_PORT,
-        settings.TRIBUTE_WEBHOOK_PATH,
+        port,
+        settings.TRIBUTE_WEBHOOK_PATH if settings.RUN_TRIBUTE_WEBHOOK else "disabled",
     )
     return runner
+
+
+async def _setup_tribute_webhook() -> web.AppRunner:
+    startup_log.warning("_setup_tribute_webhook is deprecated; using _setup_service_app instead")
+    return await _setup_service_app()
 
 
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
@@ -242,6 +263,7 @@ async def main() -> None:
 
     routers = [
         h_start.router,
+        h_catalog.router,
         h_calc.router,
         h_calc_water.router,
         h_calc_kcal.router,
@@ -294,7 +316,7 @@ async def main() -> None:
 
     start_scheduler(bot)
 
-    runner = await _setup_tribute_webhook()
+    runner = await _setup_service_app()
     mark("S7: start_polling enter")
     try:
         await dp.start_polling(

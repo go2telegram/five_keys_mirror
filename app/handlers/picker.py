@@ -6,12 +6,12 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
 from app.products import GOAL_MAP, PRODUCTS
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
-from app.storage import SESSIONS, set_last_plan
+from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils_media import send_product_album
 
 LOG = logging.getLogger(__name__)
@@ -330,7 +330,7 @@ async def pick_finalize(c: CallbackQuery):
         "order_url": settings.velavie_url,
     }
 
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         await set_last_plan(session, c.from_user.id, plan_payload)
         await events_repo.log(
@@ -344,4 +344,4 @@ async def pick_finalize(c: CallbackQuery):
                 "season": season,
             },
         )
-        await session.commit()
+        await commit_safely(session)

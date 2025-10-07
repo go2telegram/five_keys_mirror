@@ -1,4 +1,4 @@
-.PHONY: migrate upgrade db-check dev fmt lint hooks
+.PHONY: migrate upgrade db-check dev fmt lint hooks build-products validate-products
 
 migrate:
 	@alembic revision -m "$(msg)" --autogenerate
@@ -26,3 +26,9 @@ hooks:
 	@python -m pip install pre-commit
 	@pre-commit install
 	@pre-commit run --all-files
+
+build-products:
+	@python tools/build_products.py build
+
+validate-products:
+	@python tools/build_products.py validate

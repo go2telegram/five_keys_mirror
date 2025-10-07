@@ -1,3 +1,4 @@
+from app.storage import commit_safely
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -6,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
-from app.db.session import session_scope
+from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
@@ -61,10 +62,10 @@ def _format_until(until: datetime) -> str:
 
 @router.callback_query(F.data == "sub:menu")
 async def sub_menu(c: CallbackQuery):
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         await events_repo.log(session, c.from_user.id, "subscription_menu", {})
-        await session.commit()
+        await commit_safely(session)
     await c.answer()
     markup = _kb_sub_menu()
     await c.message.edit_text(
@@ -75,7 +76,7 @@ async def sub_menu(c: CallbackQuery):
 
 @router.callback_query(F.data == "sub:check")
 async def sub_check(c: CallbackQuery):
-    async with session_scope() as session:
+    async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
         plan = sub.plan if sub else None
@@ -86,7 +87,7 @@ async def sub_check(c: CallbackQuery):
             "subscription_check",
             {"active": is_active, "plan": plan, "until": until},
         )
-        await session.commit()
+        await commit_safely(session)
 
     await c.answer()
     if is_active and sub:
