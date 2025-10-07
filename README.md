@@ -4,14 +4,50 @@
 
 ## Каталог
 
-Для обновления каталога продуктов используйте импортёр:
+Для обновления каталога продуктов используйте импортёр. Он умеет работать как с локальными файлами, так и с медиарепозиторием на GitHub и проверяет согласованность данных.
+
+### Сборка локально (offline)
+
+Перед сборкой обновите локальную ветку:
 
 ```bash
-python tools/build_products.py build
+git fetch --all --prune
+git switch main && git pull --ff-only
+```
+
+```bash
+python tools/build_products.py build \
+  --descriptions-path app/catalog/descriptions \
+  --images-dir app/static/images/products \
+  --expect-count from=images --fail-on-mismatch
+
 python tools/build_products.py validate
 ```
 
-Команды поддерживают параметры `--descriptions-url` и `--images-base`, что упрощает работу с локальными фикстурами или форками медиарепозитория.
+✅ Ожидаемая развёртка: `found_descriptions=…  found_images=38  built=38`, а затем `Catalog OK (38 products)`.
+
+### Сборка из GitHub (online)
+
+```bash
+python tools/build_products.py build \
+  --descriptions-url https://github.com/go2telegram/media/tree/main/descriptions \
+  --images-base https://raw.githubusercontent.com/go2telegram/media/main/media/products \
+  --expect-count from=images --fail-on-mismatch
+
+python tools/build_products.py validate
+```
+
+### Если внезапно не 38
+
+Команда `build` выведет `unmatched_images` и `missing_images` — изучите список и причины. Самые частые случаи:
+
+- отсутствует файл описания или картинки;
+- опечатка в имени файла/ссылке;
+- slug отличается от ожидаемого (добавьте alias или поправьте правила slug/alias).
+
+После фиксов запустите сборку повторно и проверьте результат.
+
+В Telegram можно запросить `/catalog_reload`, чтобы подтянуть актуальный JSON, и `/catalog_report`, чтобы увидеть `built=38`.
 
 ## Требования
 
