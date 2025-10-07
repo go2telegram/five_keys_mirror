@@ -21,7 +21,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from slugify import slugify
+try:  # pragma: no cover - optional dependency
+    from python_slugify import slugify as _python_slugify  # type: ignore
+except ImportError:  # pragma: no cover - fallback to vendored implementation
+    _python_slugify = None
+
+from slugify import slugify as _fallback_slugify
 
 
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
@@ -335,11 +340,25 @@ def _classify_category(text: str) -> str:
 
 
 def _slug(text: str) -> str:
-    return slugify(text, lowercase=True, language="ru")
+    prepared = text.replace("Ё", "Е").replace("ё", "е")
+    if _python_slugify is not None:
+        return _python_slugify(prepared, lowercase=True, language="ru")
+    return _fallback_slugify(prepared, lowercase=True, language="ru")
+
+
+def _normalize_slug_value(slug_value: str) -> str:
+    value = slug_value.strip()
+    if re.search(r"[А-Яа-яЁё]", value):
+        return _slug(value)
+    slug = value.lower().replace("_", "-")
+    slug = re.sub(r"[^a-z0-9-]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug).strip("-")
+    return slug
 
 
 def _tokenize_slug(slug_value: str) -> list[str]:
-    tokens = [token for token in re.split(r"[-_]+", slug_value.lower()) if token]
+    normalized = _normalize_slug_value(slug_value)
+    tokens = [token for token in re.split(r"[-_]+", normalized) if token]
     return [token for token in tokens if token not in STOPWORDS]
 
 
@@ -353,33 +372,32 @@ def _refine_slug(slug_value: str) -> str:
     return "-".join(tokens) if tokens else slug_value
 
 
-def _slug_variants(slug_value: str) -> list[str]:
-    tokens = _tokenize_slug(slug_value)
+def _slug_aliases(slug_value: str) -> set[str]:
+    normalized = _normalize_slug_value(slug_value)
+    tokens = _tokenize_slug(normalized)
     joined = "".join(tokens)
     without_digits = "".join(token for token in tokens if not token.isdigit())
-    variants = {slug_value.lower(), slug_value.lower().replace("-", ""), joined, without_digits}
-    variants.update(tokens)
-    return [variant for variant in variants if variant]
-
-
-def _build_aliases(name: str, product_id: str) -> list[str]:
-    base = re.sub(r"[^0-9A-Z]+", "_", name.upper()).strip("_")
-    parts = [part for part in base.split("_") if part]
+    stripped_digits = re.sub(r"[0-9]+", "", normalized)
+    stripped_digits = re.sub(r"-+", "-", stripped_digits).strip("-")
     variants = {
-        product_id.replace("-", "_").upper(),
+        normalized,
+        normalized.replace("-", ""),
+        normalized.replace("-", "_"),
+        joined,
+        without_digits,
+        re.sub(r"[^a-z0-9]+", "", normalized),
+        stripped_digits,
     }
-    if base:
-        variants.add(base)
-    for index in range(len(parts), 0, -1):
-        candidate = "_".join(parts[:index])
-        if candidate:
-            variants.add(candidate)
-        if parts[index - 1].isdigit():
-            shorter = "_".join(parts[: index - 1])
-            if shorter:
-                variants.add(shorter)
-    variants.update(parts)
-    return sorted({alias for alias in variants if alias})
+    variants.update(tokens)
+    return {variant for variant in variants if variant}
+
+
+def _alias_variants(slug_value: str) -> list[str]:
+    return sorted(_slug_aliases(slug_value))
+
+
+def _build_aliases(product_id: str) -> list[str]:
+    return _alias_variants(product_id)
 
 
 def _parse_block(block: ProductBlock) -> dict[str, object]:
@@ -432,9 +450,6 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
         "order": {"velavie_link": block.url},
         "available": True,
     }
-    aliases = _build_aliases(name, product_id)
-    if aliases:
-        data["aliases"] = aliases
     if usage:
         data["usage"] = usage
     if contra:
@@ -492,43 +507,59 @@ def _local_web_base(images_dir: Path) -> str:
     return web_base
 
 
-def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
-    slug_lower = slug_value.lower()
-    variants = _slug_variants(slug_lower)
+@dataclass(frozen=True)
+class ImageMatch:
+    name: str
+    alias: str | None = None
+    score: int = 0
+
+
+def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
+    slug_lower = _normalize_slug_value(slug_value)
+    aliases = _slug_aliases(slug_lower)
     sanitized_slug = re.sub(r"[^a-z0-9]", "", slug_lower)
-    prioritized: list[tuple[int, str]] = []
+    prioritized: list[tuple[int, int, str | None, str]] = []
     for candidate in candidates:
-        stem = Path(candidate).stem.lower()
-        suffix = Path(candidate).suffix.lower()
+        path = Path(candidate)
+        suffix = path.suffix.lower()
         if suffix not in IMAGE_EXTENSIONS:
             continue
-        sanitized = re.sub(r"[^a-z0-9]", "", stem)
+        stem = path.stem
+        candidate_slug = _normalize_slug_value(stem)
+        candidate_aliases = _slug_aliases(candidate_slug)
+        sanitized = re.sub(r"[^a-z0-9]", "", candidate_slug)
+        alias_intersection = aliases.intersection(candidate_aliases)
+        alias_candidates = [alias for alias in alias_intersection if alias != slug_lower]
+        alias_used = min(alias_candidates, key=len) if alias_candidates else None
         score: int | None = None
-        if stem == slug_lower:
+        if candidate_slug == slug_lower:
             score = 0
-        elif stem.startswith(slug_lower) and "main" in stem[len(slug_lower):]:
+        elif candidate_slug.startswith(slug_lower) and "main" in candidate_slug[len(slug_lower):]:
             score = 1
         elif sanitized_slug and sanitized == sanitized_slug:
             score = 2
         elif sanitized_slug and sanitized.startswith(sanitized_slug) and "main" in sanitized[len(sanitized_slug):]:
             score = 3
-        elif any(
-            variant
-            and sanitized.startswith(variant)
-            and "main" in sanitized[len(variant) :]
-            for variant in variants
-        ):
+        elif alias_intersection:
             score = 4
-        elif any(variant and sanitized == variant for variant in variants):
+            if alias_used is None:
+                alias_used = min(alias_intersection, key=len)
+        elif sanitized_slug and sanitized.startswith(sanitized_slug):
             score = 5
-        elif any(variant and sanitized.startswith(variant) for variant in variants):
-            score = 6
-        if score is not None:
-            prioritized.append((score, candidate))
+        else:
+            continue
+        main_bonus = 0 if "main" in candidate_slug else 1
+        prioritized.append((score, main_bonus, alias_used, candidate))
     if prioritized:
-        prioritized.sort()
-        return prioritized[0][1]
+        prioritized.sort(key=lambda item: (item[0], item[1], item[3]))
+        score, _main_bonus, alias_used, candidate = prioritized[0]
+        return ImageMatch(name=candidate, alias=alias_used, score=score)
     return None
+
+
+def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
+    match = _match_image(slug_value, candidates)
+    return match.name if match else None
 
 
 def _resolve_image(
@@ -539,11 +570,16 @@ def _resolve_image(
     image_base: str,
 ) -> None:
     product_id = str(product["id"])
-    image_name = _choose_image(product_id, image_files)
-    if not image_name:
+    match = _match_image(product_id, image_files)
+    if not match:
         logging.warning("No image for %s", product_id)
         product["available"] = False
         return
+    if match.alias is not None and match.alias != product_id:
+        aliases = _build_aliases(product_id)
+        if aliases:
+            product["aliases"] = aliases
+    image_name = match.name
     if image_mode == "remote":
         base = image_base if image_base.endswith("/") else image_base + "/"
         url = urljoin(base, image_name)
