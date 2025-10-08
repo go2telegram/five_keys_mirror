@@ -37,6 +37,7 @@ async def test_quiz_deficits_flow(monkeypatch):
     monkeypatch.setattr(quiz_deficits.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(quiz_deficits, "set_last_plan", AsyncMock())
     monkeypatch.setattr(quiz_deficits.events_repo, "log", AsyncMock())
+    monkeypatch.setattr(quiz_deficits.quiz_results_repo, "save", AsyncMock())
     send_mock = AsyncMock()
     monkeypatch.setattr(quiz_deficits, "send_product_cards", send_mock)
 
@@ -48,6 +49,7 @@ async def test_quiz_deficits_flow(monkeypatch):
 
     quiz_deficits.set_last_plan.assert_awaited()
     quiz_deficits.events_repo.log.assert_awaited()
+    quiz_deficits.quiz_results_repo.save.assert_awaited()
     send_mock.assert_awaited()
     assert user_id not in quiz_deficits.SESSIONS
 
@@ -58,6 +60,7 @@ async def test_quiz_stress2_flow(monkeypatch):
     monkeypatch.setattr(quiz_stress2.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(quiz_stress2, "set_last_plan", AsyncMock())
     monkeypatch.setattr(quiz_stress2.events_repo, "log", AsyncMock())
+    monkeypatch.setattr(quiz_stress2.quiz_results_repo, "save", AsyncMock())
     send_mock = AsyncMock()
     monkeypatch.setattr(quiz_stress2, "send_product_cards", send_mock)
 
@@ -68,6 +71,7 @@ async def test_quiz_stress2_flow(monkeypatch):
 
     quiz_stress2.set_last_plan.assert_awaited()
     quiz_stress2.events_repo.log.assert_awaited()
+    quiz_stress2.quiz_results_repo.save.assert_awaited()
     send_mock.assert_awaited()
 
 
@@ -77,6 +81,7 @@ async def test_quiz_skin_joint_flow(monkeypatch):
     monkeypatch.setattr(quiz_skin_joint.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(quiz_skin_joint, "set_last_plan", AsyncMock())
     monkeypatch.setattr(quiz_skin_joint.events_repo, "log", AsyncMock())
+    monkeypatch.setattr(quiz_skin_joint.quiz_results_repo, "save", AsyncMock())
     send_mock = AsyncMock()
     monkeypatch.setattr(quiz_skin_joint, "send_product_cards", send_mock)
 
@@ -87,6 +92,7 @@ async def test_quiz_skin_joint_flow(monkeypatch):
 
     quiz_skin_joint.set_last_plan.assert_awaited()
     quiz_skin_joint.events_repo.log.assert_awaited()
+    quiz_skin_joint.quiz_results_repo.save.assert_awaited()
     send_mock.assert_awaited()
 
 

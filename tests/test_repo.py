@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
-from app.repo import events, leads, referrals, subscriptions, users
+from app.repo import events, leads, quiz_results, referrals, subscriptions, users
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
@@ -163,5 +163,28 @@ def test_events_notify():
             recipients = await events.notify_recipients(session)
             assert 1 in recipients
             assert 2 not in recipients
+
+    run(_test())
+
+
+def test_quiz_results_repo():
+    async def _test():
+        async with SessionManager() as session:
+            await users.get_or_create_user(session, 77, "quiz_user")
+            await quiz_results.save(
+                session,
+                user_id=77,
+                quiz_name="energy",
+                score=9,
+                tags={"level": "mild"},
+            )
+            await session.commit()
+
+            stored = await quiz_results.list_by_user(session, 77)
+            assert len(stored) == 1
+            item = stored[0]
+            assert item.quiz_name == "energy"
+            assert item.score == 9
+            assert item.tags.get("level") == "mild"
 
     run(_test())

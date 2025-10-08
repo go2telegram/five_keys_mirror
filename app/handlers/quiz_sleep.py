@@ -6,7 +6,7 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.repo import events as events_repo, quiz_results as quiz_results_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 
 router = Router()
@@ -140,6 +140,13 @@ async def quiz_sleep_step(c: CallbackQuery):
                 c.from_user.id,
                 "quiz_finish",
                 {"quiz": "sleep", "score": total, "level": level_label},
+            )
+            await quiz_results_repo.save(
+                session,
+                user_id=c.from_user.id,
+                quiz_name="sleep",
+                score=total,
+                tags={"level": level_key, "context": ctx},
             )
             await commit_safely(session)
 

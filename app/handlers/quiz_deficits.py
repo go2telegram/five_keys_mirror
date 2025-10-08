@@ -11,7 +11,7 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.repo import events as events_repo, quiz_results as quiz_results_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 
 router = Router(name="quiz_deficits")
@@ -214,6 +214,8 @@ async def _finish_quiz(c: CallbackQuery) -> None:
         "order_url": settings.velavie_url,
     }
 
+    total_score = sum(scores.values())
+
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, user_id, c.from_user.username)
         await set_last_plan(session, user_id, plan_payload)
@@ -227,6 +229,13 @@ async def _finish_quiz(c: CallbackQuery) -> None:
                 "levels": levels,
                 "overall": level_key,
             },
+        )
+        await quiz_results_repo.save(
+            session,
+            user_id=user_id,
+            quiz_name="deficits",
+            score=total_score,
+            tags={"levels": levels, "overall": level_key},
         )
         await commit_safely(session)
 
