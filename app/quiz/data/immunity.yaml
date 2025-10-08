@@ -3,6 +3,7 @@ cover: "immunity/cover.png"
 questions:
   - id: infections
     text: "Простужаешься чаще трёх раз в год?"
+    hint: "Вспомни последние 12 месяцев и оцени частоту простуд."
     image: "immunity/q1.png"
     options:
       - key: rarely
@@ -19,6 +20,7 @@ questions:
         tags: ["immunity"]
   - id: recovery
     text: "Как быстро проходит болезнь?"
+    hint: "Подумай, сколько дней обычно требуется на восстановление."
     image: "immunity/q2.png"
     options:
       - key: fast
@@ -35,6 +37,7 @@ questions:
         tags: ["vitamin_d3"]
   - id: lifestyle
     text: "Есть хронический стресс или недосып?"
+    hint: "Оцени, насколько стабилен твой сон и уровень стресса."
     image: "immunity/q3.png"
     options:
       - key: calm
@@ -51,6 +54,7 @@ questions:
         tags: ["probiotic"]
   - id: digestion
     text: "Регулярно ли есть овощи, клетчатка и пробиотики?"
+    hint: "Представь типичный рацион в течение недели."
     image: "immunity/q4.png"
     options:
       - key: balanced
@@ -67,6 +71,7 @@ questions:
         tags: ["fiber", "probiotic"]
   - id: support
     text: "Принимаешь ли курсы витаминов или пробиотиков?"
+    hint: "Вспомни, как часто проходишь поддерживающие курсы."
     image: "immunity/q5.png"
     options:
       - key: regular

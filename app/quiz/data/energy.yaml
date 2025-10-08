@@ -3,6 +3,7 @@ cover: "energy/cover.png"
 questions:
   - id: q1
     text: "Как часто чувствуешь упадок сил днём?"
+    hint: "Выбери вариант, который ближе всего к твоему состоянию."
     image: "energy/q1.png"
     options:
       - key: rarely
@@ -19,6 +20,7 @@ questions:
         tags: ["energy", "mitochondria"]
   - id: q2
     text: "Какой у тебя сон?"
+    hint: "Отметь качество сна, которое бывает чаще всего."
     image: "energy/q2.png"
     options:
       - key: deep
@@ -35,6 +37,7 @@ questions:
         tags: ["sleep_focus"]
   - id: q3
     text: "Сколько чашек кофе в день?"
+    hint: "Посчитай среднее количество кофеина за день."
     image: "energy/q3.png"
     options:
       - key: none
@@ -51,6 +54,7 @@ questions:
         tags: ["overstim"]
   - id: q4
     text: "Лёгкость подъёма по утрам?"
+    hint: "Выбери, как обычно проходит твоё утро."
     image: "energy/q4.png"
     options:
       - key: easy
@@ -67,6 +71,7 @@ questions:
         tags: ["adaptogens", "mct"]
   - id: q5
     text: "Физическая активность в неделю?"
+    hint: "Оцени среднюю нагрузку за последнюю пару недель."
     image: "energy/q5.png"
     options:
       - key: none

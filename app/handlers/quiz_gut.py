@@ -133,7 +133,7 @@ async def quiz_gut_step(c: CallbackQuery):
             cards,
             bullets=actions,
             headline=notes,
-            back_cb="quiz:menu",
+            back_cb="tests:menu",
         )
 
         SESSIONS.pop(c.from_user.id, None)

@@ -3,6 +3,7 @@ cover: "gut/cover.png"
 questions:
   - id: q1
     text: "Как часто испытываешь вздутие или тяжесть после еды?"
+    hint: "Вспомни ощущения в последние недели и выбери подходящий вариант."
     image: "gut/q1.png"
     options:
       - key: rarely
@@ -19,6 +20,7 @@ questions:
         tags: ["gut", "probiotic"]
   - id: q2
     text: "Сколько клетчатки (овощи, цельные продукты) в рационе?"
+    hint: "Оцени, насколько регулярно на тарелке есть овощи и цельные продукты."
     image: "gut/q2.png"
     options:
       - key: plenty
@@ -35,6 +37,7 @@ questions:
         tags: ["fiber", "digest_support"]
   - id: q3
     text: "Как часто принимаешь пробиотики или ферментированные продукты?"
+    hint: "Подумай про кефир, йогурты, ферментированные продукты и добавки."
     image: "gut/q3.png"
     options:
       - key: weekly
@@ -51,6 +54,7 @@ questions:
         tags: ["probiotic", "gut"]
   - id: q4
     text: "Наблюдаются ли проблемы с кожей или суставами, связанные с ЖКТ?"
+    hint: "Если замечаешь связь с питанием, отметь частоту проявлений."
     image: "gut/q4.png"
     options:
       - key: none
@@ -67,6 +71,7 @@ questions:
         tags: ["collagen", "gut"]
   - id: q5
     text: "Как часто болеешь простудными заболеваниями?"
+    hint: "Вспомни, сколько раз заболевал за последний год."
     image: "gut/q5.png"
     options:
       - key: rare

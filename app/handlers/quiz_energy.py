@@ -98,7 +98,7 @@ async def _on_finish_energy(
             cards,
             bullets=actions,
             headline=notes,
-            back_cb="quiz:menu",
+            back_cb="tests:menu",
         )
 
     return True

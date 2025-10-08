@@ -21,6 +21,10 @@ from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from urllib.parse import urlparse
 
+from app.db.session import compat_session, session_scope
+from app.repo import quiz_results as quiz_results_repo, users as users_repo
+from app.storage import commit_safely
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(__file__).resolve().parent / "data"
 IMAGE_ROOT = PROJECT_ROOT / "app" / "static" / "images" / "quiz"
@@ -36,6 +40,8 @@ DEFAULT_REMOTE_BASE = (
 _quiz_mode = os.getenv("QUIZ_IMAGE_MODE", "remote").strip().lower()
 QUIZ_IMAGE_MODE = _quiz_mode if _quiz_mode in {"remote", "local"} else "remote"
 QUIZ_REMOTE_BASE = os.getenv("QUIZ_IMG_BASE", DEFAULT_REMOTE_BASE).rstrip("/")
+
+DEFAULT_HINT = "Выбери вариант ответа ниже."
 
 
 class QuizSession(StatesGroup):
@@ -59,6 +65,7 @@ class QuizQuestion:
     text: str
     options: list[QuizOption]
     image: str | None = None
+    hint: str | None = None
 
 
 @dataclass
@@ -256,6 +263,8 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
             origin=call,
         )
 
+        await _store_quiz_result(call, definition, result_context)
+
         handled = False
         hooks = QUIZ_HOOKS.get(quiz_name)
         if hooks and hooks.on_finish:
@@ -339,11 +348,13 @@ def _parse_question(raw: dict[str, Any]) -> QuizQuestion:
 
     text = str(raw.get("text", ""))
     image = raw.get("image")
+    hint_raw = raw.get("hint")
+    hint = str(hint_raw).strip() if isinstance(hint_raw, str) and hint_raw.strip() else None
     options = [_parse_option(opt) for opt in raw.get("options", [])]
     if not options:
         raise ValueError(f"Question {qid} must define answer options")
 
-    return QuizQuestion(id=qid, text=text, options=options, image=image)
+    return QuizQuestion(id=qid, text=text, options=options, image=image, hint=hint)
 
 
 def _parse_option(raw: dict[str, Any]) -> QuizOption:
@@ -403,9 +414,23 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
     total = len(definition.questions)
     question = definition.questions[index]
 
+    with suppress(Exception):
+        await message.answer_chat_action("typing")
+
     header = definition.title if index == 0 else ""
     prefix = f"Вопрос {index + 1}/{total}:\n"
-    text = f"{header}\n\n{prefix}{question.text}" if header else f"{prefix}{question.text}"
+    lines: list[str] = []
+    if header:
+        lines.append(header)
+        lines.append("")
+    lines.append(f"{prefix}{question.text}")
+
+    hint = question.hint or DEFAULT_HINT
+    if hint:
+        lines.append("")
+        lines.append(f"<i>{hint}</i>")
+
+    text = "\n".join(lines).strip()
 
     kb = InlineKeyboardBuilder()
     for opt_idx, option in enumerate(question.options):
@@ -415,9 +440,10 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
         )
     if index > 0:
         kb.button(
-            text="⬅️ Назад",
+            text="◀️ К предыдущему",
             callback_data=f"tests:back:{definition.name}:{index}",
         )
+    kb.button(text="⬅️ Назад", callback_data="tests:menu")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)
 
@@ -452,6 +478,27 @@ async def _send_default_result(
         text += f"\nanswers: {answers_line}"
 
     await message.answer(text)
+
+
+async def _store_quiz_result(
+    call: CallbackQuery,
+    definition: QuizDefinition,
+    result: QuizResultContext,
+) -> None:
+    user = getattr(call, "from_user", None)
+    user_id = getattr(user, "id", None)
+    username = getattr(user, "username", None)
+
+    try:
+        async with compat_session(session_scope) as session:
+            if user_id:
+                await users_repo.get_or_create_user(session, int(user_id), username)
+            await quiz_results_repo.save_result(session, user_id, definition, result)
+            await commit_safely(session)
+    except Exception:
+        logger.exception(
+            "Failed to persist quiz result for %s", definition.name,
+        )
 
 
 async def _send_photo(

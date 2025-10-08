@@ -2,6 +2,7 @@ import asyncio
 import json
 import sys
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from aiogram.fsm.context import FSMContext
@@ -40,6 +41,7 @@ class DummyMessage:
         self.photo = None
         self.reply_markup = None
         self.deleted = False
+        self.actions = []
 
     async def answer(self, text: str, reply_markup=None):
         child = DummyMessage()
@@ -58,6 +60,9 @@ class DummyMessage:
 
     async def delete(self):
         self.deleted = True
+
+    async def answer_chat_action(self, action: str):
+        self.actions.append(action)
 
 
 class DummyCallback:
@@ -94,6 +99,7 @@ def _write_quiz(tmp_path, name="sample", *, with_images=True):
                 {"key": "a", "text": "A", "score": 1, "tags": [f"tag{idx+1}"]},
                 {"key": "b", "text": "B", "score": 2, "tags": [f"tag{idx+1}"]},
             ],
+            "hint": f"Hint {idx+1}",
         }
         if with_images:
             question["image"] = f"folder/q{idx+1}.png"
@@ -130,6 +136,9 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
         _write_quiz(quiz_tmp)
         hook_calls = []
 
+        store_mock = AsyncMock()
+        monkeypatch.setattr(engine, "_store_quiz_result", store_mock)
+
         async def _on_finish(user_id, definition, result):
             hook_calls.append((user_id, definition.name, result.total_score, tuple(sorted(result.collected_tags))))
             return False
@@ -156,6 +165,7 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
 
             assert await state.get_state() is None
             assert hook_calls == [(callback.from_user.id, "sample", 5, ("tag1", "tag2", "tag3", "tag4", "tag5"))]
+            store_mock.assert_awaited()
         finally:
             await state.storage.close()
 
@@ -172,6 +182,8 @@ def test_quiz_without_images(monkeypatch, quiz_tmp):
 
             question_message = entry_message.children[-1]
             assert "Вопрос 1/5" in question_message.text
+            assert "Hint 1" in question_message.text
+            assert engine.DEFAULT_HINT not in question_message.text
         finally:
             await state.storage.close()
 

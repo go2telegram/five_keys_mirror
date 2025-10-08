@@ -46,6 +46,9 @@ class User(Base):
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
+    quiz_results: Mapped[list["QuizResult"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Subscription(Base):
@@ -118,3 +121,23 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class QuizResult(Base):
+    __tablename__ = "quiz_results"
+    __table_args__ = (
+        Index("ix_quiz_results_user", "user_id"),
+        Index("ix_quiz_results_quiz", "quiz"),
+    )
+
+    id: Mapped[int] = mapped_column(_bigint_pk, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    quiz: Mapped[str] = mapped_column(String(64), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    level: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    payload: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user: Mapped[Optional[User]] = relationship(back_populates="quiz_results")

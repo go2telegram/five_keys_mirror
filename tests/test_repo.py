@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
-from app.repo import events, leads, referrals, subscriptions, users
+from app.repo import events, leads, quiz_results, referrals, subscriptions, users
+from app.quiz.engine import QuizDefinition, QuizOption, QuizQuestion, QuizResultContext, QuizThreshold
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
@@ -163,5 +164,37 @@ def test_events_notify():
             recipients = await events.notify_recipients(session)
             assert 1 in recipients
             assert 2 not in recipients
+
+    run(_test())
+
+
+def test_quiz_results_save():
+    async def _test():
+        async with SessionManager() as session:
+            option = QuizOption(key="a", text="Yes", score=3, tags=["ok"])
+            question = QuizQuestion(id="q1", text="How?", options=[option], image=None, hint="Hint")
+            threshold = QuizThreshold(min=0, max=10, label="Good", advice="Keep going", tags=["ok"])
+            definition = QuizDefinition(
+                name="demo",
+                title="Demo",
+                questions=[question],
+                thresholds=[threshold],
+                cover=None,
+            )
+            result = QuizResultContext(
+                total_score=3,
+                chosen_options={"q1": option},
+                collected_tags=["ok"],
+                threshold=threshold,
+                origin=None,
+            )
+
+            entry = await quiz_results.save_result(session, 7, definition, result)
+            await session.commit()
+
+            assert entry.id is not None
+            assert entry.user_id == 7
+            assert entry.quiz == "demo"
+            assert entry.payload["answers"]["q1"]["text"] == "Yes"
 
     run(_test())

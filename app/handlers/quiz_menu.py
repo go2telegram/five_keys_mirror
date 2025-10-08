@@ -1,15 +1,28 @@
-# app/handlers/quiz_menu.py
+"""Handlers for opening the quiz/tests menu."""
+
+from contextlib import suppress
+
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from app.keyboards import kb_quiz_menu
+from app.keyboards import kb_tests_menu
 
 router = Router()
 
+MENU_TEXT = (
+    "🧠 <b>Тесты</b>\n\n"
+    "Выбери направление, чтобы пройти экспресс-опрос и получить рекомендации."
+)
 
-@router.callback_query(F.data == "quiz:menu")
-async def quiz_menu(c: CallbackQuery):
+
+@router.callback_query(F.data.in_({"quiz:menu", "tests:menu"}))
+async def quiz_menu(c: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
     await c.answer()
-    await c.message.edit_text(
-        "🗂 <b>Все квизы</b>\n\nВыбери ключ здоровья, который хочешь проверить:", reply_markup=kb_quiz_menu()
-    )
+    if not c.message:
+        return
+    with suppress(Exception):
+        await c.message.edit_text(MENU_TEXT, reply_markup=kb_tests_menu())
+        return
+    await c.message.answer(MENU_TEXT, reply_markup=kb_tests_menu())

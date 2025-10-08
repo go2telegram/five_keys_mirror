@@ -69,7 +69,7 @@ def _keyboard(idx: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for _, (label, value) in enumerate(answers):
         kb.button(text=label, callback_data=f"q:skin_joint:{idx}:{value}")
-    kb.button(text="⬅️ Назад", callback_data="quiz:menu")
+    kb.button(text="⬅️ Назад", callback_data="tests:menu")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 1, 1, 2)
     return kb.as_markup()
@@ -169,5 +169,5 @@ async def _finish_quiz(c: CallbackQuery) -> None:
         cards,
         bullets=actions,
         headline=notes,
-        back_cb="quiz:menu",
+            back_cb="tests:menu",
     )

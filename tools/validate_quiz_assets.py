@@ -42,10 +42,12 @@ def main() -> int:
         if cover:
             total_files += 1
 
-        for question in data.get("questions", []) or []:
-            qid = question.get("id", "<unknown>")
+        questions = data.get("questions", []) or []
+        for idx, question in enumerate(questions):
+            qid = question.get("id", f"#{idx + 1}")
             image_path = question.get("image")
             missing += _check_asset(quiz_name, f"question {qid}", image_path)
+            missing += _check_question(quiz_name, qid, question)
             if image_path:
                 total_files += 1
 
@@ -96,6 +98,35 @@ def _check_asset(quiz: str, label: str, path_str: str | None) -> int:
 
     print(f"WARN [{quiz}] {label}: file not found (searched {len(candidates)} locations)")
     return 1
+
+
+def _check_question(quiz: str, qid: str, question: dict[str, Any]) -> int:
+    issues = 0
+    text = question.get("text")
+    if not isinstance(text, str) or not text.strip():
+        print(f"WARN [{quiz}] question {qid}: missing text")
+        issues += 1
+
+    options = question.get("options") or []
+    if not options:
+        print(f"WARN [{quiz}] question {qid}: no answer options")
+        issues += 1
+    else:
+        for idx, opt in enumerate(options):
+            if not isinstance(opt, dict):
+                print(f"WARN [{quiz}] question {qid}: option #{idx + 1} is not a mapping")
+                issues += 1
+                continue
+            if not opt.get("text"):
+                print(f"WARN [{quiz}] question {qid}: option #{idx + 1} has empty text")
+                issues += 1
+
+    hint = question.get("hint")
+    if not isinstance(hint, str) or not hint.strip():
+        print(f"WARN [{quiz}] question {qid}: missing hint text")
+        issues += 1
+
+    return issues
 
 
 def _normalize_relative(path: Path) -> Path:

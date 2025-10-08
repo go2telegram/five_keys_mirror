@@ -3,6 +3,7 @@ cover: "sleep/cover.png"
 questions:
   - id: q1
     text: "Как быстро засыпаешь после отбоя?"
+    hint: "Вспомни последние вечера и оцени среднее время засыпания."
     image: "sleep/q1.png"
     options:
       - key: fast
@@ -19,6 +20,7 @@ questions:
         tags: ["sleep_support", "sleep_calm", "magnesium"]
   - id: q2
     text: "Просыпаешься ли среди ночи?"
+    hint: "Отметь вариант, который чаще всего повторяется."
     image: "sleep/q2.png"
     options:
       - key: rarely
@@ -35,6 +37,7 @@ questions:
         tags: ["sleep_support", "sleep_calm", "glycine"]
   - id: q3
     text: "Сколько экранного времени за час до сна?"
+    hint: "Подумай про телефон, ноутбук и телевизор перед сном."
     image: "sleep/q3.png"
     options:
       - key: low
@@ -51,6 +54,7 @@ questions:
         tags: ["sleep_support", "sleep_calm", "magnesium"]
   - id: q4
     text: "Есть ли расслабляющий ритуал перед сном (ванна, чтение, дыхание)?"
+    hint: "Вспомни, как часто удаётся уделить время расслаблению."
     image: "sleep/q4.png"
     options:
       - key: yes
@@ -67,6 +71,7 @@ questions:
         tags: ["sleep_support", "sleep_calm", "glycine"]
   - id: q5
     text: "Как ощущаешь себя утром после пробуждения?"
+    hint: "Выбери ощущение, которое повторяется большую часть времени."
     image: "sleep/q5.png"
     options:
       - key: fresh
@@ -83,6 +88,7 @@ questions:
         tags: ["sleep_support", "magnesium", "mct"]
   - id: q6
     text: "Как часто ужинаешь поздно или плотно за 2 часа до сна?"
+    hint: "Оцени привычный график ужинов за последнюю пару недель."
     image: "sleep/q6.png"
     options:
       - key: early

@@ -3,6 +3,7 @@ cover: "stress/cover.png"
 questions:
   - id: q1
     text: "Как часто чувствуешь нервное напряжение?"
+    hint: "Отметь частоту, которая лучше всего описывает твои будни."
     image: "stress/q1.png"
     options:
       - key: calm
@@ -19,6 +20,7 @@ questions:
         tags: ["stress_support", "adaptogens"]
   - id: q2
     text: "Как спишь в последние недели?"
+    hint: "Оцени качество сна за последнюю пару недель."
     image: "stress/q2.png"
     options:
       - key: good
@@ -35,6 +37,7 @@ questions:
         tags: ["magnesium", "adaptogens"]
   - id: q3
     text: "Сколько кофеина получаешь в день?"
+    hint: "Учти кофе, чай, матча и энергетики."
     image: "stress/q3.png"
     options:
       - key: low
@@ -51,6 +54,7 @@ questions:
         tags: ["reduce_caffeine", "adaptogens"]
   - id: q4
     text: "Как реагируешь на неожиданные задачи?"
+    hint: "Вспомни недавние стрессовые ситуации и свою реакцию."
     image: "stress/q4.png"
     options:
       - key: focused
@@ -67,6 +71,7 @@ questions:
         tags: ["adaptogens", "magnesium"]
   - id: q5
     text: "Есть ли мышечные зажимы или головные боли?"
+    hint: "Отметь, насколько часто тело сигнализирует о напряжении."
     image: "stress/q5.png"
     options:
       - key: none
@@ -83,6 +88,7 @@ questions:
         tags: ["magnesium", "adaptogens"]
   - id: q6
     text: "Чем обычно помогаешь себе расслабиться?"
+    hint: "Выбери способ, к которому чаще всего прибегаешь."
     image: "stress/q6.png"
     options:
       - key: movement

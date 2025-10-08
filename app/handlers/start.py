@@ -13,8 +13,8 @@ from app.db.session import compat_session, session_scope
 from app.keyboards import (
     kb_goal_menu,
     kb_onboarding_entry,
-    kb_quiz_menu,
     kb_recommendation_prompt,
+    kb_tests_menu,
     kb_yes_no,
 )
 from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
@@ -155,7 +155,7 @@ async def onboarding_tests(c: CallbackQuery) -> None:
     await c.answer()
     await c.message.answer(
         "Выбирай тест, чтобы получить персональный план:",
-        reply_markup=kb_quiz_menu(),
+        reply_markup=kb_tests_menu(),
     )
 
 

@@ -6,13 +6,21 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.products import BUY_URLS, PRODUCTS
 
+_TEST_MENU_ITEMS = [
+    ("⚡ Энергия", "energy"),
+    ("😴 Сон", "sleep"),
+    ("😰 Стресс", "stress"),
+    ("🛡 Иммунитет", "immunity"),
+    ("🌿 ЖКТ", "gut"),
+]
+
 # ---------- Главное меню ----------
 
 
 def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
+    kb.button(text="🧠 Тесты", callback_data="tests:menu")
     kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
     kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
@@ -37,7 +45,7 @@ def kb_onboarding_entry() -> InlineKeyboardMarkup:
 
     kb = InlineKeyboardBuilder()
     kb.button(text="💊 Подбор продукта", callback_data="onboard:product")
-    kb.button(text="🧪 Пройти тесты", callback_data="onboard:tests")
+    kb.button(text="🧠 Тесты", callback_data="tests:menu")
     kb.button(text="🎁 Регистрация", callback_data="onboard:register")
     kb.adjust(1)
     return kb.as_markup()
@@ -55,19 +63,19 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
 # ---------- Меню «Все квизы» ----------
 
 
-def kb_quiz_menu() -> InlineKeyboardMarkup:
+def kb_tests_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="⚡ Энергия", callback_data="quiz:energy")
-    kb.button(text="🛡 Иммунитет", callback_data="quiz:immunity")
-    kb.button(text="🌿 ЖКТ", callback_data="quiz:gut")
-    kb.button(text="😴 Сон", callback_data="quiz:sleep")
-    kb.button(text="🧠 Стресс", callback_data="quiz:stress")
-    kb.button(text="🩸 Дефициты", callback_data="quiz:deficits")
-    kb.button(text="🧘 Стресс 2.0", callback_data="quiz:stress2")
-    kb.button(text="✨ Кожа и суставы", callback_data="quiz:skin_joint")
+    for title, slug in _TEST_MENU_ITEMS:
+        kb.button(text=title, callback_data=f"tests:{slug}")
     kb.button(text="⬅️ Назад", callback_data="home:main")
-    kb.adjust(2, 2, 2, 2, 1)
+    kb.adjust(2, 2, 1)
     return kb.as_markup()
+
+
+def kb_quiz_menu() -> InlineKeyboardMarkup:
+    """Backward-compatible alias for legacy imports."""
+
+    return kb_tests_menu()
 
 
 # ---------- Да / Нет ----------
