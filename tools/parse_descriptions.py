@@ -15,9 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import tools.build_products as bp
+
 from tools.build_products import (
     ProductBlock,
     _alias_variants,
+    _canonical_title,
     _join_paragraphs,
     _normalize_space,
     _section_for_line,
@@ -105,21 +108,30 @@ def _build_record(block: ProductBlock) -> dict[str, object]:
     if not block.lines:
         raise ValueError(f"Empty block in {block.origin}")
     title = block.lines[0]
-    product_id = _refine_slug(_slug(title))
+    canonical_title = _canonical_title(block.lines)
+    product_id = _refine_slug(_slug(canonical_title))
     tags = sorted({token for token in _tokenize_slug(product_id) if token})
     aliases = _alias_variants(product_id)
     section_data = _collect_section(block)
     description = section_data.get("description", "")
     short = section_data.get("short") or description or title
     section_data["short"] = short
+    buy_url = _normalize_url(block.url)
     data = {
         "title": title,
         "id": product_id,
-        "buy_url": _normalize_url(block.url),
+        "buy_url": buy_url,
         "tags": tags,
         "aliases": aliases,
     }
     data.update(section_data)
+    overrides = bp.DESCRIPTION_OVERRIDES.get(product_id)
+    if overrides:
+        if "buy_url" in overrides:
+            data["buy_url"] = overrides["buy_url"]
+        for key, value in overrides.items():
+            if key != "buy_url":
+                data[key] = value
     return data
 
 

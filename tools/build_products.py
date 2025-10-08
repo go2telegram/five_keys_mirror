@@ -77,6 +77,29 @@ CATEGORY_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 STOPWORDS = {"t8", "era", "nash", "t8era"}
 
+BRAND_NAME_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^(?:T8|Т8)\s+ERA\b", re.IGNORECASE),
+    re.compile(r"^(?:T8|Т8)\b", re.IGNORECASE),
+    re.compile(r"^NASH\b", re.IGNORECASE),
+    re.compile(r"^VIMI\b", re.IGNORECASE),
+    re.compile(r"^VITEN\b", re.IGNORECASE),
+    re.compile(r"^ERA\b", re.IGNORECASE),
+)
+
+DESCRIPTION_OVERRIDES: Mapping[str, dict[str, str]] = {
+    "t8-era-mit-up": {
+        "usage": "По 1 стику в день утром за 30 минут до еды. Упаковка рассчитана на 21 день.",
+    },
+    "t8-blend-90": {
+        "buy_url": "https://vlv-shop.ru/ru-ru/app/catalog/18/39090?ref=735861",
+        "composition": "сывороточный протеин и таёжные ягоды помогают поддерживать организм.",
+    },
+    "t8-stekla-black-96": {
+        "usage": "Надевать за 2 часа до сна.",
+        "contra": "Нет.",
+    },
+}
+
 
 class CatalogBuildError(RuntimeError):
     """Raised when the catalog cannot be built."""
@@ -365,6 +388,47 @@ def _classify_category(text: str) -> str:
     return "general"
 
 
+def _normalize_title_candidate(text: str) -> str:
+    candidate = text.strip().strip("«»\"'“”")
+    if not candidate:
+        return ""
+    candidate = re.split(r"[—–]", candidate, maxsplit=1)[0].strip()
+    suffix_numbers: list[str] = []
+    for match in re.findall(r"\(([^)]*)\)", candidate):
+        digits = re.findall(r"\d+", match)
+        if not digits:
+            continue
+        if re.search(r"%(?:\s|$)", match) or re.search(r"капсул", match, re.IGNORECASE):
+            suffix_numbers.extend(digits)
+    candidate = re.sub(r"\s*\([^)]*\)", "", candidate).strip()
+    candidate = re.sub(r"\s+с\s+[^,]+$", "", candidate, flags=re.IGNORECASE)
+    if suffix_numbers:
+        candidate = f"{candidate} {' '.join(suffix_numbers)}".strip()
+    return candidate
+
+
+def _has_brand_prefix(text: str) -> bool:
+    normalized = text.strip()
+    if not normalized:
+        return False
+    return any(pattern.match(normalized) for pattern in BRAND_NAME_PATTERNS)
+
+
+def _canonical_title(lines: Sequence[str]) -> str:
+    if not lines:
+        raise CatalogBuildError("Empty product block")
+    primary = _normalize_title_candidate(lines[0])
+    if _has_brand_prefix(primary):
+        return primary
+    for line in lines[1:]:
+        if not line.strip():
+            break
+        candidate = _normalize_title_candidate(line)
+        if _has_brand_prefix(candidate):
+            return candidate
+    return primary
+
+
 def _slug(text: str) -> str:
     prepared = text.replace("Ё", "Е").replace("ё", "е")
     if _python_slugify is not None:
@@ -393,7 +457,8 @@ def _refine_slug(slug_value: str) -> str:
     if tokens and tokens[-1] in {"kapsul", "capsules"}:
         tokens.pop()
     if tokens and tokens[-1].isdigit():
-        if int(tokens[-1]) <= 50:
+        last = int(tokens[-1])
+        if last <= 50 and not (len(tokens) >= 2 and tokens[-2] in {"omega"}):
             tokens.pop()
     return "-".join(tokens) if tokens else slug_value
 
@@ -415,6 +480,15 @@ def _slug_aliases(slug_value: str) -> set[str]:
         stripped_digits,
     }
     variants.update(tokens)
+    for prefix in ("t8-era-", "t8-", "nash-"):
+        if normalized.startswith(prefix):
+            variants.add(normalized[len(prefix) :])
+    parts = normalized.split("-")
+    if len(parts) > 1 and parts[-1].isdigit():
+        without_last = "-".join(parts[:-1])
+        if without_last:
+            variants.add(without_last)
+            variants.add(without_last.replace("-", "_"))
     return {variant for variant in variants if variant}
 
 
@@ -433,6 +507,7 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
     if not lines:
         raise CatalogBuildError(f"Empty product block in {block.origin}")
     name = lines[0]
+    canonical_name = _canonical_title(lines)
     remainder = lines[1:]
     section_data: dict[str, list[str]] = defaultdict(list)
     body: list[str] = []
@@ -463,7 +538,7 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
         [part for part in section_data.get("composition", []) if part]
     )
     category = _classify_category(name + "\n" + description)
-    product_id = _refine_slug(_slug(name))
+    product_id = _refine_slug(_slug(canonical_name))
     tags = sorted({token for token in _tokenize_slug(product_id) if token})
     data: dict[str, object] = {
         "id": product_id,
@@ -482,6 +557,16 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
         data["contra"] = contra
     if composition:
         data["composition"] = composition
+    overrides = DESCRIPTION_OVERRIDES.get(product_id)
+    if overrides:
+        for key, value in overrides.items():
+            if key == "buy_url":
+                data.setdefault("order", {})
+                order = data["order"]
+                if isinstance(order, dict):
+                    order["velavie_link"] = value
+            else:
+                data[key] = value
     return data
 
 
@@ -496,10 +581,11 @@ def _load_products(texts: list[tuple[str, str]]) -> list[dict[str, object]]:
 
 
 def _dedupe_products(
-    products: Iterable[dict[str, object]], *, dedupe: bool = True
+    products: Iterable[dict[str, object]], *, dedupe: bool = True, strict: bool = False
 ) -> list[dict[str, object]]:
     normalized: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
+    duplicates: list[tuple[str, str]] = []
     for product in products:
         title = str(product.get("title", "")).strip()
         order = product.get("order") if isinstance(product.get("order"), dict) else None
@@ -514,11 +600,19 @@ def _dedupe_products(
             order["velavie_link"] = url
         key = (title.lower(), url)
         if dedupe and key in seen:
+            duplicates.append((title, url))
+            if strict:
+                raise CatalogBuildError(
+                    f"Duplicate product description for '{title}' ({url})"
+                )
             continue
         seen.add(key)
         normalized.append(product)
     if not normalized:
         raise CatalogBuildError("No products parsed from descriptions")
+    if strict and duplicates:
+        titles = ", ".join(sorted({title for title, _ in duplicates}))
+        raise CatalogBuildError(f"Duplicate product descriptions detected: {titles}")
     return normalized
 
 
@@ -621,12 +715,20 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
+    strict: bool = False,
 ) -> None:
     product_id = str(product["id"])
     match = _match_image(product_id, image_files)
     if not match:
-        logging.warning("No image for %s", product_id)
+        message = f"No image for {product_id}"
+        if strict:
+            raise CatalogBuildError(message)
+        logging.warning(message)
         product["available"] = False
+        fallback = image_base if image_base.endswith("/") else image_base + "/"
+        fallback += f"{product_id}.jpg"
+        product["image"] = fallback
+        product["images"] = [fallback]
         return
     if match.alias is not None and match.alias != product_id:
         aliases = _build_aliases(product_id)
@@ -692,12 +794,18 @@ def build_catalog(
     images_dir: str | None = None,
     output: Path | None = None,
     dedupe: bool = True,
+    strict_images: bool = False,
+    strict_descriptions: bool = False,
+    expect_count: int | None = None,
+    fail_on_mismatch: bool = False,
 ) -> tuple[int, Path]:
     texts = _load_description_texts(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
-    products = _dedupe_products(_load_products(texts), dedupe=dedupe)
+    products = _dedupe_products(
+        _load_products(texts), dedupe=dedupe, strict=strict_descriptions
+    )
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -715,7 +823,10 @@ def build_catalog(
     for product in products:
         product_id = str(product["id"])
         if product_id in unique_ids:
-            logging.warning("Duplicate product id %s", product_id)
+            message = f"Duplicate product id {product_id}"
+            if strict_descriptions:
+                raise CatalogBuildError(message)
+            logging.warning(message)
             continue
         unique_ids.add(product_id)
         url = str(product["order"]["velavie_link"])
@@ -724,14 +835,29 @@ def build_catalog(
             "velavie_link": quoted_url,
             "utm": utm,
         }
-        _resolve_image(product, image_files=files, image_mode=mode, image_base=image_base)
+        _resolve_image(
+            product,
+            image_files=files,
+            image_mode=mode,
+            image_base=image_base,
+            strict=strict_images,
+        )
         normalized.append(product)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return len(normalized), destination
+    count = len(normalized)
+    if expect_count is not None and count != expect_count:
+        mismatch = (
+            "Built product count mismatch: "
+            f"expected {expect_count}, got {count}"
+        )
+        if fail_on_mismatch:
+            raise CatalogBuildError(mismatch)
+        logging.warning(mismatch)
+    return count, destination
 
 
 def validate_catalog(path: Path | None = None) -> int:
@@ -791,6 +917,23 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
     build_parser.add_argument("--dedupe", choices=("on", "off"), default="on")
+    build_parser.add_argument("--strict-images", action="store_true", help="Fail if a product image cannot be resolved")
+    build_parser.add_argument(
+        "--strict-descriptions",
+        action="store_true",
+        help="Fail on duplicate product descriptions or identifiers",
+    )
+    build_parser.add_argument(
+        "--expect-count",
+        type=int,
+        default=None,
+        help="Expected number of products in the generated catalog",
+    )
+    build_parser.add_argument(
+        "--fail-on-mismatch",
+        action="store_true",
+        help="Exit with an error if the built product count mismatches --expect-count",
+    )
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
     validate_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
@@ -811,6 +954,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 images_dir=args.images_dir,
                 output=args.output,
                 dedupe=args.dedupe != "off",
+                strict_images=args.strict_images,
+                strict_descriptions=args.strict_descriptions,
+                expect_count=args.expect_count,
+                fail_on_mismatch=args.fail_on_mismatch,
             )
             print(f"Built catalog with {count} products → {path}")
             return 0
