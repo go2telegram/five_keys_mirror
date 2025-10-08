@@ -14,6 +14,40 @@ from app.catalog.report import (
 )
 
 
+def test_get_catalog_report_prefers_summary_file(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "products.json"
+    catalog_path.write_text(json.dumps({"products": []}), encoding="utf-8")
+
+    summary_path = tmp_path / "build_summary.json"
+    summary_payload = {
+        "built": 11,
+        "counts": {
+            "images": {"found": 13},
+            "descriptions": {"found": 12},
+        },
+        "missing": {"images": ["missing-1.jpg", "missing-2.jpg"]},
+        "unmatched": {"images": ["extra-1.jpg"]},
+        "generated_at": "2024-01-02T03:04:05+00:00",
+        "catalog_path": str(catalog_path),
+    }
+    summary_path.write_text(json.dumps(summary_payload), encoding="utf-8")
+
+    report = get_catalog_report(
+        summary_path=summary_path,
+        report_path=tmp_path / "products.report.json",
+        catalog_path=catalog_path,
+    )
+
+    assert isinstance(report, CatalogReport)
+    assert report.built == 11
+    assert report.found_images == 13
+    assert report.found_descriptions == 12
+    assert report.missing_images == ["missing-1.jpg", "missing-2.jpg"]
+    assert report.unmatched_images == ["extra-1.jpg"]
+    assert report.catalog_path == catalog_path
+    assert report.generated_at == datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+
+
 def test_get_catalog_report_prefers_report_file(tmp_path: Path) -> None:
     catalog_path = tmp_path / "products.json"
     catalog_path.write_text(json.dumps({"products": []}), encoding="utf-8")
@@ -30,7 +64,11 @@ def test_get_catalog_report_prefers_report_file(tmp_path: Path) -> None:
     }
     report_path.write_text(json.dumps(report_payload), encoding="utf-8")
 
-    report = get_catalog_report(report_path=report_path, catalog_path=catalog_path)
+    report = get_catalog_report(
+        summary_path=tmp_path / "build_summary.json",
+        report_path=report_path,
+        catalog_path=catalog_path,
+    )
 
     assert isinstance(report, CatalogReport)
     assert report.built == 7
@@ -73,6 +111,7 @@ def test_get_catalog_report_fallback_to_catalog_json(tmp_path: Path) -> None:
     os.utime(catalog_path, os_stat_time)
 
     report = get_catalog_report(
+        summary_path=tmp_path / "build_summary.json",
         report_path=tmp_path / "missing.report.json",
         catalog_path=catalog_path,
         images_dir=images_dir,
@@ -90,6 +129,7 @@ def test_get_catalog_report_fallback_to_catalog_json(tmp_path: Path) -> None:
 def test_get_catalog_report_raises_on_missing_catalog(tmp_path: Path) -> None:
     with pytest.raises(CatalogReportError):
         get_catalog_report(
+            summary_path=tmp_path / "build_summary.json",
             report_path=tmp_path / "missing.report.json",
             catalog_path=tmp_path / "missing.json",
             images_dir=tmp_path / "images",

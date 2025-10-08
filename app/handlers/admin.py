@@ -133,7 +133,7 @@ async def leads_csv(m: Message):
     )
 
 
-def _format_catalog_items(items: list[str], *, limit: int = 10) -> str:
+def _format_catalog_items(items: list[str], *, limit: int = 5) -> str:
     if not items:
         return "—"
     preview = items[:limit]
@@ -179,11 +179,11 @@ async def catalog_report(m: Message) -> None:
 
     text = (
         "📦 <b>Каталог</b>\n"
-        f"found_descriptions={report.found_descriptions}\n"
         f"found_images={report.found_images}\n"
+        f"found_descriptions={report.found_descriptions}\n"
         f"built={report.built}\n"
-        f"missing_images: {_format_catalog_items(report.missing_images)}\n"
         f"unmatched_images: {_format_catalog_items(report.unmatched_images)}\n"
+        f"missing_images: {_format_catalog_items(report.missing_images)}\n"
         f"catalog: {_format_catalog_path(report.catalog_path)}\n"
         f"build_time: {timestamp}"
     )
