@@ -30,7 +30,7 @@ python tools/build_products.py validate
 Если нужно полностью офлайн-собирание (например, при работе с новыми моками), переключите режим на локальный и укажите каталог с изображениями:
 
 ```bash
-export IMAGES_MODE=catalog_local
+export IMAGES_MODE=local
 
 python tools/build_products.py build \
   --descriptions-path "app/catalog/descriptions" \
@@ -57,7 +57,7 @@ python tools/build_products.py validate
 В `.env` доступны переменные для тонкой настройки источников:
 
 ```env
-IMAGES_MODE=catalog_remote   # или catalog_local для офлайн-сборки
+IMAGES_MODE=remote           # укажите local (или legacy catalog_local) для офлайн-сборки
 IMAGES_BASE=.../media/products
 IMAGES_DIR=app/static/images/products
 QUIZ_IMAGE_MODE=remote       # переключите на local, чтобы слать картинки с диска

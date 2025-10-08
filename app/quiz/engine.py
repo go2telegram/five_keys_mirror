@@ -464,6 +464,7 @@ async def _send_photo(
     if not path_str:
         return False
 
+    remote_mode = QUIZ_IMAGE_MODE == "remote"
     session: aiohttp.ClientSession | None = None
     try:
         for source, candidate in _iter_photo_candidates(path_str):
@@ -471,6 +472,14 @@ async def _send_photo(
                 if source == "local":
                     await message.answer_photo(
                         photo=FSInputFile(str(candidate)),
+                        caption=caption,
+                        reply_markup=reply_markup,
+                    )
+                    return True
+
+                if remote_mode:
+                    await message.answer_photo(
+                        photo=str(candidate),
                         caption=caption,
                         reply_markup=reply_markup,
                     )

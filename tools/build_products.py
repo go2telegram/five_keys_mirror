@@ -40,10 +40,10 @@ DEFAULT_DESCRIPTIONS_PATH = str(ROOT / "app" / "catalog" / "descriptions")
 PINNED_MEDIA_SHA = "1312d74492d26a8de5b8a65af38293fe6bf8ccc5"
 
 DEFAULT_IMAGES_MODE = "remote"  # or "local"
-_ENV_IMAGES_MODE = os.getenv("IMAGES_MODE", "").lower()
-if _ENV_IMAGES_MODE == "catalog_local":
+_ENV_IMAGES_MODE = os.getenv("IMAGES_MODE", "").strip().lower()
+if _ENV_IMAGES_MODE in {"local", "catalog_local"}:
     DEFAULT_IMAGES_MODE = "local"
-elif _ENV_IMAGES_MODE == "catalog_remote":
+elif _ENV_IMAGES_MODE in {"remote", "catalog_remote"}:
     DEFAULT_IMAGES_MODE = "remote"
 
 DEFAULT_IMAGES_BASE = os.getenv(
