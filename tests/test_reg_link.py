@@ -1,3 +1,8 @@
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from app.handlers import reg
 
 
@@ -13,3 +18,16 @@ def test_registration_markup_contains_discount_button(monkeypatch):
     assert url in urls
     callbacks = [btn.callback_data for btn in _flatten(markup) if btn.callback_data]
     assert "home:main" in callbacks
+
+
+@pytest.mark.asyncio
+async def test_register_command_uses_markup(monkeypatch):
+    url = "https://velavie.example/offer"
+    monkeypatch.setattr(reg.settings, "VELAVIE_URL", url)
+    message = MagicMock()
+    message.from_user = SimpleNamespace(id=1, username="tester")
+    message.answer = AsyncMock()
+
+    await reg.reg_command(message)
+
+    message.answer.assert_awaited()

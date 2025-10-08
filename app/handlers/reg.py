@@ -1,5 +1,6 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
@@ -18,6 +19,15 @@ async def reg_open(c: CallbackQuery):
         return
 
     await c.message.edit_text(REG_TEXT, reply_markup=build_reg_markup(url))
+
+
+@router.message(Command("register"))
+async def reg_command(message: Message) -> None:
+    url = settings.velavie_url
+    if not url:
+        await message.answer(REG_TEXT_UNAVAILABLE, reply_markup=kb_back_home())
+        return
+    await message.answer(REG_TEXT, reply_markup=build_reg_markup(url))
 
 
 def build_reg_markup(url: str):

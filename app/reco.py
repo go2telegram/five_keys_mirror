@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable, List, Mapping, Sequence
 
 from app.products import PRODUCTS
 
@@ -127,6 +127,89 @@ CTX = {
         "T8_BLEND": "Сильные антиоксиданты уменьшают воспаление и улучшают тонус кожи.",
     },
 }
+
+
+def _dedupe_codes(codes: Iterable[str]) -> List[str]:
+    seen: set[str] = set()
+    result: List[str] = []
+    for code in codes:
+        if not code:
+            continue
+        if code in seen:
+            continue
+        seen.add(code)
+        result.append(code)
+    return result
+
+
+def personalize_codes(
+    codes: Sequence[str],
+    profile: Mapping[str, object] | None,
+    *,
+    limit: int | None = 3,
+) -> List[str]:
+    """Apply stored profile preferences to a list of recommendation codes."""
+
+    base = _dedupe_codes(codes)
+    if not profile:
+        return base[:limit] if limit is not None else base
+
+    result = list(base)
+
+    allergies_raw = str(profile.get("allergies", "")) if isinstance(profile, Mapping) else ""
+    allergies = allergies_raw.lower()
+    if allergies == "herbs":
+        result = [code for code in result if code not in {"TEO_GREEN"}]
+    elif allergies == "vegan":
+        result = [code for code in result if code not in {"OMEGA3", "ERA_MIT_UP"}]
+
+    extras: List[str] = []
+    age_group = str(profile.get("age_group", "")) if isinstance(profile, Mapping) else ""
+    if age_group == "50p" and "D3" in PRODUCTS:
+        extras.append("D3")
+
+    lifestyle = str(profile.get("lifestyle", "")) if isinstance(profile, Mapping) else ""
+    if lifestyle == "active" and "OMEGA3" in PRODUCTS:
+        extras.append("OMEGA3")
+
+    season = str(profile.get("season", "")) if isinstance(profile, Mapping) else ""
+    if season == "winter" and "D3" in PRODUCTS:
+        extras.append("D3")
+
+    for extra in extras:
+        if extra and extra not in result:
+            result.append(extra)
+
+    budget_limit: int | None
+    budget = str(profile.get("budget", "")) if isinstance(profile, Mapping) else ""
+    if budget == "lite":
+        budget_limit = 2
+    elif budget == "std":
+        budget_limit = 3
+    else:
+        budget_limit = None
+
+    effective_limit = limit
+    if budget_limit is not None:
+        effective_limit = budget_limit if effective_limit is None else min(effective_limit, budget_limit)
+
+    if effective_limit is not None and len(result) > effective_limit:
+        prioritized = [code for code in result if code in extras]
+        remainder = [code for code in result if code not in prioritized]
+        ordered = prioritized + remainder
+        # Preserve order for non-prioritized elements
+        seen: set[str] = set()
+        deduped: List[str] = []
+        for code in ordered:
+            if code in seen:
+                continue
+            seen.add(code)
+            deduped.append(code)
+        result = deduped[:effective_limit]
+    elif effective_limit is not None:
+        result = result[:effective_limit]
+
+    return result
 
 
 def product_lines(codes: List[str], context: str) -> List[str]:

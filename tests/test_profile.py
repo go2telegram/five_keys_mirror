@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -73,3 +76,16 @@ async def test_profile_renders_core_information(monkeypatch):
     callbacks = _collect_callbacks(kwargs["reply_markup"])
     assert "notify:off" in callbacks
     assert "home:main" in callbacks
+
+
+@pytest.mark.asyncio
+async def test_profile_command_uses_payload(monkeypatch):
+    monkeypatch.setattr(profile, "_profile_payload", AsyncMock(return_value=("text", object())))
+    message = MagicMock()
+    message.from_user = SimpleNamespace(id=55, username="tester")
+    message.answer = AsyncMock()
+
+    await profile.profile_command(message)
+
+    profile._profile_payload.assert_awaited_with(55, "tester")
+    message.answer.assert_awaited()

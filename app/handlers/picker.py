@@ -8,9 +8,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
-from app.products import GOAL_MAP, PRODUCTS
-from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.products import GOAL_MAP
+from app.reco import personalize_codes, product_lines
+from app.repo import events as events_repo, profiles as profiles_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils_media import send_product_album
 
@@ -250,44 +250,12 @@ async def pick_finalize(c: CallbackQuery):
 
     # Базовый набор по уровню
     if level == "basic":
-        rec_codes = meta["codes_basic"].copy()
+        base_codes = meta["codes_basic"].copy()
         ctx = meta["ctx_basic"]
     else:
-        rec_codes = meta["codes_pro"].copy()
+        base_codes = meta["codes_pro"].copy()
         ctx = meta["ctx_pro"]
 
-    # Возраст/образ жизни
-    if age == "50p" and "D3" in PRODUCTS and "D3" not in rec_codes:
-        rec_codes.append("D3")
-    if life == "active" and "OMEGA3" in PRODUCTS and "OMEGA3" not in rec_codes:
-        rec_codes.append("OMEGA3")
-
-    # Ограничения
-    if allerg == "herbs":
-        rec_codes = [c for c in rec_codes if c not in ("TEO_GREEN",)]
-    if allerg == "vegan":
-        rec_codes = [c for c in rec_codes if c not in ("ERA_MIT_UP", "OMEGA3")]
-
-    # Сезон
-    if season == "winter" and "D3" in PRODUCTS and "D3" not in rec_codes:
-        rec_codes.append("D3")
-
-    # Бюджет
-    if budget == "lite":
-        rec_codes = rec_codes[:2]
-    elif budget == "std":
-        rec_codes = rec_codes[:3]
-    # pro — оставляем всё
-
-    # Подстраховка
-    if not rec_codes:
-        rec_codes = GOAL_MAP.get(goal_key, [])[:2]
-
-    # Фото
-    await send_product_album(c.bot, c.message.chat.id, rec_codes[:3])
-
-    # Карточка и PDF-план
-    lines = product_lines(rec_codes[:3], ctx)
     level_label = "Новичок" if level == "basic" else "Продвинутый"
     age_label = "50+" if age == "50p" else ("30–50" if age == "30_50" else "до 30")
     life_label = "активный" if life == "active" else "офис"
@@ -302,36 +270,52 @@ async def pick_finalize(c: CallbackQuery):
         f"бюджет: {budget_label}"
     )
 
-    msg = [
-        f"<b>{meta['context_name']}</b> — {level_label}\n",
-        desc + "\n",
-        "Поддержка:\n" + "\n".join(lines),
-    ]
-    reply_markup = kb_buylist_pdf("pick:menu", rec_codes[:3])
-    await c.message.answer("".join(msg), reply_markup=reply_markup)
-
-    # Сохраняем план для PDF
-    actions = meta["actions"]
-    notes = meta["notes"]
-    if allerg == "herbs":
-        notes += " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, " "избегай острых блюд и алкоголя."
-    if age == "50p":
-        notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците " "по согласованию с врачом."
-
-    plan_payload = {
-        "title": meta["title"],
-        "context": goal_key,
-        "context_name": meta["context_name"],
-        "level": f"{level_label}, {desc}",
-        "products": rec_codes[:3],
-        "lines": lines,
-        "actions": actions,
-        "notes": notes,
-        "order_url": settings.velavie_url,
+    profile_update = {
+        "age_group": age,
+        "lifestyle": life,
+        "allergies": allerg,
+        "season": season,
+        "budget": budget,
     }
+
+    personalized_codes: list[str]
+    lines: list[str]
+    notes = meta["notes"]
 
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
+        profile_data = await profiles_repo.merge_profile(session, c.from_user.id, profile_update)
+        personalized_codes = personalize_codes(base_codes, profile_data)
+        if not personalized_codes:
+            fallback = GOAL_MAP.get(goal_key, []) or base_codes
+            personalized_codes = personalize_codes(fallback, profile_data)
+            if not personalized_codes:
+                personalized_codes = fallback[:3]
+        lines = product_lines(personalized_codes, ctx)
+        if str(profile_data.get("allergies", "")) == "herbs":
+            notes += (
+                " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, "
+                "избегай острых блюд и алкоголя."
+            )
+        if str(profile_data.get("age_group", "")) == "50p":
+            notes += (
+                " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците "
+                "по согласованию с врачом."
+            )
+
+        actions = meta["actions"]
+        plan_payload = {
+            "title": meta["title"],
+            "context": goal_key,
+            "context_name": meta["context_name"],
+            "level": f"{level_label}, {desc}",
+            "products": personalized_codes,
+            "lines": lines,
+            "actions": actions,
+            "notes": notes,
+            "order_url": settings.velavie_url,
+        }
+
         await set_last_plan(session, c.from_user.id, plan_payload)
         await events_repo.log(
             session,
@@ -345,3 +329,15 @@ async def pick_finalize(c: CallbackQuery):
             },
         )
         await commit_safely(session)
+
+    # Фото
+    await send_product_album(c.bot, c.message.chat.id, personalized_codes[:3])
+
+    # Карточка и PDF-план
+    msg = [
+        f"<b>{meta['context_name']}</b> — {level_label}\n",
+        desc + "\n",
+        "Поддержка:\n" + "\n".join(lines),
+    ]
+    reply_markup = kb_buylist_pdf("pick:menu", personalized_codes[:3])
+    await c.message.answer("".join(msg), reply_markup=reply_markup)

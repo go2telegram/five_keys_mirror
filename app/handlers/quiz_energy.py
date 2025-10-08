@@ -17,8 +17,8 @@ from app.quiz.engine import (
     register_quiz_hooks,
     start_quiz,
 )
-from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.reco import personalize_codes, product_lines
+from app.repo import events as events_repo, profiles as profiles_repo, users as users_repo
 from app.storage import commit_safely, set_last_plan
 
 router = Router()
@@ -55,7 +55,6 @@ async def _on_finish_energy(
     user_id: int, definition: QuizDefinition, result: QuizResultContext
 ) -> bool:
     level_key, level_label, ctx, rec_codes = _energy_outcome(result.total_score)
-    lines = product_lines(rec_codes[:3], ctx)
 
     actions = [
         "Ложиться до 23:00 и спать 7–9 часов.",
@@ -64,23 +63,30 @@ async def _on_finish_energy(
     ]
     notes = "Следи за гидратацией: 30–35 мл воды/кг. Ужин — за 3 часа до сна."
 
-    plan_payload = {
-        "title": "План: Энергия",
-        "context": "energy",
-        "context_name": "Энергия",
-        "level": level_label,
-        "products": rec_codes[:3],
-        "lines": lines,
-        "actions": actions,
-        "notes": notes,
-        "order_url": settings.velavie_url,
-    }
+    personalized_codes: list[str]
+    lines: list[str]
 
     origin = result.origin
     username = origin.from_user.username if origin and origin.from_user else None
 
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, user_id, username)
+        profile_data = await profiles_repo.get_profile_data(session, user_id)
+        personalized_codes = personalize_codes(rec_codes, profile_data)
+        if not personalized_codes:
+            personalized_codes = rec_codes[:3]
+        lines = product_lines(personalized_codes, ctx)
+        plan_payload = {
+            "title": "План: Энергия",
+            "context": "energy",
+            "context_name": "Энергия",
+            "level": level_label,
+            "products": personalized_codes,
+            "lines": lines,
+            "actions": actions,
+            "notes": notes,
+            "order_url": settings.velavie_url,
+        }
         await set_last_plan(session, user_id, plan_payload)
         await events_repo.log(
             session,
@@ -90,7 +96,7 @@ async def _on_finish_energy(
         )
         await commit_safely(session)
 
-    cards = pick_for_context("energy", level_key, rec_codes[:3])
+    cards = pick_for_context("energy", level_key, personalized_codes)
     if origin:
         await send_product_cards(
             origin,

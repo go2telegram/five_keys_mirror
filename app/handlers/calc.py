@@ -8,8 +8,8 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
-from app.reco import CTX, product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.reco import CTX, personalize_codes, product_lines
+from app.repo import events as events_repo, profiles as profiles_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 
 router = Router()
@@ -85,8 +85,6 @@ async def _process_msd(message: Message) -> None:
     ideal = round(height_m * height_m * coeff, 1)
 
     rec_codes = msd_recommendations()
-    cards = _cards_with_overrides(rec_codes, "msd")
-    lines = product_lines(rec_codes, "msd")
     bullets = [
         "Белок в каждом приёме пищи (1.2–1.6 г/кг).",
         "Ежедневная клетчатка (TEO GREEN) + вода 30–35 мл/кг.",
@@ -94,20 +92,27 @@ async def _process_msd(message: Message) -> None:
     ]
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
-    plan_payload = {
-        "title": "План: Идеальный вес (MSD)",
-        "context": "msd",
-        "context_name": "Калькулятор MSD",
-        "level": None,
-        "products": rec_codes,
-        "lines": lines,
-        "actions": bullets,
-        "notes": notes,
-        "order_url": settings.velavie_url,
-    }
+    personalized_codes: list[str]
+    lines: list[str]
 
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        profile_data = await profiles_repo.get_profile_data(session, message.from_user.id)
+        personalized_codes = personalize_codes(rec_codes, profile_data)
+        if not personalized_codes:
+            personalized_codes = rec_codes
+        lines = product_lines(personalized_codes, "msd")
+        plan_payload = {
+            "title": "План: Идеальный вес (MSD)",
+            "context": "msd",
+            "context_name": "Калькулятор MSD",
+            "level": None,
+            "products": personalized_codes,
+            "lines": lines,
+            "actions": bullets,
+            "notes": notes,
+            "order_url": settings.velavie_url,
+        }
         await set_last_plan(session, message.from_user.id, plan_payload)
         await events_repo.log(
             session,
@@ -120,6 +125,7 @@ async def _process_msd(message: Message) -> None:
     headline = (
         f"Ориентир по формуле MSD: <b>{ideal} кг</b>." "\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     )
+    cards = _cards_with_overrides(personalized_codes, "msd")
     await send_product_cards(
         message,
         "Итог: идеальный вес по MSD",

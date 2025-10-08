@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 
 import plotly.graph_objects as go
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from plotly.io import to_html
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.catalog.loader import load_catalog
 from app.config import settings
 from app.db.models import Event, Lead
-from app.db.session import session_scope
+from app.db.session import current_revision, head_revision, session_scope
 from app.repo import events as events_repo, leads as leads_repo
 
 app = FastAPI(title="Five Keys Admin Dashboard")
@@ -318,6 +318,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
         <h2>Каталог</h2>
         <div class=\"metric\">{context['catalog_total']} SKU</div>
         <p class=\"muted\">Обновлено: {context['catalog_updated']}</p>
+        <p class=\"muted\">Версия: {context['catalog_version']}</p>
       </article>
     </section>
 
@@ -369,6 +370,21 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 """
 
 
+def _catalog_state() -> Tuple[int, str, str, List[Dict[str, Any]]]:
+    catalog_data = load_catalog()
+    catalog_products = list(catalog_data["products"].values())
+    catalog_total = len(catalog_products)
+    version = str(catalog_data.get("version") or "unknown")
+    catalog_path = Path(__file__).resolve().parent / "catalog" / "products.json"
+    try:
+        updated = datetime.fromtimestamp(catalog_path.stat().st_mtime, tz=timezone.utc)
+    except FileNotFoundError:
+        updated_str = "—"
+    else:
+        updated_str = updated.strftime("%Y-%m-%d")
+    return catalog_total, updated_str, version, catalog_products
+
+
 async def _gather_dashboard_context() -> Dict[str, Any]:
     async with session_scope() as session:
         quiz_counts, quiz_total = await _collect_event_stats(session, "quiz_finish", "quiz")
@@ -378,21 +394,11 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
 
     ctr = (plans_total / quiz_total * 100.0) if quiz_total else 0.0
 
-    catalog_data = load_catalog()
-    catalog_products = list(catalog_data["products"].values())
-    catalog_total = len(catalog_products)
+    catalog_total, updated_str, catalog_version, catalog_products = _catalog_state()
     goal_counter: Counter[str] = Counter()
     for product in catalog_products:
         for goal in product.get("goals", []) or []:
             goal_counter[str(goal)] += 1
-
-    catalog_path = Path(__file__).resolve().parent / "catalog" / "products.json"
-    try:
-        updated = datetime.fromtimestamp(catalog_path.stat().st_mtime, tz=timezone.utc)
-    except FileNotFoundError:
-        updated_str = "—"
-    else:
-        updated_str = updated.strftime("%Y-%m-%d")
 
     quiz_chart = _build_bar_chart("Завершено квизов", quiz_counts, "#2563eb")
     calc_chart = _build_bar_chart("Использование калькуляторов", calc_counts, "#ec4899")
@@ -413,6 +419,7 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "ctr": ctr,
         "catalog_total": catalog_total,
         "catalog_updated": updated_str,
+        "catalog_version": catalog_version,
         "top_products": top_products,
         "catalog_goals": catalog_goals,
         "recent_leads": recent_leads,
@@ -424,3 +431,85 @@ async def dashboard(_: None = Depends(_require_token)) -> HTMLResponse:
     context = await _gather_dashboard_context()
     html = _render_dashboard_html(context)
     return HTMLResponse(html)
+
+
+def _render_doctor_html(context: Dict[str, Any]) -> str:
+    db = context["database"]
+    catalog = context["catalog"]
+    status = "✅ Всё актуально" if db["is_up_to_date"] else "⚠ Требуется миграция"
+    return f"""
+<!DOCTYPE html>
+<html lang=\"ru\">
+<head>
+  <meta charset=\"utf-8\" />
+  <title>Five Keys Doctor</title>
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 32px; }}
+    section {{ background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 24px; margin-bottom: 24px; }}
+    h1 {{ margin-top: 0; }}
+    dt {{ font-weight: 600; margin-top: 12px; }}
+    dd {{ margin: 0 0 8px 0; }}
+    .muted {{ color: #94a3b8; }}
+  </style>
+</head>
+<body>
+  <h1>Системный доктор</h1>
+  <section>
+    <h2>База данных</h2>
+    <dl>
+      <dt>Текущая ревизия</dt><dd>{db['current_revision']}</dd>
+      <dt>Актуальная ревизия</dt><dd>{db['head_revision']}</dd>
+      <dt>Статус</dt><dd>{status}</dd>
+    </dl>
+  </section>
+  <section>
+    <h2>Каталог</h2>
+    <dl>
+      <dt>Версия</dt><dd>{catalog['version']}</dd>
+      <dt>Количество SKU</dt><dd>{catalog['total']}</dd>
+      <dt>Обновлён</dt><dd>{catalog['updated']}</dd>
+    </dl>
+  </section>
+</body>
+</html>
+"""
+
+
+async def _gather_doctor_context() -> Dict[str, Any]:
+    current = await current_revision()
+    head = await head_revision()
+    catalog_total, updated_str, catalog_version, _ = _catalog_state()
+    return {
+        "database": {
+            "current_revision": current or "unknown",
+            "head_revision": head or "unknown",
+            "is_up_to_date": bool(current and head and current == head),
+        },
+        "catalog": {
+            "total": catalog_total,
+            "updated": updated_str,
+            "version": catalog_version,
+        },
+    }
+
+
+@app.get("/admin/doctor", response_class=HTMLResponse)
+async def doctor(_: None = Depends(_require_token)) -> HTMLResponse:
+    context = await _gather_doctor_context()
+    html = _render_doctor_html(context)
+    return HTMLResponse(html)
+
+
+@app.get("/admin/analytics")
+async def analytics(_: None = Depends(_require_token)) -> JSONResponse:
+    context = await _gather_dashboard_context()
+    payload = {
+        "leads_total": context["leads_total"],
+        "leads_recent": context["leads_recent"],
+        "quiz_total": context["quiz_total"],
+        "calc_total": context["calc_total"],
+        "plans_total": context["plans_total"],
+        "ctr": round(context["ctr"], 4),
+    }
+    return JSONResponse(payload)

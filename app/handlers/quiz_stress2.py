@@ -10,8 +10,8 @@ from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
-from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.reco import personalize_codes, product_lines
+from app.repo import events as events_repo, profiles as profiles_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 
 router = Router(name="quiz_stress2")
@@ -134,7 +134,6 @@ async def _finish_quiz(c: CallbackQuery) -> None:
     level_key, level_label, ctx = _level(total)
 
     rec_codes = ["VITEN", "OMEGA3", "TEO_GREEN"]
-    lines = product_lines(rec_codes, ctx)
 
     actions = [
         "Дыхание 4-7-8 по 5 минут вечером.",
@@ -143,20 +142,27 @@ async def _finish_quiz(c: CallbackQuery) -> None:
     ]
     notes = "Напоминай себе о перерывах каждые 90 минут и снижай кофеин после обеда."
 
-    plan_payload = {
-        "title": "План: стресс 2.0",
-        "context": "stress",
-        "context_name": "Стресс 2.0",
-        "level": level_label,
-        "products": rec_codes,
-        "lines": lines,
-        "actions": actions,
-        "notes": notes,
-        "order_url": settings.velavie_url,
-    }
+    personalized_codes: list[str]
+    lines: list[str]
 
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, user_id, c.from_user.username)
+        profile_data = await profiles_repo.get_profile_data(session, user_id)
+        personalized_codes = personalize_codes(rec_codes, profile_data)
+        if not personalized_codes:
+            personalized_codes = rec_codes
+        lines = product_lines(personalized_codes, ctx)
+        plan_payload = {
+            "title": "План: стресс 2.0",
+            "context": "stress",
+            "context_name": "Стресс 2.0",
+            "level": level_label,
+            "products": personalized_codes,
+            "lines": lines,
+            "actions": actions,
+            "notes": notes,
+            "order_url": settings.velavie_url,
+        }
         await set_last_plan(session, user_id, plan_payload)
         await events_repo.log(
             session,
@@ -166,7 +172,7 @@ async def _finish_quiz(c: CallbackQuery) -> None:
         )
         await commit_safely(session)
 
-    cards = pick_for_context("stress", level_key, rec_codes)
+    cards = pick_for_context("stress", level_key, personalized_codes)
     await send_product_cards(
         c,
         f"Итог: {level_label}",
