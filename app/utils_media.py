@@ -15,6 +15,34 @@ from app.utils.image_resolver import resolve_media_reference
 LOG = logging.getLogger(__name__)
 
 
+async def fetch_image_as_file(url: str) -> BufferedInputFile | None:
+    timeout = aiohttp.ClientTimeout(total=8)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url, allow_redirects=True) as response:
+                content_type = response.headers.get("Content-Type", "")
+                if response.status != 200:
+                    LOG.warning(
+                        "Failed to fetch media %s: status %s", url, response.status
+                    )
+                    return None
+                if not content_type.startswith("image/"):
+                    LOG.warning(
+                        "Unexpected content type for %s: %s", url, content_type
+                    )
+                    return None
+                data = await response.read()
+    except ClientError as exc:
+        LOG.warning("Network error fetching media %s: %s", url, exc)
+        return None
+    except Exception:  # pragma: no cover - defensive guard
+        LOG.exception("Unexpected error fetching media %s", url)
+        return None
+
+    name = Path(url).name.split("?")[0] or "image.jpg"
+    return BufferedInputFile(data, filename=name)
+
+
 def _resolve_product(code: str) -> dict | None:
     if not code:
         return None
@@ -40,54 +68,25 @@ def _collect_image_refs(product: dict) -> list[str]:
 
 async def _build_media_group(refs: List[str]) -> list[InputMediaPhoto]:
     media: list[InputMediaPhoto] = []
-    session: aiohttp.ClientSession | None = None
-    try:
-        for ref in refs:
-            source, session = await _resolve_media_source(ref, session)
-            if not source:
-                continue
-            media.append(InputMediaPhoto(media=source))
-    finally:
-        if session:
-            await session.close()
+    for ref in refs:
+        source = await _resolve_media_source(ref)
+        if not source:
+            continue
+        media.append(InputMediaPhoto(media=source))
     return media
 
 
-async def _resolve_media_source(
-    ref: str, session: aiohttp.ClientSession | None
-) -> tuple[FSInputFile | BufferedInputFile | None, aiohttp.ClientSession | None]:
+async def _resolve_media_source(ref: str) -> FSInputFile | BufferedInputFile | None:
     resolved = resolve_media_reference(ref)
     if isinstance(resolved, FSInputFile):
-        return resolved, session
+        return resolved
     if isinstance(resolved, str):
-        session = session or aiohttp.ClientSession()
-        proxy = await _download_via_proxy(session, resolved)
+        proxy = await fetch_image_as_file(resolved)
         if proxy:
-            return proxy, session
-        return None, session
-    return None, session
-
-
-async def _download_via_proxy(
-    session: aiohttp.ClientSession, url: str
-) -> BufferedInputFile | None:
-    try:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                LOG.warning(
-                    "Failed to fetch media %s via proxy: status %s", url, resp.status
-                )
-                return None
-            data = await resp.read()
-    except ClientError as exc:
-        LOG.warning("Network error fetching media %s: %s", url, exc)
+            return proxy
+        LOG.warning("Failed to resolve remote media %s", resolved)
         return None
-    except Exception:
-        LOG.exception("Unexpected error fetching media %s", url)
-        return None
-
-    filename = _extract_filename(url)
-    return BufferedInputFile(data, filename=filename)
+    return None
 
 
 def _extract_filename(url: str) -> str:
@@ -137,17 +136,12 @@ async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
         except Exception:
             LOG.exception("send_product_album: media group failed; falling back to singles")
 
-    session: aiohttp.ClientSession | None = None
-    try:
-        for ref in collected:
-            source, session = await _resolve_media_source(ref, session)
-            if not source:
-                continue
-            try:
-                await bot.send_photo(chat_id, photo=source)
-                LOG.debug("send_product_album: sent single %s", ref)
-            except Exception:
-                LOG.exception("send_product_album: failed to send %s", ref)
-    finally:
-        if session:
-            await session.close()
+    for ref in collected:
+        source = await _resolve_media_source(ref)
+        if not source:
+            continue
+        try:
+            await bot.send_photo(chat_id, photo=source)
+            LOG.debug("send_product_album: sent single %s", ref)
+        except Exception:
+            LOG.exception("send_product_album: failed to send %s", ref)
