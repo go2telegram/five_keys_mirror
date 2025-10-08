@@ -11,6 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo
+from app.utils import safe_edit_text
 
 router = Router(name="notify")
 LOG = logging.getLogger(__name__)
@@ -45,8 +46,11 @@ async def _render(message: Message | CallbackQuery, enabled: bool) -> None:
     text = f"Сейчас напоминания {status}.\n\n" "Используйте кнопки ниже, чтобы переключить статус."
     markup = _status_keyboard(enabled)
     if isinstance(message, CallbackQuery):
+        if message.message is None:
+            LOG.warning("notify render called without message")
+            return
         try:
-            await message.message.edit_text(text, reply_markup=markup)
+            await safe_edit_text(message.message, text, markup)
         except Exception:  # noqa: BLE001 - graceful fallback with navigation buttons
             LOG.exception("notify edit failed")
             await message.message.answer(text, reply_markup=markup)

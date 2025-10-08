@@ -20,6 +20,7 @@ from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
+from app.utils import safe_edit_text
 
 router = Router(name="calc_unified")
 
@@ -95,7 +96,7 @@ async def _send_step(
         message = target.message
         if replace and message is not None:
             try:
-                await message.edit_text(step.prompt, reply_markup=markup)
+                await safe_edit_text(message, step.prompt, markup)
             except Exception:
                 await message.answer(step.prompt, reply_markup=markup)
         else:

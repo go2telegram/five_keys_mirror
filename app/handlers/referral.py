@@ -7,6 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
+from app.utils import safe_edit_text
 
 router = Router()
 
@@ -46,7 +47,7 @@ async def ref_menu_cb(c: CallbackQuery):
         "Поделитесь ссылкой — когда друг оформит подписку, я засчитаю конверсию."
     )
     await c.answer()
-    await c.message.edit_text(text, reply_markup=_kb_ref(link))
+    await safe_edit_text(c.message, text, _kb_ref(link))
 
 
 @router.message(Command("ref"))

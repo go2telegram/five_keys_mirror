@@ -15,6 +15,7 @@ from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import referrals as referrals_repo, subscriptions as subscriptions_repo, users as users_repo
 from app.storage import commit_safely
+from app.utils import safe_edit_text
 
 router = Router(name="admin_crud")
 
@@ -170,7 +171,7 @@ async def handle_callbacks(query: CallbackQuery) -> None:
             await query.answer()
             text, markup = await _render_users(page, query_text)
             if query.message:
-                await query.message.edit_text(text, reply_markup=markup)
+                await safe_edit_text(query.message, text, markup)
         elif action == "refs" and parts[2] == "page":
             if len(parts) < 4:
                 await query.answer("Bad arguments", show_alert=True)
@@ -187,7 +188,7 @@ async def handle_callbacks(query: CallbackQuery) -> None:
             await query.answer()
             text, markup = await _render_referrals(ref_id, page, period_text)
             if query.message:
-                await query.message.edit_text(text, reply_markup=markup)
+                await safe_edit_text(query.message, text, markup)
         else:
             await query.answer("Bad arguments", show_alert=True)
     except Exception as exc:  # pragma: no cover

@@ -16,6 +16,7 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.utils import safe_edit_text
 
 router = Router(name="profile")
 
@@ -100,7 +101,8 @@ async def profile_open(c: CallbackQuery) -> None:
     )
 
     markup = _profile_keyboard(notify_enabled).as_markup()
+    text = "\n".join(lines)
     try:
-        await c.message.edit_text("\n".join(lines), reply_markup=markup)
+        await safe_edit_text(c.message, text, markup)
     except Exception:  # noqa: BLE001 - graceful fallback if edit fails
-        await c.message.answer("\n".join(lines), reply_markup=markup)
+        await c.message.answer(text, reply_markup=markup)

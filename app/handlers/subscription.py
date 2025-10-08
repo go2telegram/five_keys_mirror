@@ -1,36 +1,18 @@
-from app.storage import commit_safely
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.storage import commit_safely
+from app.utils import safe_edit_text
 
 router = Router(name="subscription")
-
-
-def _markups_equal(
-    first: InlineKeyboardMarkup | None, second: InlineKeyboardMarkup | None
-) -> bool:
-    if first is second:
-        return True
-    if first is None or second is None:
-        return first is None and second is None
-    return first.model_dump() == second.model_dump()
-
-
-async def _edit_text_if_changed(
-    message: Message | None, new_text: str, new_markup: InlineKeyboardMarkup | None = None
-) -> None:
-    if message is None:
-        return
-    if message.text != new_text or not _markups_equal(message.reply_markup, new_markup):
-        await message.edit_text(new_text, reply_markup=new_markup)
 
 
 def _kb_sub_menu() -> InlineKeyboardMarkup:
@@ -87,7 +69,7 @@ async def sub_menu(c: CallbackQuery):
         await commit_safely(session)
     await c.answer()
     markup = _kb_sub_menu()
-    await _edit_text_if_changed(
+    await safe_edit_text(
         c.message,
         "💎 <b>Подписка</b>\nПолучите доступ к Premium и закрытым материалам.",
         markup,
@@ -120,9 +102,9 @@ async def sub_check(c: CallbackQuery):
         builder.button(text="Открыть Premium", callback_data="premium:menu")
         for row in kb_back_home("sub:menu").inline_keyboard:
             builder.row(*row)
-        await _edit_text_if_changed(c.message, text, builder.as_markup())
+        await safe_edit_text(c.message, text, builder.as_markup())
     else:
-        await _edit_text_if_changed(
+        await safe_edit_text(
             c.message,
             "Подписка не найдена. Оплатите MITO в Tribute и дождитесь подтверждения вебхука.",
             _kb_sub_menu(),
@@ -132,7 +114,7 @@ async def sub_check(c: CallbackQuery):
 @router.callback_query(F.data == "sub:renew")
 async def sub_renew(c: CallbackQuery):
     await c.answer()
-    await _edit_text_if_changed(
+    await safe_edit_text(
         c.message,
         "Выберите тариф MITO для продления доступа.",
         _kb_sub_renew(),

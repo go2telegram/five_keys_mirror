@@ -52,6 +52,7 @@ from app.logging_config import setup_logging
 from app.middlewares import AuditMiddleware
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
+from app.utils import safe_edit_text
 
 try:
     from app.handlers import health as h_health
@@ -130,7 +131,7 @@ async def home_main(c: CallbackQuery) -> None:
             return
 
         try:
-            await c.message.edit_text(GREETING, reply_markup=kb_main())
+            await safe_edit_text(c.message, GREETING, kb_main())
         except Exception:
             log_home.warning("home:main edit failed; sending fresh message", exc_info=True)
             await c.message.answer(GREETING, reply_markup=kb_main())

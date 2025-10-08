@@ -5,6 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.keyboards import kb_back_home
 from app.texts import REG_TEXT, REG_TEXT_UNAVAILABLE
+from app.utils import safe_edit_text
 
 router = Router()
 
@@ -14,10 +15,10 @@ async def reg_open(c: CallbackQuery):
     url = settings.velavie_url
     await c.answer()
     if not url:
-        await c.message.edit_text(REG_TEXT_UNAVAILABLE, reply_markup=kb_back_home())
+        await safe_edit_text(c.message, REG_TEXT_UNAVAILABLE, kb_back_home())
         return
 
-    await c.message.edit_text(REG_TEXT, reply_markup=build_reg_markup(url))
+    await safe_edit_text(c.message, REG_TEXT, build_reg_markup(url))
 
 
 def build_reg_markup(url: str):
