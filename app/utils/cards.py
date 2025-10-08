@@ -11,6 +11,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home
 from app.utils.image_resolver import resolve_media_reference
+from app.utils_media import fetch_image_as_file
 
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
@@ -172,6 +173,13 @@ async def send_product_cards(
     for img in _collect_media(cards):
         resolved = resolve_media_reference(img)
         if not resolved:
+            continue
+        if isinstance(resolved, str):
+            fetched = await fetch_image_as_file(resolved)
+            if not fetched:
+                LOG.warning("send_product_cards: failed to fetch remote media %s", resolved)
+                continue
+            media.add_photo(media=fetched)
             continue
         media.add_photo(media=resolved)
     try:
