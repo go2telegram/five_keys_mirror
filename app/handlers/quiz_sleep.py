@@ -5,6 +5,12 @@ from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.quiz.engine import (
+    QuizDefinition,
+    QuizHooks,
+    QuizResultContext,
+    register_quiz_hooks,
+)
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -34,6 +40,32 @@ SLEEP_QUESTIONS = [
     ),
     ("Бывают ли тяжёлые ужины/перекусы позднее чем за 2 часа до сна?", [("Редко", 0), ("Иногда", 2), ("Часто", 4)]),
 ]
+
+
+def _register_yaml_hooks() -> None:
+    async def _on_finish_sleep(
+        call: CallbackQuery, definition: QuizDefinition, result: QuizResultContext
+    ) -> bool:
+        if not call.message:
+            return False
+
+        threshold = result.threshold
+        tags_line = ", ".join(threshold.tags) if threshold.tags else "—"
+        text = (
+            f"Тест «{definition.title}» завершён!\n\n"
+            f"score: {result.total_score}\n"
+            f"label: {threshold.label}\n"
+            f"advice: {threshold.advice}\n"
+            f"tags: {tags_line}"
+        )
+        if result.collected_tags:
+            collected = ", ".join(result.collected_tags)
+            text += f"\nanswers: {collected}"
+
+        await call.message.answer(text)
+        return True
+
+    register_quiz_hooks("sleep", QuizHooks(on_finish=_on_finish_sleep))
 
 
 def kb_quiz_q(idx: int):
@@ -162,3 +194,6 @@ async def quiz_sleep_step(c: CallbackQuery):
         f"Вопрос {idx + 1}/{len(SLEEP_QUESTIONS)}:\n{qtext}",
         kb_quiz_q(idx),
     )
+
+
+_register_yaml_hooks()
