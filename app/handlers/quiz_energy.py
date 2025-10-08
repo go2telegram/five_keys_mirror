@@ -52,7 +52,7 @@ def _energy_outcome(total: int) -> tuple[str, str, str, list[str]]:
 
 
 async def _on_finish_energy(
-    call: CallbackQuery, definition: QuizDefinition, result: QuizResultContext
+    user_id: int, definition: QuizDefinition, result: QuizResultContext
 ) -> bool:
     level_key, level_label, ctx, rec_codes = _energy_outcome(result.total_score)
     lines = product_lines(rec_codes[:3], ctx)
@@ -76,26 +76,30 @@ async def _on_finish_energy(
         "order_url": settings.velavie_url,
     }
 
+    origin = result.origin
+    username = origin.from_user.username if origin and origin.from_user else None
+
     async with compat_session(session_scope) as session:
-        await users_repo.get_or_create_user(session, call.from_user.id, call.from_user.username)
-        await set_last_plan(session, call.from_user.id, plan_payload)
+        await users_repo.get_or_create_user(session, user_id, username)
+        await set_last_plan(session, user_id, plan_payload)
         await events_repo.log(
             session,
-            call.from_user.id,
+            user_id,
             "quiz_finish",
             {"quiz": "energy", "score": result.total_score, "level": level_label},
         )
         await commit_safely(session)
 
     cards = pick_for_context("energy", level_key, rec_codes[:3])
-    await send_product_cards(
-        call,
-        f"Итог: {level_label}",
-        cards,
-        bullets=actions,
-        headline=notes,
-        back_cb="quiz:menu",
-    )
+    if origin:
+        await send_product_cards(
+            origin,
+            f"Итог: {level_label}",
+            cards,
+            bullets=actions,
+            headline=notes,
+            back_cb="quiz:menu",
+        )
 
     return True
 
