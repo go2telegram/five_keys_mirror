@@ -29,6 +29,29 @@ def kb_main() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+# ---------- Онбординг ----------
+
+
+def kb_onboarding_entry() -> InlineKeyboardMarkup:
+    """Первый экран /start с основными сценариями."""
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💊 Подбор продукта", callback_data="onboard:product")
+    kb.button(text="🧪 Пройти тесты", callback_data="onboard:tests")
+    kb.button(text="🎁 Регистрация", callback_data="onboard:register")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def kb_recommendation_prompt() -> InlineKeyboardMarkup:
+    """Короткая кнопка для быстрого перехода к рекомендациям."""
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💊 Получить рекомендации", callback_data="pick:menu")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 # ---------- Меню «Все квизы» ----------
 
 

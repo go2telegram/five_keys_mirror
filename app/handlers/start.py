@@ -10,12 +10,20 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
-from app.keyboards import kb_main, kb_yes_no
+from app.keyboards import (
+    kb_goal_menu,
+    kb_onboarding_entry,
+    kb_quiz_menu,
+    kb_recommendation_prompt,
+    kb_yes_no,
+)
 from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
 from app.config import settings
 from app import build_info
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
-from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON
+from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
+
+from app.handlers import reg as reg_handlers
 
 logger = logging.getLogger(__name__)
 log_start = logging.getLogger("start")
@@ -23,12 +31,11 @@ log_start = logging.getLogger("start")
 router = Router(name="start")
 
 GREETING = (
-    "\u041f\u0440\u0438\u0432\u0435\u0442! \u041d\u0430 \u0441\u0432\u044f\u0437\u0438 "
-    "\xab\u041f\u044f\u0442\u044c \u043a\u043b\u044e\u0447\u0435\u0439 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u044f"
-    "\xbb. "
-    "\u0412\u044b\u0431\u0438\u0440\u0430\u0439 \u0440\u0430\u0437\u0434\u0435\u043b "
-    "\u0432 \u043c\u0435\u043d\u044e \u043d\u0438\u0436\u0435:"
+    "Привет! На связи «Пять ключей здоровья». "
+    "Помогу подобрать продукты, пройти тесты и оформить регистрацию."
 )
+
+RETURNING_PROMPT = "Готов показать обновлённые рекомендации. Нажми кнопку ниже, чтобы продолжить."
 
 START_THROTTLE_SECONDS = 3.0
 ADMIN_PANEL_THROTTLE = 5.0
@@ -71,7 +78,7 @@ async def start_safe(message: Message) -> None:
         getattr(message.from_user, "username", None),
     )
 
-    await message.answer(GREETING, reply_markup=kb_main())
+    await message.answer(GREETING, reply_markup=kb_onboarding_entry())
 
     asyncio.create_task(_start_full(message, payload))
 
@@ -82,8 +89,11 @@ async def _start_full(message: Message, payload: str) -> None:
     try:
         tg_id = message.from_user.id
         username = message.from_user.username
+        existing_user = None
+        already_prompted = None
 
         async with compat_session(session_scope) as session:
+            existing_user = await users_repo.get_user(session, tg_id)
             await users_repo.get_or_create_user(session, tg_id, username)
             await events_repo.log(session, tg_id, "start", {"payload": payload})
 
@@ -103,6 +113,8 @@ async def _start_full(message: Message, payload: str) -> None:
             already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
             await commit_safely(session)
 
+        is_new_user = existing_user is None
+
         if not already_prompted:
             async with compat_session(session_scope) as session:
                 await events_repo.log(session, tg_id, "notify_prompted", {})
@@ -111,8 +123,45 @@ async def _start_full(message: Message, payload: str) -> None:
                 ASK_NOTIFY,
                 reply_markup=kb_yes_no("notify:yes", "notify:no"),
             )
+
+        if is_new_user:
+            await _start_registration(message)
+        else:
+            await _prompt_recommendations(message)
     except Exception:  # noqa: BLE001 - log unexpected issues without breaking /start
         logger.exception("start_full failed")
+
+
+async def _start_registration(message: Message) -> None:
+    url = settings.velavie_url
+    if url:
+        await message.answer(REG_TEXT, reply_markup=reg_handlers.build_reg_markup(url))
+    else:
+        await message.answer(REG_TEXT)
+
+
+async def _prompt_recommendations(message: Message) -> None:
+    await message.answer(RETURNING_PROMPT, reply_markup=kb_recommendation_prompt())
+
+
+@router.callback_query(F.data == "onboard:product")
+async def onboarding_product(c: CallbackQuery) -> None:
+    await c.answer()
+    await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
+
+
+@router.callback_query(F.data == "onboard:tests")
+async def onboarding_tests(c: CallbackQuery) -> None:
+    await c.answer()
+    await c.message.answer(
+        "Выбирай тест, чтобы получить персональный план:",
+        reply_markup=kb_quiz_menu(),
+    )
+
+
+@router.callback_query(F.data == "onboard:register")
+async def onboarding_register(c: CallbackQuery) -> None:
+    return await reg_handlers.reg_open(c)
 
 
 @router.callback_query(F.data == "notify:yes")

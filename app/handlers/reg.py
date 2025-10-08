@@ -17,10 +17,10 @@ async def reg_open(c: CallbackQuery):
         await c.message.edit_text(REG_TEXT_UNAVAILABLE, reply_markup=kb_back_home())
         return
 
-    await c.message.edit_text(REG_TEXT, reply_markup=_build_reg_markup(url))
+    await c.message.edit_text(REG_TEXT, reply_markup=build_reg_markup(url))
 
 
-def _build_reg_markup(url: str):
+def build_reg_markup(url: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="🎁 Перейти к регистрации", url=url)
     for row in kb_back_home().inline_keyboard:
