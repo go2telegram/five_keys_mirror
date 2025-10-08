@@ -17,3 +17,9 @@ def test_select_by_goals_returns_results():
     items = select_by_goals(["energy"])
     assert 0 <= len(items) <= 6
     assert all(isinstance(item, dict) for item in items)
+
+
+def test_manual_alias_is_resolved():
+    product = product_by_alias("beet-shot-legacy")
+    assert product is not None
+    assert product["id"] == "t8-beet-shot"
