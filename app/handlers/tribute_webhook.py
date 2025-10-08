@@ -123,7 +123,7 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 await referrals_repo.convert(session, tg_id_int, bonus_days=0)
                 await events_repo.log(
                     session,
-                    referral.referrer_id,
+                    referral.user_id,
                     "ref_conversion",
                     {"invited_id": tg_id_int, "plan": plan},
                 )

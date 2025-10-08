@@ -369,9 +369,9 @@ async def ref_convert(message: Message) -> None:
             await message.answer("User not found", reply_markup=kb_back_home("home:main"))
             return
         if bonus_days > 0:
-            current_sub = await subscriptions_repo.get(session, referral.referrer_id)
+            current_sub = await subscriptions_repo.get(session, referral.user_id)
             plan = current_sub.plan if current_sub else "trial"
-            await users_repo.get_or_create_user(session, referral.referrer_id)
-            await subscriptions_repo.set_plan(session, referral.referrer_id, plan, days=bonus_days)
+            await users_repo.get_or_create_user(session, referral.user_id)
+            await subscriptions_repo.set_plan(session, referral.user_id, plan, days=bonus_days)
         await commit_safely(session)
     await message.answer("Referral updated", reply_markup=kb_back_home("home:main"))
