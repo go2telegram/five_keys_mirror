@@ -1,0 +1,116 @@
+title: "Стресс"
+cover: "stress/cover.png"
+questions:
+  - id: q1
+    text: "Как часто чувствуешь нервное напряжение?"
+    image: "stress/q1.png"
+    options:
+      - key: calm
+        text: "Редко"
+        score: 1
+        tags: ["stress_support"]
+      - key: sometimes
+        text: "Иногда"
+        score: 2
+        tags: ["adaptogens"]
+      - key: often
+        text: "Часто"
+        score: 3
+        tags: ["stress_support", "adaptogens"]
+  - id: q2
+    text: "Как спишь в последние недели?"
+    image: "stress/q2.png"
+    options:
+      - key: good
+        text: "Глубоко, быстро засыпаю"
+        score: 1
+        tags: ["stress_support"]
+      - key: light
+        text: "Сон поверхностный, тяжело уснуть"
+        score: 2
+        tags: ["theanine", "magnesium"]
+      - key: bad
+        text: "Просыпаюсь среди ночи, кошмары"
+        score: 3
+        tags: ["magnesium", "adaptogens"]
+  - id: q3
+    text: "Сколько кофеина получаешь в день?"
+    image: "stress/q3.png"
+    options:
+      - key: low
+        text: "0–1 чашка кофе/матча"
+        score: 1
+        tags: ["stress_support"]
+      - key: mid
+        text: "2–3 напитка с кофеином"
+        score: 2
+        tags: ["reduce_caffeine"]
+      - key: high
+        text: "4+ кофе/энергетиков"
+        score: 3
+        tags: ["reduce_caffeine", "adaptogens"]
+  - id: q4
+    text: "Как реагируешь на неожиданные задачи?"
+    image: "stress/q4.png"
+    options:
+      - key: focused
+        text: "Сохраняю спокойствие"
+        score: 1
+        tags: ["stress_support"]
+      - key: tense
+        text: "Чувствую напряжение"
+        score: 2
+        tags: ["theanine"]
+      - key: overwhelmed
+        text: "Паника, сложно собраться"
+        score: 3
+        tags: ["adaptogens", "magnesium"]
+  - id: q5
+    text: "Есть ли мышечные зажимы или головные боли?"
+    image: "stress/q5.png"
+    options:
+      - key: none
+        text: "Редко беспокоит"
+        score: 1
+        tags: ["stress_support"]
+      - key: sometimes
+        text: "Иногда напрягается шея/плечи"
+        score: 2
+        tags: ["magnesium"]
+      - key: often
+        text: "Часто болит голова или спина"
+        score: 3
+        tags: ["magnesium", "adaptogens"]
+  - id: q6
+    text: "Чем обычно помогаешь себе расслабиться?"
+    image: "stress/q6.png"
+    options:
+      - key: movement
+        text: "Спорт, прогулки, дыхание"
+        score: 1
+        tags: ["stress_support"]
+      - key: sweets
+        text: "Сладкое, сериалы, соцсети"
+        score: 2
+        tags: ["reduce_caffeine"]
+      - key: stimulants
+        text: "Кофе, алкоголь, энергетики"
+        score: 3
+        tags: ["reduce_caffeine", "adaptogens"]
+result:
+  thresholds:
+    - min: 0
+      max: 8
+      label: "Стресс под контролем"
+      advice: "Продолжай практики восстановления: сон, прогулки, дыхание, поддержка магнием при необходимости."
+      tags: ["stress_support"]
+    - min: 9
+      max: 13
+      label: "Нужна мягкая разгрузка"
+      advice: "Добавь L-теанин, магний вечером, техники расслабления и следи за уровнем кофеина."
+      tags: ["theanine", "magnesium", "reduce_caffeine"]
+    - min: 14
+      max: 18
+      label: "Выраженный стресс"
+      advice: "Сфокусируйся на адаптогенах, магнии и снижении стимуляторов, проанализируй режим дня."
+      tags: ["adaptogens", "magnesium", "reduce_caffeine"]
