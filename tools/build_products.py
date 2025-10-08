@@ -10,6 +10,7 @@ import os
 import re
 import sys
 from collections import defaultdict
+from functools import lru_cache
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping, Sequence
@@ -30,6 +31,7 @@ from slugify import slugify as _fallback_slugify
 
 
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
+ALIASES_PATH = ROOT / "app" / "catalog" / "aliases.json"
 SCHEMA_PATH = ROOT / "app" / "data" / "products.schema.json"
 
 # descriptions source (один из)
@@ -426,6 +428,47 @@ def _build_aliases(product_id: str) -> list[str]:
     return _alias_variants(product_id)
 
 
+@lru_cache(maxsize=1)
+def _load_catalog_alias_map() -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for item in _load_catalog_products():
+        product_id = str(item.get("id", "")).strip()
+        if not product_id:
+            continue
+        for alias in _alias_variants(product_id):
+            normalized = alias.lower()
+            mapping.setdefault(normalized, product_id)
+    return mapping
+
+
+@lru_cache(maxsize=1)
+def _catalog_products_by_id() -> dict[str, dict[str, object]]:
+    mapping: dict[str, dict[str, object]] = {}
+    for item in _load_catalog_products():
+        product_id = str(item.get("id", "")).strip()
+        if product_id:
+            mapping[product_id] = item
+    return mapping
+
+
+def _lookup_catalog_product(product_id: str) -> dict[str, object] | None:
+    return _catalog_products_by_id().get(product_id)
+
+
+def _canonicalize_product_id(order_url: str, fallback_id: str) -> str:
+    canonical_url = _canonical_buy_url(order_url)
+    if canonical_url:
+        product_id = _load_catalog_buy_map().get(canonical_url)
+        if product_id:
+            return product_id
+    alias_map = _load_catalog_alias_map()
+    for alias in _alias_variants(fallback_id):
+        product_id = alias_map.get(alias.lower())
+        if product_id:
+            return product_id
+    return fallback_id
+
+
 def _parse_block(block: ProductBlock) -> dict[str, object]:
     if not block.url:
         raise CatalogBuildError(f"Missing order URL in {block.origin}")
@@ -464,6 +507,7 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
     )
     category = _classify_category(name + "\n" + description)
     product_id = _refine_slug(_slug(name))
+    product_id = _canonicalize_product_id(block.url, product_id)
     tags = sorted({token for token in _tokenize_slug(product_id) if token})
     data: dict[str, object] = {
         "id": product_id,
@@ -560,19 +604,113 @@ def _local_web_base(images_dir: Path) -> str:
     return web_base
 
 
+def _load_image_aliases(path: Path = ALIASES_PATH) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:  # pragma: no cover - surfaced as CatalogBuildError
+        raise CatalogBuildError(f"Cannot read aliases file {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:  # pragma: no cover
+        raise CatalogBuildError(f"Aliases file {path} is not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise CatalogBuildError(f"Aliases file {path} must be a JSON object")
+    aliases: dict[str, str] = {}
+    for key, value in data.items():
+        if not isinstance(key, str) or not isinstance(value, str):
+            raise CatalogBuildError(
+                f"Aliases file {path} must map string filenames to string product ids"
+            )
+        aliases[key] = value
+    return aliases
+
+
+@lru_cache(maxsize=1)
+def _load_catalog_products() -> list[dict[str, object]]:
+    try:
+        payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    except OSError:  # pragma: no cover - missing catalog is acceptable during build
+        return []
+    except json.JSONDecodeError:  # pragma: no cover - invalid catalog treated as empty
+        return []
+    products = payload.get("products")
+    if not isinstance(products, list):
+        return []
+    return [item for item in products if isinstance(item, dict)]
+
+
+def _canonical_buy_url(url: str) -> str:
+    if not url:
+        return ""
+    normalized = quote_url(url)
+    parts = urlsplit(normalized)
+    query_items = [
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if not key.lower().startswith("utm_")
+    ]
+    query_items.sort()
+    query = urlencode(query_items)
+    path = parts.path.rstrip("/")
+    return urlunsplit((parts.scheme, parts.netloc.lower(), path, query, ""))
+
+
+@lru_cache(maxsize=1)
+def _load_catalog_buy_map() -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for item in _load_catalog_products():
+        product_id = str(item.get("id", "")).strip()
+        if not product_id:
+            continue
+        order = item.get("order")
+        if not isinstance(order, dict):
+            continue
+        link = order.get("velavie_link")
+        if not isinstance(link, str) or not link:
+            continue
+        canonical = _canonical_buy_url(link)
+        if canonical:
+            mapping[canonical] = product_id
+    return mapping
+
+
 @dataclass(frozen=True)
 class ImageMatch:
     name: str
     alias: str | None = None
     score: int = 0
+    alias_override: str | None = None
 
 
-def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
+def _match_image(
+    slug_value: str,
+    candidates: list[str],
+    *,
+    alias_map: Mapping[str, str] | None = None,
+) -> ImageMatch | None:
     slug_lower = _normalize_slug_value(slug_value)
     aliases = _slug_aliases(slug_lower)
     sanitized_slug = re.sub(r"[^a-z0-9]", "", slug_lower)
+    reserved: dict[str, str] = {}
+    if alias_map:
+        for candidate in candidates:
+            path = Path(candidate)
+            alias_key: str | None = None
+            alias_target: str | None = None
+            for key in (candidate, path.name):
+                if key in alias_map:
+                    alias_key = key
+                    alias_target = alias_map[key]
+                    break
+            if alias_target is None:
+                continue
+            if alias_target == slug_value:
+                return ImageMatch(name=candidate, alias_override=alias_key, score=0)
+            reserved[candidate] = alias_target
     prioritized: list[tuple[int, int, str | None, str]] = []
     for candidate in candidates:
+        if candidate in reserved:
+            continue
         path = Path(candidate)
         suffix = path.suffix.lower()
         if suffix not in IMAGE_EXTENSIONS:
@@ -610,8 +748,13 @@ def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
     return None
 
 
-def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
-    match = _match_image(slug_value, candidates)
+def _choose_image(
+    slug_value: str,
+    candidates: list[str],
+    *,
+    alias_map: Mapping[str, str] | None = None,
+) -> str | None:
+    match = _match_image(slug_value, candidates, alias_map=alias_map)
     return match.name if match else None
 
 
@@ -621,13 +764,32 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
+    alias_map: Mapping[str, str] | None = None,
 ) -> None:
     product_id = str(product["id"])
-    match = _match_image(product_id, image_files)
+    match = _match_image(product_id, image_files, alias_map=alias_map)
     if not match:
+        fallback = _lookup_catalog_product(product_id)
+        if fallback:
+            images = fallback.get("images")
+            if isinstance(images, list) and images:
+                resolved = [str(item) for item in images if isinstance(item, str) and item]
+                if resolved:
+                    product["images"] = resolved
+                    product["image"] = str(fallback.get("image", resolved[0]))
+                    product["available"] = bool(fallback.get("available", True))
+                    logging.info("Reusing catalog image for %s", product_id)
+                    return
         logging.warning("No image for %s", product_id)
         product["available"] = False
+        placeholder = "/static/images/products/placeholder.png"
+        product["image"] = placeholder
+        product["images"] = [placeholder]
         return
+    if match.alias_override:
+        logging.info(
+            "Image alias %s → %s (%s)", match.alias_override, product_id, match.name
+        )
     if match.alias is not None and match.alias != product_id:
         aliases = _build_aliases(product_id)
         if aliases:
@@ -703,6 +865,8 @@ def build_catalog(
     if mode not in {"remote", "local"}:
         raise CatalogBuildError("images-mode must be 'remote' or 'local'")
 
+    alias_map = _load_image_aliases()
+
     if mode == "remote":
         base = images_base or DEFAULT_IMAGES_BASE
         image_base, files = _list_remote_images(base)
@@ -724,7 +888,13 @@ def build_catalog(
             "velavie_link": quoted_url,
             "utm": utm,
         }
-        _resolve_image(product, image_files=files, image_mode=mode, image_base=image_base)
+        _resolve_image(
+            product,
+            image_files=files,
+            image_mode=mode,
+            image_base=image_base,
+            alias_map=alias_map,
+        )
         normalized.append(product)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))

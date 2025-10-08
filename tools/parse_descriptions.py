@@ -18,6 +18,8 @@ if str(ROOT) not in sys.path:
 from tools.build_products import (
     ProductBlock,
     _alias_variants,
+    _canonical_buy_url,
+    _canonicalize_product_id,
     _join_paragraphs,
     _normalize_space,
     _section_for_line,
@@ -26,6 +28,7 @@ from tools.build_products import (
     _tokenize_slug,
     _refine_slug,
     _slug,
+    _lookup_catalog_product,
     quote_url,
 )
 
@@ -105,7 +108,16 @@ def _build_record(block: ProductBlock) -> dict[str, object]:
     if not block.lines:
         raise ValueError(f"Empty block in {block.origin}")
     title = block.lines[0]
-    product_id = _refine_slug(_slug(title))
+    raw_product_id = _refine_slug(_slug(title))
+    buy_url = _normalize_url(block.url)
+    product_id = _canonicalize_product_id(buy_url, raw_product_id)
+    catalog_product = _lookup_catalog_product(product_id)
+    if catalog_product:
+        order = catalog_product.get("order")
+        if isinstance(order, dict):
+            canonical_link = order.get("velavie_link")
+            if isinstance(canonical_link, str) and canonical_link:
+                buy_url = _canonical_buy_url(canonical_link) or buy_url
     tags = sorted({token for token in _tokenize_slug(product_id) if token})
     aliases = _alias_variants(product_id)
     section_data = _collect_section(block)
@@ -115,11 +127,16 @@ def _build_record(block: ProductBlock) -> dict[str, object]:
     data = {
         "title": title,
         "id": product_id,
-        "buy_url": _normalize_url(block.url),
+        "buy_url": buy_url,
         "tags": tags,
         "aliases": aliases,
     }
     data.update(section_data)
+    if catalog_product:
+        for key in ("usage", "contra", "composition"):
+            value = catalog_product.get(key)
+            if isinstance(value, str) and value.strip():
+                data[key] = value.strip()
     return data
 
 

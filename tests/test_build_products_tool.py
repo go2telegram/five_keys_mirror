@@ -81,6 +81,19 @@ def test_match_image_alias_variants(slug_value: str, candidate: str) -> None:
     assert match.alias is not None
 
 
+def test_match_image_alias_table_precedence() -> None:
+    files = ["omega3_main.jpg", "T8 ERA LCHF-COCOA.webp"]
+    alias_map = {"T8 ERA LCHF-COCOA.webp": "t8-era-lchf-cocoa"}
+    match = bp._match_image("t8-era-lchf-cocoa", files, alias_map=alias_map)
+    assert match is not None
+    assert match.name == "T8 ERA LCHF-COCOA.webp"
+    assert match.alias_override == "T8 ERA LCHF-COCOA.webp"
+
+    other_match = bp._match_image("nash-omega-3", files, alias_map=alias_map)
+    assert other_match is not None
+    assert other_match.name == "omega3_main.jpg"
+
+
 def test_slug_transliterates_yo() -> None:
     assert bp._slug("СТЁКЛА Black 96") == "stekla-black-96"
 
