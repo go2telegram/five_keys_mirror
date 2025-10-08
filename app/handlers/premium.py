@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.utils import safe_edit_text
 
 router = Router(name="premium")
 
@@ -55,13 +56,22 @@ async def premium_menu(c: CallbackQuery):
 
     await c.answer()
     if not is_active or plan is None:
-        await c.message.edit_text(
+        await safe_edit_text(
+            c.message,
             "🔒 Premium доступен только с активной подпиской.",
-            reply_markup=kb_back_home("sub:menu"),
+            kb_back_home("sub:menu"),
         )
         return
 
     if plan == "basic":
-        await c.message.edit_text("💎 MITO Basic — доступ к разделам:", reply_markup=_kb_links(BASIC_LINKS))
+        await safe_edit_text(
+            c.message,
+            "💎 MITO Basic — доступ к разделам:",
+            _kb_links(BASIC_LINKS),
+        )
     else:
-        await c.message.edit_text("💎 MITO Pro — полный доступ:", reply_markup=_kb_links(PRO_LINKS))
+        await safe_edit_text(
+            c.message,
+            "💎 MITO Pro — полный доступ:",
+            _kb_links(PRO_LINKS),
+        )

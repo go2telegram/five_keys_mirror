@@ -22,6 +22,7 @@ from app.config import settings
 from app import build_info
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
+from app.utils import safe_edit_text
 
 from app.handlers import reg as reg_handlers
 
@@ -170,7 +171,7 @@ async def notify_yes(c: CallbackQuery):
     async with compat_session(session_scope) as session:
         await events_repo.log(session, c.from_user.id, "notify_on", {})
         await commit_safely(session)
-    await c.message.edit_text(NOTIFY_ON)
+    await safe_edit_text(c.message, NOTIFY_ON)
 
 
 @router.callback_query(F.data == "notify:no")
@@ -179,7 +180,7 @@ async def notify_no(c: CallbackQuery):
     async with compat_session(session_scope) as session:
         await events_repo.log(session, c.from_user.id, "notify_off", {})
         await commit_safely(session)
-    await c.message.edit_text(NOTIFY_OFF)
+    await safe_edit_text(c.message, NOTIFY_OFF)
 
 
 @router.message(Command("version"))

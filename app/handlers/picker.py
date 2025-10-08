@@ -13,6 +13,7 @@ from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils_media import send_product_album
+from app.utils import safe_edit_text
 
 LOG = logging.getLogger(__name__)
 
@@ -100,8 +101,11 @@ def _extend_with_back_home(builder: InlineKeyboardBuilder, back_cb: str) -> Inli
 
 
 async def _safe_edit(c: CallbackQuery, text: str, markup):
+    if c.message is None:
+        LOG.warning("picker edit called without message")
+        return
     try:
-        await c.message.edit_text(text, reply_markup=markup)
+        await safe_edit_text(c.message, text, markup)
     except Exception:  # noqa: BLE001 - fallback to a fresh message
         LOG.exception("picker edit failed")
         await c.message.answer(text, reply_markup=markup)

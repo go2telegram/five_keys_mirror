@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, Message
 from app.catalog.loader import load_catalog
 from app.config import settings
 from app.storage import touch_throttle
-from app.utils import catalog_summary, send_product_cards
+from app.utils import catalog_summary, safe_edit_text, send_product_cards
 
 router = Router(name="catalog")
 log = logging.getLogger("catalog")
@@ -85,9 +85,10 @@ async def catalog_menu_callback(callback: CallbackQuery) -> None:
     await callback.answer()
     if callback.message:
         catalog = load_catalog()
-        await callback.message.edit_text(
+        await safe_edit_text(
+            callback.message,
             "🛍 Каталог продуктов\nВыбери продукт, чтобы узнать подробности:",
-            reply_markup=_build_catalog_markup(catalog),
+            _build_catalog_markup(catalog),
         )
 
 

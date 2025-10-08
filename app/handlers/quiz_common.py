@@ -7,6 +7,7 @@ import logging
 from aiogram.types import CallbackQuery
 
 from app.keyboards import kb_back_home
+from app.utils import safe_edit_text
 from app.utils.cards import send_product_cards
 
 LOG = logging.getLogger(__name__)
@@ -18,8 +19,11 @@ ERROR_TEXT = (
 
 
 async def safe_edit(c: CallbackQuery, text: str, reply_markup) -> None:
+    if c.message is None:
+        LOG.warning("safe_edit called without message")
+        return
     try:
-        await c.message.edit_text(text, reply_markup=reply_markup)
+        await safe_edit_text(c.message, text, reply_markup)
     except Exception:  # noqa: BLE001 - deliberate fall back to a safe message
         LOG.exception("edit_text failed")
         await c.message.answer(ERROR_TEXT, reply_markup=kb_back_home())

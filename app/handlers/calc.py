@@ -11,6 +11,7 @@ from app.keyboards import kb_back_home, kb_calc_menu
 from app.reco import CTX, product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from app.utils import safe_edit_text
 
 router = Router()
 
@@ -55,7 +56,7 @@ def _cards_with_overrides(codes: list[str], context_key: str) -> list[dict]:
 @router.callback_query(F.data == "calc:menu")
 async def calc_menu(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("Выбери калькулятор:", reply_markup=kb_calc_menu())
+    await safe_edit_text(c.message, "Выбери калькулятор:", kb_calc_menu())
 
 
 # --- MSD (идеальный вес по росту) ---
@@ -65,9 +66,10 @@ async def calc_menu(c: CallbackQuery):
 async def calc_msd(c: CallbackQuery):
     SESSIONS[c.from_user.id] = {"calc": "msd"}
     await c.answer()
-    await c.message.edit_text(
+    await safe_edit_text(
+        c.message,
         "Введи рост в сантиметрах и пол (М/Ж), например: <code>165 Ж</code>",
-        reply_markup=kb_back_home("calc:menu"),
+        kb_back_home("calc:menu"),
     )
 
 

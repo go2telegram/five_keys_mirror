@@ -3,6 +3,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.utils import safe_edit_text
+
 router = Router()
 
 # ====== ДАННЫЕ НАВИГАЦИИ (только ссылки и названия) ======
@@ -127,7 +129,7 @@ def kb_nav_tests():
 @router.callback_query(F.data == "nav:root")
 async def nav_root(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("🧭 Навигатор по каналу — выбери раздел:", reply_markup=kb_nav_root())
+    await safe_edit_text(c.message, "🧭 Навигатор по каналу — выбери раздел:", kb_nav_root())
 
 
 @router.callback_query(F.data.startswith("nav:cat:"))
@@ -139,11 +141,11 @@ async def nav_category(c: CallbackQuery):
     title = NAV[cat_key]["title"]
     body = f"{title}\nВыбери, что открыть:"
     await c.answer()
-    await c.message.edit_text(body, reply_markup=kb_nav_category(cat_key))
+    await safe_edit_text(c.message, body, kb_nav_category(cat_key))
 
 
 @router.callback_query(F.data == "nav:tests")
 async def nav_tests(c: CallbackQuery):
     await c.answer()
     text = "🧪 Выбери тест, который хочешь пройти:"
-    await c.message.edit_text(text, reply_markup=kb_nav_tests())
+    await safe_edit_text(c.message, text, kb_nav_tests())
