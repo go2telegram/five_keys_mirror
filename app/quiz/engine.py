@@ -23,6 +23,7 @@ DATA_ROOT = Path(__file__).resolve().parent / "data"
 IMAGE_ROOT = PROJECT_ROOT / "app" / "static" / "images" / "quiz"
 
 ANSWER_PREFIX = "tests:answer"
+BACK_PREFIX = "tests:back"
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +37,12 @@ QUIZ_REMOTE_BASE = os.getenv("QUIZ_IMG_BASE", DEFAULT_REMOTE_BASE).rstrip("/")
 
 
 class QuizSession(StatesGroup):
-    """Aiogram FSM state for an active quiz."""
+    """Aiogram FSM states for quiz questions."""
 
-    IN_PROGRESS = State()
+
+for _idx in range(1, 51):  # Support up to 50 questions per quiz.
+    setattr(QuizSession, f"Q{_idx}", State())
+del _idx
 
 
 @dataclass
@@ -91,6 +95,7 @@ class QuizResultContext:
     chosen_options: dict[str, QuizOption]
     collected_tags: list[str]
     threshold: QuizThreshold
+    source: CallbackQuery | Message | None = None
 
 
 @dataclass
@@ -98,8 +103,7 @@ class QuizHooks:
     """Optional lifecycle hooks to customize quiz behaviour."""
 
     on_finish: (
-        Callable[[CallbackQuery, QuizDefinition, QuizResultContext], Awaitable[bool]]
-        | None
+        Callable[[int, QuizDefinition, QuizResultContext], Awaitable[None]] | None
     ) = None
 
 
@@ -128,8 +132,8 @@ def load_quiz(name: str) -> QuizDefinition:
     questions = [_parse_question(q) for q in raw.get("questions", [])]
     thresholds = [_parse_threshold(t) for t in raw.get("result", {}).get("thresholds", [])]
 
-    if not questions:
-        raise ValueError(f"Quiz {name} must contain at least one question")
+    if len(questions) < 5:
+        raise ValueError(f"Quiz {name} must contain at least five questions")
     if not thresholds:
         raise ValueError(f"Quiz {name} must define result thresholds")
 
@@ -165,7 +169,7 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
         await entry.answer()
 
     await state.clear()
-    await state.set_state(QuizSession.IN_PROGRESS)
+    await state.set_state(_question_state(0))
     await state.update_data(
         quiz=name,
         index=0,
@@ -189,81 +193,14 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
         return
 
     parts = call.data.split(":")
-    if len(parts) != 5 or parts[0] != "tests" or parts[1] != "answer":
+    if len(parts) < 3 or parts[0] != "tests":
         return
+    action = parts[1]
 
-    _, _, quiz_name, question_idx_raw, option_idx_raw = parts
-
-    try:
-        question_idx = int(question_idx_raw)
-        option_idx = int(option_idx_raw)
-    except ValueError:
-        await call.answer()
-        return
-
-    data = await state.get_data()
-    active_quiz = data.get("quiz")
-    if active_quiz != quiz_name:
-        await call.answer()
-        return
-
-    try:
-        definition = load_quiz(quiz_name)
-    except FileNotFoundError:
-        await call.answer("Тест недоступен")
-        return
-
-    questions = definition.questions
-    if not (0 <= question_idx < len(questions)):
-        await call.answer()
-        return
-
-    question = questions[question_idx]
-    if not (0 <= option_idx < len(question.options)):
-        await call.answer()
-        return
-
-    option = question.options[option_idx]
-
-    total_score = int(data.get("score", 0)) + option.score
-    tags: list[str] = list(data.get("tags", []))
-    tags.extend(option.tags)
-    answer_keys: dict[str, str] = dict(data.get("answers", {}))
-    answer_keys[question.id] = option.key
-
-    next_index = question_idx + 1
-
-    await call.answer()
-
-    if next_index >= len(questions):
-        threshold = definition.pick_threshold(total_score)
-        chosen_options = _materialize_answers(definition, answer_keys)
-        result_context = QuizResultContext(
-            total_score=total_score,
-            chosen_options=chosen_options,
-            collected_tags=_unique(tags),
-            threshold=threshold,
-        )
-
-        handled = False
-        hooks = QUIZ_HOOKS.get(quiz_name)
-        if hooks and hooks.on_finish:
-            handled = await hooks.on_finish(call, definition, result_context)
-
-        if not handled:
-            await _send_default_result(call, definition, result_context)
-
-        await state.clear()
-        with suppress(Exception):
-            if call.message:
-                await call.message.delete()
-        return
-
-    await state.update_data(score=total_score, tags=tags, answers=answer_keys, index=next_index)
-    if call.message:
-        await _send_question(call.message, definition, next_index)
-        with suppress(Exception):
-            await call.message.delete()
+    if action == "answer" and len(parts) == 5:
+        await _handle_answer(call, state, parts[2:])
+    elif action == "back" and len(parts) == 4:
+        await _handle_back(call, state, parts[2:])
 
 
 def _parse_question(raw: dict[str, Any]) -> QuizQuestion:
@@ -292,8 +229,13 @@ def _parse_option(raw: dict[str, Any]) -> QuizOption:
 
 
 def _parse_threshold(raw: dict[str, Any]) -> QuizThreshold:
+    if "min" not in raw or "max" not in raw:
+        raise ValueError("Each threshold must define 'min' and 'max'")
+
     min_score = int(raw.get("min", 0))
     max_score = int(raw.get("max", min_score))
+    if max_score < min_score:
+        raise ValueError("Threshold 'max' cannot be less than 'min'")
     label = str(raw.get("label", ""))
     advice = str(raw.get("advice", ""))
     tags = [str(tag) for tag in raw.get("tags", [])]
@@ -329,6 +271,11 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
         kb.button(
             text=option.text,
             callback_data=f"{ANSWER_PREFIX}:{definition.name}:{index}:{opt_idx}",
+        )
+    if index > 0:
+        kb.button(
+            text="◀️ Назад",
+            callback_data=f"{BACK_PREFIX}:{definition.name}:{index}",
         )
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)
@@ -367,6 +314,7 @@ async def _send_photo(
     reply_markup=None,
 ) -> bool:
     if not path_str:
+        logger.warning("Quiz image missing, falling back to text message")
         return False
 
     for source, candidate in _iter_photo_candidates(path_str):
@@ -401,6 +349,133 @@ async def _send_photo(
 
     logger.warning("Quiz image unavailable, using text fallback: %s", path_str)
     return False
+
+
+async def _handle_answer(
+    call: CallbackQuery, state: FSMContext, payload: Sequence[str]
+) -> None:
+    quiz_name, question_idx_raw, option_idx_raw = payload
+
+    try:
+        question_idx = int(question_idx_raw)
+        option_idx = int(option_idx_raw)
+    except ValueError:
+        await call.answer()
+        return
+
+    data = await state.get_data()
+    if data.get("quiz") != quiz_name:
+        await call.answer()
+        return
+
+    try:
+        definition = load_quiz(quiz_name)
+    except FileNotFoundError:
+        await call.answer("Тест недоступен")
+        return
+
+    questions = definition.questions
+    if not (0 <= question_idx < len(questions)):
+        await call.answer()
+        return
+
+    question = questions[question_idx]
+    if not (0 <= option_idx < len(question.options)):
+        await call.answer()
+        return
+
+    answer_keys: dict[str, str] = dict(data.get("answers", {}))
+    answer_keys[question.id] = question.options[option_idx].key
+
+    total_score, tags, chosen_options = _evaluate_answers(definition, answer_keys)
+    next_index = question_idx + 1
+
+    await call.answer()
+
+    if next_index >= len(questions):
+        threshold = definition.pick_threshold(total_score)
+        result_context = QuizResultContext(
+            total_score=total_score,
+            chosen_options=chosen_options,
+            collected_tags=tags,
+            threshold=threshold,
+            source=call,
+        )
+
+        hooks = QUIZ_HOOKS.get(quiz_name)
+        if hooks and hooks.on_finish and call.from_user:
+            await hooks.on_finish(call.from_user.id, definition, result_context)
+
+        await _send_default_result(call, definition, result_context)
+        await state.clear()
+        with suppress(Exception):
+            if call.message:
+                await call.message.delete()
+        return
+
+    await state.update_data(
+        answers=answer_keys,
+        score=total_score,
+        tags=tags,
+        index=next_index,
+    )
+    await state.set_state(_question_state(next_index))
+
+    if call.message:
+        await _send_question(call.message, definition, next_index)
+        with suppress(Exception):
+            await call.message.delete()
+
+
+async def _handle_back(
+    call: CallbackQuery, state: FSMContext, payload: Sequence[str]
+) -> None:
+    quiz_name, question_idx_raw = payload
+
+    try:
+        question_idx = int(question_idx_raw)
+    except ValueError:
+        await call.answer()
+        return
+
+    if question_idx <= 0:
+        await call.answer()
+        return
+
+    data = await state.get_data()
+    if data.get("quiz") != quiz_name:
+        await call.answer()
+        return
+
+    try:
+        definition = load_quiz(quiz_name)
+    except FileNotFoundError:
+        await call.answer("Тест недоступен")
+        return
+
+    questions = definition.questions
+    if question_idx > len(questions):
+        await call.answer()
+        return
+
+    previous_index = question_idx - 1
+    answers: dict[str, str] = dict(data.get("answers", {}))
+    total_score, tags, _ = _evaluate_answers(definition, answers)
+
+    await state.update_data(
+        answers=answers,
+        score=total_score,
+        tags=tags,
+        index=previous_index,
+    )
+    await state.set_state(_question_state(previous_index))
+
+    await call.answer()
+
+    if call.message:
+        await _send_question(call.message, definition, previous_index)
+        with suppress(Exception):
+            await call.message.delete()
 
 
 def build_quiz_image_url(path: str) -> str:
@@ -527,6 +602,25 @@ def _materialize_answers(
     return mapping
 
 
+def _evaluate_answers(
+    definition: QuizDefinition, answer_keys: dict[str, str]
+) -> tuple[int, list[str], dict[str, QuizOption]]:
+    chosen_options = _materialize_answers(definition, answer_keys)
+    total_score = sum(option.score for option in chosen_options.values())
+    tags: list[str] = []
+    for option in chosen_options.values():
+        tags.extend(option.tags)
+    return total_score, _unique(tags), chosen_options
+
+
+def _question_state(index: int) -> State:
+    attr = f"Q{index + 1}"
+    state = getattr(QuizSession, attr, None)
+    if state is None:
+        raise ValueError("Unsupported quiz question index: %s" % (index + 1))
+    return state
+
+
 def _unique(items: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -540,6 +634,7 @@ def _unique(items: Sequence[str]) -> list[str]:
 
 __all__ = [
     "ANSWER_PREFIX",
+    "BACK_PREFIX",
     "QuizDefinition",
     "QuizHooks",
     "QuizOption",
