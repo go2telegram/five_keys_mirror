@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     LEADS_CHAT_ID: int | None = None
 
     DB_URL: str = "sqlite+aiosqlite:///./var/bot.db"
-    DB_MIGRATE_ON_START: bool = True
+    MIGRATE_ON_START: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("MIGRATE_ON_START", "DB_MIGRATE_ON_START"),
+    )
     REDIS_URL: str | None = None
     TIMEZONE: str = "Europe/Moscow"
 
