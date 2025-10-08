@@ -43,7 +43,9 @@ class User(Base):
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    referrals: Mapped[list["Referral"]] = relationship(back_populates="referrer", foreign_keys="Referral.referrer_id")
+    referrals: Mapped[list["Referral"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
+    )
 
 
 class Subscription(Base):
@@ -61,21 +63,23 @@ class Subscription(Base):
 class Referral(Base):
     __tablename__ = "referrals"
     __table_args__ = (
-        Index("ix_ref_referrer", "referrer_id"),
+        Index("ix_ref_user", "user_id"),
         Index("ix_ref_invited", "invited_id"),
         Index("ix_ref_conv", "converted_at"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    referrer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     invited_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     bonus_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
-    referrer: Mapped[Optional[User]] = relationship(
-        back_populates="referrals", foreign_keys=[referrer_id], viewonly=True
-    )
+    user: Mapped[User] = relationship(back_populates="referrals", foreign_keys=[user_id])
 
 
 class PromoUsage(Base):
