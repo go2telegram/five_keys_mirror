@@ -1,10 +1,13 @@
 from datetime import datetime
 from io import StringIO
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
+from app.catalog.report import CatalogReportError, get_catalog_report
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.repo import (
@@ -128,3 +131,61 @@ async def leads_csv(m: Message):
         BufferedInputFile(csv_bytes, filename=fname),
         caption=f"Экспорт лидов ({len(items)})",
     )
+
+
+def _format_catalog_items(items: list[str], *, limit: int = 10) -> str:
+    if not items:
+        return "—"
+    preview = items[:limit]
+    remainder = len(items) - len(preview)
+    formatted = ", ".join(preview)
+    if remainder > 0:
+        formatted += f", … (+{remainder})"
+    return formatted
+
+
+def _format_catalog_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
+
+
+@router.message(Command("catalog_report"))
+async def catalog_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    try:
+        report = get_catalog_report()
+    except CatalogReportError as exc:
+        await m.answer(f"Не удалось собрать отчёт: {exc}")
+        return
+
+    tz = None
+    try:
+        tz = ZoneInfo(settings.TIMEZONE)
+    except Exception:  # noqa: BLE001 - timezone may be invalid in config
+        tz = None
+
+    timestamp = "—"
+    if report.generated_at:
+        dt = report.generated_at
+        if tz:
+            dt = dt.astimezone(tz)
+        timestamp = dt.strftime("%Y-%m-%d %H:%M:%S %Z").strip()
+        if not timestamp:
+            timestamp = dt.isoformat(timespec="seconds")
+
+    text = (
+        "📦 <b>Каталог</b>\n"
+        f"found_descriptions={report.found_descriptions}\n"
+        f"found_images={report.found_images}\n"
+        f"built={report.built}\n"
+        f"missing_images: {_format_catalog_items(report.missing_images)}\n"
+        f"unmatched_images: {_format_catalog_items(report.unmatched_images)}\n"
+        f"catalog: {_format_catalog_path(report.catalog_path)}\n"
+        f"build_time: {timestamp}"
+    )
+
+    await m.answer(text)
