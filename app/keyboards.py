@@ -12,7 +12,7 @@ from app.products import BUY_URLS, PRODUCTS
 def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
+    kb.button(text="🧪 Тесты", callback_data="tests:menu")
     kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
     kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")

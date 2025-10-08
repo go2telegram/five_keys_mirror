@@ -1,9 +1,22 @@
 # app/handlers/navigator.py
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 router = Router()
+
+# ====== Тесты ======
+
+tests_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="⚡ Энергия", callback_data="tests:energy")],
+        [InlineKeyboardButton(text="🛌 Сон", callback_data="tests:sleep")],
+        [InlineKeyboardButton(text="😵 Стресс", callback_data="tests:stress")],
+        [InlineKeyboardButton(text="🛡 Иммунитет", callback_data="tests:immunity")],
+        [InlineKeyboardButton(text="🧠 ЖКТ/Дефициты", callback_data="tests:gut")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:home")],
+    ]
+)
 
 # ====== ДАННЫЕ НАВИГАЦИИ (только ссылки и названия) ======
 NAV = {
@@ -112,6 +125,12 @@ async def nav_root(c: CallbackQuery):
     await c.message.edit_text("🧭 Навигатор по каналу — выбери раздел:", reply_markup=kb_nav_root())
 
 
+@router.callback_query(F.data == "tests:menu")
+async def tests_menu(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text("🧪 Выбери тест:", reply_markup=tests_kb)
+
+
 @router.callback_query(F.data.startswith("nav:cat:"))
 async def nav_category(c: CallbackQuery):
     cat_key = c.data.split(":")[-1]
@@ -122,3 +141,10 @@ async def nav_category(c: CallbackQuery):
     body = f"{title}\nВыбери, что открыть:"
     await c.answer()
     await c.message.edit_text(body, reply_markup=kb_nav_category(cat_key))
+
+
+@router.callback_query(F.data == "nav:home")
+async def nav_home(c: CallbackQuery):
+    from app.main import home_main
+
+    await home_main(c)
