@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 CATALOG_DIR = os.path.dirname(__file__)
 CATALOG_PATH = os.path.join(CATALOG_DIR, "products.json")
+CATALOG_FILE = Path(CATALOG_PATH)
 ALIASES_PATH = os.path.join(CATALOG_DIR, "aliases.json")
 
 
@@ -29,8 +31,9 @@ def _read_raw() -> Dict[str, Any]:
         raise CatalogError("products.json must contain an object at the top level")
 
     items = raw.get("products")
+    version = raw.get("version")
     if isinstance(items, list) and items:
-        return {"products": items}
+        return {"products": items, "version": version}
 
     # Backwards compatibility: legacy format is a flat mapping id -> metadata.
     if items is None:
@@ -46,7 +49,7 @@ def _read_raw() -> Dict[str, Any]:
                     copy["order"] = {"velavie_link": velavie_link}
             legacy_items.append(copy)
         if legacy_items:
-            return {"products": legacy_items}
+            return {"products": legacy_items, "version": version}
 
     raise CatalogError("products.json must contain a non-empty 'products' array")
 
@@ -99,6 +102,7 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
 
     data = _read_raw()
     items: List[Dict[str, Any]] = data["products"]
+    version = str(data.get("version") or _derive_version_fallback())
 
     by_id: Dict[str, Dict[str, Any]] = {}
     by_alias: Dict[str, str] = {}
@@ -138,7 +142,24 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
         "products": by_id,
         "aliases": by_alias,
         "ordered": ordered_ids,
+        "version": version,
     }
+
+
+def catalog_version() -> str:
+    data = load_catalog()
+    version = data.get("version")
+    if isinstance(version, str) and version:
+        return version
+    return _derive_version_fallback()
+
+
+def _derive_version_fallback() -> str:
+    try:
+        stat = CATALOG_FILE.stat()
+    except FileNotFoundError:
+        return "unknown"
+    return str(int(stat.st_mtime))
 
 
 def product_by_id(pid: str) -> Dict[str, Any] | None:
@@ -182,5 +203,6 @@ __all__ = [
     "load_catalog",
     "product_by_id",
     "product_by_alias",
+    "catalog_version",
     "select_by_goals",
 ]
