@@ -46,6 +46,9 @@ class User(Base):
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
+    calculator_results: Mapped[list["CalculatorResult"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Subscription(Base):
@@ -118,3 +121,18 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class CalculatorResult(Base):
+    __tablename__ = "calculator_results"
+    __table_args__ = (Index("ix_calc_results_user", "user_id"),)
+
+    id: Mapped[int] = mapped_column(_bigint_pk, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="calculator_results")

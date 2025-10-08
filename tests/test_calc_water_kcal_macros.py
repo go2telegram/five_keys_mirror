@@ -40,6 +40,7 @@ async def test_water_calculator_flow(monkeypatch):
     monkeypatch.setattr(calc_water.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(calc_water, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc_water.events_repo, "log", AsyncMock())
+    monkeypatch.setattr(calc_water.calc_unified, "save_result", AsyncMock())
     send_mock = AsyncMock()
     monkeypatch.setattr(calc_water, "send_product_cards", send_mock)
 
@@ -62,6 +63,7 @@ async def test_water_calculator_flow(monkeypatch):
 
     calc_water.set_last_plan.assert_awaited()
     calc_water.events_repo.log.assert_awaited()
+    calc_water.calc_unified.save_result.assert_awaited()
     send_mock.assert_awaited()
     assert user_id not in calc_water.SESSIONS
 
@@ -72,6 +74,7 @@ async def test_kcal_calculator_flow(monkeypatch):
     monkeypatch.setattr(calc_kcal.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(calc_kcal, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc_kcal.events_repo, "log", AsyncMock())
+    monkeypatch.setattr(calc_kcal.calc_unified, "save_result", AsyncMock())
     send_mock = AsyncMock()
     monkeypatch.setattr(calc_kcal, "send_product_cards", send_mock)
 
@@ -98,6 +101,7 @@ async def test_kcal_calculator_flow(monkeypatch):
 
     calc_kcal.set_last_plan.assert_awaited()
     calc_kcal.events_repo.log.assert_awaited()
+    calc_kcal.calc_unified.save_result.assert_awaited()
     send_mock.assert_awaited()
     assert user_id not in calc_kcal.SESSIONS
 

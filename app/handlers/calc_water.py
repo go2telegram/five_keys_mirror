@@ -11,6 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
+from app.handlers import calc_unified
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
@@ -161,6 +162,18 @@ async def _finalize(c: CallbackQuery, total: float, glasses: int) -> None:
             "calc_finish",
             {
                 "calc": "water",
+                "liters": total,
+                "glasses": glasses,
+                "activity": activity,
+                "climate": climate,
+                "weight": weight,
+            },
+        )
+        await calc_unified.save_result(
+            session,
+            user_id,
+            "water",
+            {
                 "liters": total,
                 "glasses": glasses,
                 "activity": activity,
