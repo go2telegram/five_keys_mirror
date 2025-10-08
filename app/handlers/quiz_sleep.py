@@ -44,9 +44,11 @@ SLEEP_QUESTIONS = [
 
 def _register_yaml_hooks() -> None:
     async def _on_finish_sleep(
-        call: CallbackQuery, definition: QuizDefinition, result: QuizResultContext
+        user_id: int, definition: QuizDefinition, result: QuizResultContext
     ) -> bool:
-        if not call.message:
+        origin = result.origin
+        message = origin.message if origin and origin.message else None
+        if not message:
             return False
 
         threshold = result.threshold
@@ -62,7 +64,7 @@ def _register_yaml_hooks() -> None:
             collected = ", ".join(result.collected_tags)
             text += f"\nanswers: {collected}"
 
-        await call.message.answer(text)
+        await message.answer(text)
         return True
 
     register_quiz_hooks("sleep", QuizHooks(on_finish=_on_finish_sleep))
