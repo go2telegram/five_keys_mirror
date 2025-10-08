@@ -1,0 +1,66 @@
+title: "Сон"
+cover: "app/static/images/quiz/sleep/cover.jpg"
+questions:
+  - id: q1
+    text: "Сколько часов ты обычно спишь?"
+    options:
+      - key: long
+        text: "8-9 часов"
+        score: 1
+        tags: ["ok"]
+      - key: medium
+        text: "6-7 часов"
+        score: 2
+        tags: ["sleep"]
+      - key: short
+        text: "Менее 6 часов"
+        score: 3
+        tags: ["sleep", "stress"]
+  - id: q2
+    text: "Есть ли трудности с засыпанием?"
+    image: "app/static/images/quiz/sleep/q2.jpg"
+    options:
+      - key: never
+        text: "Редко"
+        score: 1
+        tags: ["ok"]
+      - key: sometimes
+        text: "Иногда"
+        score: 2
+        tags: ["watch"]
+      - key: often
+        text: "Часто"
+        score: 3
+        tags: ["sleep"]
+  - id: q3
+    text: "Просыпаешься ли усталым?"
+    options:
+      - key: fresh
+        text: "Нет, бодрым"
+        score: 1
+        tags: ["ok"]
+      - key: neutral
+        text: "Иногда"
+        score: 2
+        tags: ["sleep"]
+      - key: tired
+        text: "Часто"
+        score: 3
+        tags: ["sleep", "energy"]
+result:
+  thresholds:
+    - min: 0
+      max: 4
+      label: "Качество сна хорошее"
+      advice: "Поддерживай режим и вечерние ритуалы."
+      tags: ["support"]
+    - min: 5
+      max: 7
+      label: "Есть небольшие нарушения"
+      advice: "Добавь расслабление и меньше гаджетов перед сном."
+      tags: ["relax"]
+    - min: 8
+      max: 12
+      label: "Сон требует внимания"
+      advice: "Важно наладить режим и обсудить с экспертом."
+      tags: ["sleep-care", "consult"]

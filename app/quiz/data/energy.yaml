@@ -1,0 +1,66 @@
+title: "Энергия"
+cover: "app/static/images/quiz/energy/cover.jpg"
+questions:
+  - id: q1
+    text: "Как часто чувствуешь упадок сил?"
+    image: "app/static/images/quiz/energy/q1.jpg"
+    options:
+      - key: rarely
+        text: "Редко"
+        score: 1
+        tags: ["ok"]
+      - key: sometimes
+        text: "Иногда"
+        score: 2
+        tags: ["watch"]
+      - key: often
+        text: "Часто"
+        score: 3
+        tags: ["energy"]
+  - id: q2
+    text: "Как часто тянешься к сладкому?"
+    options:
+      - key: low
+        text: "Редко"
+        score: 1
+        tags: ["balance"]
+      - key: medium
+        text: "Иногда"
+        score: 2
+        tags: ["sugar"]
+      - key: high
+        text: "Постоянно"
+        score: 3
+        tags: ["sugar", "energy"]
+  - id: q3
+    text: "Как восстанавливаешься после нагрузок?"
+    options:
+      - key: fast
+        text: "Быстро"
+        score: 1
+        tags: ["ok"]
+      - key: normal
+        text: "Нормально"
+        score: 2
+        tags: ["watch"]
+      - key: slow
+        text: "Долго"
+        score: 3
+        tags: ["recovery"]
+result:
+  thresholds:
+    - min: 0
+      max: 4
+      label: "OK"
+      advice: "Энергия в норме, продолжай текущий режим."
+      tags: ["support"]
+    - min: 5
+      max: 7
+      label: "Нужна поддержка"
+      advice: "Добавь больше сна и движения."
+      tags: ["mitup"]
+    - min: 8
+      max: 12
+      label: "Требуется внимание"
+      advice: "Подумай о консультации и доп. поддержке."
+      tags: ["brain-coffee", "focus"]

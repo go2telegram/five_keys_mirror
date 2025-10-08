@@ -1,0 +1,66 @@
+title: "ЖКТ"
+cover: "app/static/images/quiz/gut/cover.jpg"
+questions:
+  - id: q1
+    text: "Как часто беспокоит вздутие?"
+    options:
+      - key: never
+        text: "Редко"
+        score: 1
+        tags: ["ok"]
+      - key: sometimes
+        text: "Пару раз в неделю"
+        score: 2
+        tags: ["watch"]
+      - key: often
+        text: "Почти каждый день"
+        score: 3
+        tags: ["gut"]
+  - id: q2
+    text: "Регулярный ли стул?"
+    image: "app/static/images/quiz/gut/q2.jpg"
+    options:
+      - key: regular
+        text: "Да, ежедневно"
+        score: 1
+        tags: ["ok"]
+      - key: irregular
+        text: "Иногда пропускаю"
+        score: 2
+        tags: ["gut"]
+      - key: issues
+        text: "Частые сложности"
+        score: 3
+        tags: ["gut", "support"]
+  - id: q3
+    text: "Есть ли тяжесть после еды?"
+    options:
+      - key: light
+        text: "Редко"
+        score: 1
+        tags: ["ok"]
+      - key: medium
+        text: "Иногда"
+        score: 2
+        tags: ["watch"]
+      - key: heavy
+        text: "Часто"
+        score: 3
+        tags: ["gut", "diet"]
+result:
+  thresholds:
+    - min: 0
+      max: 4
+      label: "ЖКТ в норме"
+      advice: "Продолжай сбалансированное питание и воду."
+      tags: ["support"]
+    - min: 5
+      max: 7
+      label: "Есть поводы для внимания"
+      advice: "Добавь клетчатку и отслеживай реакции."
+      tags: ["fiber"]
+    - min: 8
+      max: 12
+      label: "Нужна поддержка ЖКТ"
+      advice: "Рассмотри консультацию и мягкую коррекцию рациона."
+      tags: ["consult", "gut-care"]

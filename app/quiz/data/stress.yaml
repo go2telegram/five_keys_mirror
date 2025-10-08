@@ -1,0 +1,66 @@
+title: "Стресс"
+cover: "app/static/images/quiz/stress/cover.jpg"
+questions:
+  - id: q1
+    text: "Часто ли чувствуешь тревожность?"
+    options:
+      - key: low
+        text: "Редко"
+        score: 1
+        tags: ["ok"]
+      - key: medium
+        text: "Иногда"
+        score: 2
+        tags: ["stress"]
+      - key: high
+        text: "Почти каждый день"
+        score: 3
+        tags: ["stress", "focus"]
+  - id: q2
+    text: "Как восстанавливаешься после нагрузки?"
+    options:
+      - key: quick
+        text: "Легко"
+        score: 1
+        tags: ["ok"]
+      - key: normal
+        text: "Пару дней"
+        score: 2
+        tags: ["recovery"]
+      - key: hard
+        text: "Долго"
+        score: 3
+        tags: ["stress"]
+  - id: q3
+    text: "Насколько стабилен сон?"
+    image: "app/static/images/quiz/stress/q3.jpg"
+    options:
+      - key: stable
+        text: "Стабильный"
+        score: 1
+        tags: ["ok"]
+      - key: light
+        text: "Лёгкие нарушения"
+        score: 2
+        tags: ["sleep"]
+      - key: broken
+        text: "Частые пробуждения"
+        score: 3
+        tags: ["sleep", "stress"]
+result:
+  thresholds:
+    - min: 0
+      max: 4
+      label: "Уровень стресса низкий"
+      advice: "Продолжай поддерживать баланс работы и отдыха."
+      tags: ["support"]
+    - min: 5
+      max: 7
+      label: "Нужен контроль"
+      advice: "Добавь практики расслабления и активности."
+      tags: ["adaptogens"]
+    - min: 8
+      max: 12
+      label: "Стресс высокий"
+      advice: "Обратись за консультацией и удели внимание восстановлению."
+      tags: ["consult", "stress-care"]
