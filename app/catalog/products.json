@@ -353,7 +353,8 @@
         "t8-era-mit-up",
         "t8_era_mit_up",
         "t8eramitup",
-        "up"
+        "up",
+        "ERA_MIT_UP"
       ],
       "image": "/static/images/products/mitup_main.png",
       "images": [
@@ -411,6 +412,9 @@
       "image": "/static/images/products/t8-mobio.jpg",
       "images": [
         "/static/images/products/t8-mobio.jpg"
+      ],
+      "aliases": [
+        "MOBIO"
       ]
     },
     {
@@ -888,6 +892,9 @@
       "image": "/static/images/products/t8-teo-green.jpg",
       "images": [
         "/static/images/products/t8-teo-green.jpg"
+      ],
+      "aliases": [
+        "TEO_GREEN"
       ]
     },
     {
@@ -1005,6 +1012,9 @@
       "image": "/static/images/products/nash-magnii-b6.jpg",
       "images": [
         "/static/images/products/nash-magnii-b6.jpg"
+      ],
+      "aliases": [
+        "MAG_B6"
       ]
     },
     {

@@ -1,7 +1,5 @@
 # app/products.py
 
-BASE = "https://raw.githubusercontent.com/go2telegram/media/main/media/products"
-
 PRODUCTS = {
     "T8_EXTRA": {
         "title": "T8 EXTRA",
@@ -9,7 +7,6 @@ PRODUCTS = {
             "Полипренолы 90% для мембран митохондрий",
             "Больше АТФ, меньше утомляемости",
         ],
-        "image_url": f"{BASE}/extra.jpg",
     },
     "T8_BLEND": {
         "title": "T8 BLEND",
@@ -17,7 +14,6 @@ PRODUCTS = {
             "6 таёжных ягод + SibXP",
             "Антиоксидантная поддержка каждый день",
         ],
-        "image_url": f"{BASE}/blend.jpg",
     },
     "VITEN": {
         "title": "NASH ViTEN",
@@ -25,7 +21,6 @@ PRODUCTS = {
             "Природный индуктор интерферона",
             "Поддержка иммунитета в сезон простуд",
         ],
-        "image_url": f"{BASE}/viten.jpg",
     },
     "TEO_GREEN": {
         "title": "T8 TEO GREEN",
@@ -33,7 +28,6 @@ PRODUCTS = {
             "Растворимая/нерастворимая клетчатка",
             "Питает микробиом и ЖКТ",
         ],
-        "image_url": f"{BASE}/teogreen.jpg",
     },
     "MOBIO": {
         "title": "MOBIO+",
@@ -41,7 +35,6 @@ PRODUCTS = {
             "Метабиотик с высокой биодоступностью",
             "После антибиотиков/стрессов — восстановление",
         ],
-        "image_url": f"{BASE}/mobio.jpg",
     },
     "OMEGA3": {
         "title": "NASH Омега-3",
@@ -49,7 +42,6 @@ PRODUCTS = {
             "Высокая концентрация EPA/DHA",
             "Сосуды, мозг, противовоспалительно",
         ],
-        "image_url": f"{BASE}/omega3.jpg",
     },
     "MAG_B6": {
         "title": "Magnesium + B6",
@@ -57,8 +49,6 @@ PRODUCTS = {
             "Антистресс и мышечное расслабление",
             "Поддержка качества сна",
         ],
-        # оставляю текущее имя файла, как у тебя в репо
-        "image_url": f"{BASE}/magniyb6.jpg",
     },
     "D3": {
         "title": "Vitamin D3",
@@ -66,7 +56,6 @@ PRODUCTS = {
             "Иммунитет, кости, настроение",
             "Осенне-зимняя поддержка",
         ],
-        "image_url": f"{BASE}/d3.jpg",
     },
     "ERA_MIT_UP": {
         "title": "T8 ERA MIT UP",
@@ -74,7 +63,6 @@ PRODUCTS = {
             "Коллаген + Уролитин A + SibXP",
             "Кожа/связки и энергия митохондрий",
         ],
-        "image_url": f"{BASE}/mitup.jpg",
     },
 }
 
