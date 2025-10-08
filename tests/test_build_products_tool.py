@@ -107,11 +107,13 @@ def test_slug_transliterates_yo() -> None:
 
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
+    summary_path = tmp_path / "report.json"
     count, generated = bp.build_catalog(
         descriptions_path=str(DESCRIPTIONS_PATH),
         images_mode="local",
         images_dir=str(IMAGES_DIR),
         output=output,
+        summary_path=summary_path,
     )
     assert generated == output
     assert count >= 20
@@ -133,6 +135,10 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
 
     validated = bp.validate_catalog(output)
     assert validated == count
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["built"] == count
+    assert summary["catalog_path"] == str(output)
 
 
 def test_load_description_texts_combines_multiple_sources(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -188,3 +194,49 @@ def test_dedupe_products_removes_duplicates() -> None:
 
     without_dedupe = bp._dedupe_products([product.copy() for product in base_products], dedupe=False)
     assert [item["title"] for item in without_dedupe] == ["Product Alpha", "Product Alpha", "Product Bravo"]
+
+
+def test_build_catalog_writes_summary(tmp_path: Path) -> None:
+    output = tmp_path / "products.json"
+    summary_path = tmp_path / "summary.json"
+    count, _ = bp.build_catalog(
+        descriptions_path=str(DESCRIPTIONS_PATH),
+        images_mode="local",
+        images_dir=str(IMAGES_DIR),
+        output=output,
+        summary_path=summary_path,
+    )
+
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["built"] == count
+    assert payload["catalog_path"] == str(output)
+    assert payload["found_images"] == len(bp._list_local_images(Path(IMAGES_DIR)))
+    assert "generated_at" in payload
+
+
+def test_expect_count_from_images_mismatch(tmp_path: Path) -> None:
+    descriptions_path = str(DESCRIPTIONS_PATH)
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    (images_dir / "placeholder.jpg").write_bytes(b"x")
+    output = tmp_path / "products.json"
+    summary_path = tmp_path / "summary.json"
+
+    with pytest.raises(bp.CatalogBuildError) as exc:
+        bp.build_catalog(
+            descriptions_path=descriptions_path,
+            images_mode="local",
+            images_dir=str(images_dir),
+            output=output,
+            summary_path=summary_path,
+            expect_count="from=images",
+            fail_on_mismatch=True,
+        )
+
+    message = str(exc.value)
+    assert "expected 1" in message
+
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["found_images"] == 1
+    assert payload["built"] != payload["found_images"]
+    assert payload["unmatched_images"] == ["placeholder.jpg"]

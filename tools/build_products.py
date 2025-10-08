@@ -10,7 +10,8 @@ import os
 import re
 import sys
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping, Sequence
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
@@ -30,6 +31,7 @@ from slugify import slugify as _fallback_slugify
 
 
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
+REPORT_PATH = ROOT / "app" / "catalog" / "products.report.json"
 SCHEMA_PATH = ROOT / "app" / "data" / "products.schema.json"
 
 # descriptions source (один из)
@@ -718,6 +720,43 @@ class ImageMatch:
     score: int = 0
 
 
+@dataclass(slots=True)
+class BuildSummary:
+    """Aggregates catalog build statistics."""
+
+    found_descriptions: int
+    available_images: set[str] = field(default_factory=set)
+    missing_images: list[str] = field(default_factory=list)
+    matched_images: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:  # pragma: no cover - trivial normalization
+        self.available_images = {str(item) for item in self.available_images}
+        self.matched_images = {str(item) for item in self.matched_images}
+
+    @property
+    def found_images(self) -> int:
+        return len(self.available_images)
+
+    def record_missing_image(self, product_id: str) -> None:
+        if product_id not in self.missing_images:
+            self.missing_images.append(product_id)
+
+    def record_matched_image(self, image_name: str) -> None:
+        self.matched_images.add(str(image_name))
+
+    def build_payload(self, *, built: int, catalog_path: Path) -> dict[str, object]:
+        unmatched = sorted(self.available_images.difference(self.matched_images))
+        return {
+            "built": int(built),
+            "catalog_path": str(catalog_path),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "found_descriptions": int(self.found_descriptions),
+            "found_images": self.found_images,
+            "missing_images": sorted(self.missing_images),
+            "unmatched_images": unmatched,
+        }
+
+
 def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
     slug_lower = _normalize_slug_value(slug_value)
     aliases = _slug_aliases(slug_lower)
@@ -766,6 +805,89 @@ def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
     return match.name if match else None
 
 
+def _strict_flag(value: bool | str | None, *, option: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    normalized = str(value).strip().lower()
+    if normalized in {"", "0", "false", "off", "no"}:
+        return False
+    if normalized in {"1", "true", "on", "yes", "error", "add"}:
+        return True
+    raise CatalogBuildError(f"Unknown value for --{option}: {value}")
+
+
+def _resolve_expect_count(
+    value: int | str | None, *, summary: BuildSummary
+) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.lower() == "from=images":
+        return summary.found_images
+    try:
+        return int(text)
+    except ValueError as exc:  # pragma: no cover - invalid CLI usage
+        raise CatalogBuildError(f"Invalid --expect-count value: {value}") from exc
+
+
+def _write_build_summary(
+    payload: dict[str, object],
+    *,
+    summary_path: Path | None = None,
+    step_summary_path: Path | None = None,
+) -> None:
+    target = Path(summary_path or REPORT_PATH)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    summary_line = (
+        "build-summary: "
+        f"found_descriptions={payload['found_descriptions']}  "
+        f"found_images={payload['found_images']}  "
+        f"built={payload['built']}"
+    )
+    print(summary_line)
+    missing = payload.get("missing_images") or []
+    unmatched = payload.get("unmatched_images") or []
+    if missing:
+        print("build-summary: missing_images →", ", ".join(str(item) for item in missing))
+    if unmatched:
+        print("build-summary: unmatched_images →", ", ".join(str(item) for item in unmatched))
+
+    resolved_step_summary: Path | None = None
+    if step_summary_path is not None:
+        resolved_step_summary = Path(step_summary_path)
+    else:
+        step_summary_env = os.environ.get("GITHUB_STEP_SUMMARY")
+        if step_summary_env:
+            resolved_step_summary = Path(step_summary_env)
+    if not resolved_step_summary:
+        return
+    resolved_step_summary.parent.mkdir(parents=True, exist_ok=True)
+    with resolved_step_summary.open("a", encoding="utf-8") as handle:
+        handle.write("### Catalog build summary\n")
+        handle.write("| Metric | Value |\n")
+        handle.write("| --- | --- |\n")
+        handle.write(f"| Found descriptions | {payload['found_descriptions']} |\n")
+        handle.write(f"| Found images | {payload['found_images']} |\n")
+        handle.write(f"| Built products | {payload['built']} |\n")
+        if missing:
+            handle.write("\n**Missing images**\\n\n")
+            for item in missing:
+                handle.write(f"- {item}\n")
+        if unmatched:
+            handle.write("\n**Unmatched images**\\n\n")
+            for item in unmatched:
+                handle.write(f"- {item}\n")
+        handle.write("\n")
+
+
 def _resolve_image(
     product: dict[str, object],
     *,
@@ -773,6 +895,7 @@ def _resolve_image(
     image_mode: str,
     image_base: str,
     strict: bool = False,
+    summary: "BuildSummary" | None = None,
 ) -> None:
     product_id = str(product["id"])
     match = _match_image(product_id, image_files)
@@ -781,6 +904,8 @@ def _resolve_image(
         if strict:
             raise CatalogBuildError(message)
         logging.warning(message)
+        if summary is not None:
+            summary.record_missing_image(product_id)
         product["available"] = False
         fallback = image_base if image_base.endswith("/") else image_base + "/"
         fallback += f"{product_id}.jpg"
@@ -791,6 +916,8 @@ def _resolve_image(
         aliases = _build_aliases(product_id)
         if aliases:
             product["aliases"] = aliases
+    if summary is not None:
+        summary.record_matched_image(match.name)
     image_name = match.name
     if image_mode == "remote":
         base = image_base if image_base.endswith("/") else image_base + "/"
@@ -851,17 +978,22 @@ def build_catalog(
     images_dir: str | None = None,
     output: Path | None = None,
     dedupe: bool = True,
-    strict_images: bool = False,
-    strict_descriptions: bool = False,
-    expect_count: int | None = None,
+    strict_images: bool | str = False,
+    strict_descriptions: bool | str = False,
+    expect_count: int | str | None = None,
     fail_on_mismatch: bool = False,
+    summary_path: Path | None = None,
+    step_summary_path: Path | None = None,
 ) -> tuple[int, Path]:
     texts = _load_description_texts(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
+    strict_descriptions_flag = _strict_flag(
+        strict_descriptions, option="strict-descriptions"
+    )
     products = _dedupe_products(
-        _load_products(texts), dedupe=dedupe, strict=strict_descriptions
+        _load_products(texts), dedupe=dedupe, strict=strict_descriptions_flag
     )
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
@@ -875,13 +1007,16 @@ def build_catalog(
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
+    summary = BuildSummary(found_descriptions=len(products), available_images=set(files))
+    strict_images_flag = _strict_flag(strict_images, option="strict-images")
+
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
     for product in products:
         product_id = str(product["id"])
         if product_id in unique_ids:
             message = f"Duplicate product id {product_id}"
-            if strict_descriptions:
+            if strict_descriptions_flag:
                 raise CatalogBuildError(message)
             logging.warning(message)
             continue
@@ -897,19 +1032,30 @@ def build_catalog(
             image_files=files,
             image_mode=mode,
             image_base=image_base,
-            strict=strict_images,
+            strict=strict_images_flag,
+            summary=summary,
         )
         normalized.append(product)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
-    destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    destination.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     count = len(normalized)
-    if expect_count is not None and count != expect_count:
+    resolved_expect_count = _resolve_expect_count(expect_count, summary=summary)
+    summary_payload = summary.build_payload(built=count, catalog_path=destination)
+    _write_build_summary(
+        summary_payload,
+        summary_path=summary_path,
+        step_summary_path=step_summary_path,
+    )
+    if resolved_expect_count is not None and count != resolved_expect_count:
         mismatch = (
             "Built product count mismatch: "
-            f"expected {expect_count}, got {count}"
+            f"expected {resolved_expect_count}, got {count}"
         )
         if fail_on_mismatch:
             raise CatalogBuildError(mismatch)
@@ -974,15 +1120,22 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
     build_parser.add_argument("--dedupe", choices=("on", "off"), default="on")
-    build_parser.add_argument("--strict-images", action="store_true", help="Fail if a product image cannot be resolved")
+    build_parser.add_argument(
+        "--strict-images",
+        nargs="?",
+        const="on",
+        default="off",
+        help="Image strictness (off/on/add)",
+    )
     build_parser.add_argument(
         "--strict-descriptions",
-        action="store_true",
-        help="Fail on duplicate product descriptions or identifiers",
+        nargs="?",
+        const="on",
+        default="off",
+        help="Description strictness (off/on/add)",
     )
     build_parser.add_argument(
         "--expect-count",
-        type=int,
         default=None,
         help="Expected number of products in the generated catalog",
     )
