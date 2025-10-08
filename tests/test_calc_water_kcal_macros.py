@@ -6,7 +6,8 @@ import pytest
 
 pytest.importorskip("aiosqlite")
 
-from app.handlers import calc_kcal, calc_macros, calc_water
+from app.handlers import calc, calc_kcal, calc_macros, calc_water
+import app.handlers.calc_common as calc_common
 
 
 @asynccontextmanager
@@ -41,7 +42,7 @@ async def test_water_calculator_flow(monkeypatch):
     monkeypatch.setattr(calc_water, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc_water.events_repo, "log", AsyncMock())
     send_mock = AsyncMock()
-    monkeypatch.setattr(calc_water, "send_product_cards", send_mock)
+    monkeypatch.setattr(calc_water, "send_calc_summary", send_mock)
 
     user_id = 501
     start_cb = _make_callback(user_id, "calc:water")
@@ -73,7 +74,7 @@ async def test_kcal_calculator_flow(monkeypatch):
     monkeypatch.setattr(calc_kcal, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc_kcal.events_repo, "log", AsyncMock())
     send_mock = AsyncMock()
-    monkeypatch.setattr(calc_kcal, "send_product_cards", send_mock)
+    monkeypatch.setattr(calc_kcal, "send_calc_summary", send_mock)
 
     user_id = 602
     await calc_kcal.start_kcal(_make_callback(user_id, "calc:kcal"))
@@ -109,7 +110,7 @@ async def test_macros_calculator_flow(monkeypatch):
     monkeypatch.setattr(calc_macros, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc_macros.events_repo, "log", AsyncMock())
     send_mock = AsyncMock()
-    monkeypatch.setattr(calc_macros, "send_product_cards", send_mock)
+    monkeypatch.setattr(calc_macros, "send_calc_summary", send_mock)
 
     user_id = 703
     await calc_macros.start_macros(_make_callback(user_id, "calc:macros"))
@@ -126,4 +127,34 @@ async def test_macros_calculator_flow(monkeypatch):
     calc_macros.set_last_plan.assert_awaited()
     calc_macros.events_repo.log.assert_awaited()
     send_mock.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_calc_recommendations_button(monkeypatch):
+    user_id = 904
+    result = calc_common.CalcResult(
+        calc="water",
+        title="test",
+        products=["OMEGA3"],
+        headline="headline",
+        bullets=["bullet"],
+        back_cb="calc:menu",
+    )
+    calc_common._RESULTS.put(user_id, result)
+
+    send_mock = AsyncMock()
+    monkeypatch.setattr(calc, "send_product_cards", send_mock)
+
+    callback = _make_callback(user_id, "calc:recommend:water")
+    await calc.calc_recommendations(callback)
+
+    send_mock.assert_awaited_with(
+        callback,
+        result.title,
+        result.products,
+        headline=result.headline,
+        bullets=result.bullets,
+        back_cb=result.back_cb,
+    )
+    calc_common._RESULTS.clear(user_id)
     assert user_id not in calc_macros.SESSIONS

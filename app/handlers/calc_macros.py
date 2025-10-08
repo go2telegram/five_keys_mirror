@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.handlers.quiz_common import send_product_cards
+from app.handlers.calc_common import log_calc_error, send_calc_summary
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -54,6 +54,13 @@ async def handle_message(message: Message) -> bool:
         weight = 0.0
 
     if weight <= 30 or weight > 250:
+        await log_calc_error(
+            message.from_user.id if message.from_user else None,
+            calc="macros",
+            step="weight",
+            reason="invalid_value",
+            raw_input=message.text,
+        )
         await message.answer(
             "Вес должен быть числом от 30 до 250 кг.",
             reply_markup=kb_back_home("calc:menu"),
@@ -167,10 +174,17 @@ async def _finalize(
         )
         await commit_safely(session)
 
-    await send_product_cards(
+    goal_label = _GOAL_LABELS.get(goal, "Поддержание")
+    await send_calc_summary(
         c,
-        "Итог: распределение БЖУ",
-        cards,
+        calc="macros",
+        title="🥗 Баланс БЖУ",
+        summary=[
+            f"Калории: <b>{calories} ккал</b>",
+            f"Б/Ж/У: <b>{protein} г</b> / <b>{fats} г</b> / <b>{carbs} г</b>",
+            f"Цель: {goal_label}",
+        ],
+        products=cards,
         headline=(
             f"Калории: <b>{calories} ккал</b>. Белки: <b>{protein} г</b>,"
             f" жиры: <b>{fats} г</b>, углеводы: <b>{carbs} г</b>."
@@ -224,6 +238,12 @@ async def choose_preference(c: CallbackQuery) -> None:
     weight = float(sess.get("weight") or 0.0)
     if weight <= 0:
         await c.answer()
+        await log_calc_error(
+            c.from_user.id if c.from_user else None,
+            calc="macros",
+            step="preference",
+            reason="missing_weight",
+        )
         await c.message.answer(
             "Вес не указан. Запусти расчёт заново.",
             reply_markup=kb_back_home("calc:menu"),

@@ -11,7 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.handlers.quiz_common import send_product_cards
+from app.handlers.calc_common import log_calc_error, send_calc_summary
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -55,6 +55,13 @@ async def handle_message(message: Message) -> bool:
     text = (message.text or "").strip()
     if step == "age":
         if not text.isdigit():
+            await log_calc_error(
+                message.from_user.id if message.from_user else None,
+                calc="kcal",
+                step="age",
+                reason="invalid_format",
+                raw_input=message.text,
+            )
             await message.answer(
                 "Возраст должен быть числом лет. Пример: <code>32</code>",
                 reply_markup=kb_back_home("calc:menu"),
@@ -62,6 +69,13 @@ async def handle_message(message: Message) -> bool:
             return True
         age = int(text)
         if age < 14 or age > 90:
+            await log_calc_error(
+                message.from_user.id if message.from_user else None,
+                calc="kcal",
+                step="age",
+                reason="out_of_range",
+                raw_input=message.text,
+            )
             await message.answer(
                 "Укажи возраст от 14 до 90 лет.",
                 reply_markup=kb_back_home("calc:menu"),
@@ -81,6 +95,13 @@ async def handle_message(message: Message) -> bool:
         except ValueError:
             weight = 0.0
         if weight <= 30 or weight > 250:
+            await log_calc_error(
+                message.from_user.id if message.from_user else None,
+                calc="kcal",
+                step="weight",
+                reason="invalid_value",
+                raw_input=message.text,
+            )
             await message.answer(
                 "Вес должен быть числом от 30 до 250 кг.",
                 reply_markup=kb_back_home("calc:menu"),
@@ -96,6 +117,13 @@ async def handle_message(message: Message) -> bool:
 
     if step == "height":
         if not text.isdigit():
+            await log_calc_error(
+                message.from_user.id if message.from_user else None,
+                calc="kcal",
+                step="height",
+                reason="invalid_format",
+                raw_input=message.text,
+            )
             await message.answer(
                 "Рост должен быть целым числом сантиметров.",
                 reply_markup=kb_back_home("calc:menu"),
@@ -103,6 +131,13 @@ async def handle_message(message: Message) -> bool:
             return True
         height = int(text)
         if height < 130 or height > 220:
+            await log_calc_error(
+                message.from_user.id if message.from_user else None,
+                calc="kcal",
+                step="height",
+                reason="out_of_range",
+                raw_input=message.text,
+            )
             await message.answer(
                 "Рост в диапазоне 130–220 см.",
                 reply_markup=kb_back_home("calc:menu"),
@@ -222,10 +257,17 @@ async def _finalize(
         )
         await commit_safely(session)
 
-    await send_product_cards(
+    goal_label = _GOAL_LABELS.get(goal, "Поддержание")
+    await send_calc_summary(
         c,
-        "Итог: дневная норма калорий",
-        cards,
+        calc="kcal",
+        title="🔥 Калории (BMR/TDEE)",
+        summary=[
+            f"BMR: <b>{base} ккал</b>",
+            f"TDEE: <b>{tdee} ккал</b>",
+            f"Цель — {goal_label}: <b>{target} ккал/день</b>",
+        ],
+        products=cards,
         headline=_headline(base, tdee, target, goal),
         bullets=bullets,
         back_cb="calc:menu",
@@ -303,6 +345,12 @@ async def choose_goal(c: CallbackQuery) -> None:
         factor = _ACTIVITY_FACTORS.get(factor_key, ("", 1.55))[1]
     except (KeyError, ValueError):
         await c.answer()
+        await log_calc_error(
+            c.from_user.id if c.from_user else None,
+            calc="kcal",
+            step="goal",
+            reason="incomplete_data",
+        )
         await c.message.answer(
             "Данные неполные. Запусти расчёт заново.",
             reply_markup=kb_back_home("calc:menu"),

@@ -7,6 +7,7 @@ from app.catalog.api import product_meta
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers import calc_kcal, calc_macros, calc_water
+from app.handlers.calc_common import get_calc_result, log_calc_error, send_calc_summary
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
 from app.reco import CTX, product_lines
@@ -94,6 +95,13 @@ async def _process_msd(message: Message) -> None:
     text = (message.text or "").strip()
     match = MSD_INPUT_RE.fullmatch(text)
     if not match:
+        await log_calc_error(
+            message.from_user.id if message.from_user else None,
+            calc="msd",
+            step="input",
+            reason="invalid_format",
+            raw_input=message.text,
+        )
         await message.answer(MSD_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
@@ -139,10 +147,12 @@ async def _process_msd(message: Message) -> None:
     headline = (
         f"Ориентир по формуле MSD: <b>{ideal} кг</b>." "\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     )
-    await send_product_cards(
+    await send_calc_summary(
         message,
-        "Итог: идеальный вес по MSD",
-        cards,
+        calc="msd",
+        title="⚖️ Идеальный вес (MSD)",
+        summary=[f"Рассчитанный ориентир: <b>{ideal} кг</b>"],
+        products=cards,
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
@@ -167,6 +177,13 @@ async def _process_bmi(message: Message) -> None:
     text = (message.text or "").strip()
     match = BMI_INPUT_RE.fullmatch(text)
     if not match:
+        await log_calc_error(
+            message.from_user.id if message.from_user else None,
+            calc="bmi",
+            step="input",
+            reason="invalid_format",
+            raw_input=message.text,
+        )
         await message.answer(BMI_PROMPT, reply_markup=kb_back_home("calc:menu"))
         return
 
@@ -222,15 +239,34 @@ async def _process_bmi(message: Message) -> None:
         "\nИМТ оценивает соотношение роста и веса, но не показывает состав тела."
         f"\n{hint}"
     )
-    await send_product_cards(
+    await send_calc_summary(
         message,
-        "Итог: индекс массы тела",
-        cards,
+        calc="bmi",
+        title="⚖️ Индекс массы тела",
+        summary=[f"ИМТ: <b>{bmi}</b> — {cat}.", hint],
+        products=cards,
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
     )
     SESSIONS.pop(message.from_user.id, None)
+
+
+@router.callback_query(F.data.startswith("calc:recommend:"))
+async def calc_recommendations(c: CallbackQuery) -> None:
+    calc_code = c.data.split(":")[-1]
+    result = get_calc_result(c.from_user.id, calc_code)
+    if not result:
+        await c.answer("Нет данных. Пройди расчёт заново.", show_alert=True)
+        return
+    await send_product_cards(
+        c,
+        result.title,
+        result.products,
+        headline=result.headline,
+        bullets=result.bullets,
+        back_cb=result.back_cb or "calc:menu",
+    )
 
 
 @router.message(F.text)

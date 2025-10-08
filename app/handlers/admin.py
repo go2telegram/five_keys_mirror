@@ -3,6 +3,8 @@ from io import StringIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from html import escape
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
@@ -23,6 +25,12 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.repo.calc_stats import (
+    CalcErrorRecord,
+    CalcUsage,
+    calc_errors as calc_errors_repo,
+    calc_usage_summary,
+)
 
 router = Router()
 
@@ -33,6 +41,85 @@ def _is_admin(user_id: int | None) -> bool:
     allowed = set(settings.ADMIN_USER_IDS or [])
     allowed.add(settings.ADMIN_ID)
     return user_id in allowed
+
+
+_CALC_LABELS = {
+    "water": "💧 Вода",
+    "kcal": "🔥 Калории",
+    "macros": "🥗 Макросы",
+    "bmi": "⚖️ BMI",
+    "msd": "⚖️ MSD",
+}
+
+
+def _format_calc_metrics(item: CalcUsage) -> str:
+    metrics = item.metrics
+    if item.calc == "water":
+        parts = []
+        liters = metrics.get("avg_liters")
+        glasses = metrics.get("avg_glasses")
+        if liters is not None:
+            parts.append(f"≈{liters:.1f} л")
+        if glasses is not None:
+            parts.append(f"≈{glasses:.0f} стак.")
+        return ", ".join(parts)
+    if item.calc == "kcal":
+        parts = []
+        bmr = metrics.get("avg_bmr")
+        tdee = metrics.get("avg_tdee")
+        target = metrics.get("avg_target")
+        if bmr is not None:
+            parts.append(f"BMR {bmr:.0f}")
+        if tdee is not None:
+            parts.append(f"TDEE {tdee:.0f}")
+        if target is not None:
+            parts.append(f"цель {target:.0f}")
+        return ", ".join(parts)
+    if item.calc == "macros":
+        calories = metrics.get("avg_calories")
+        protein = metrics.get("avg_protein")
+        fats = metrics.get("avg_fats")
+        carbs = metrics.get("avg_carbs")
+        parts = []
+        if calories is not None:
+            parts.append(f"калории {calories:.0f}")
+        macs = []
+        if protein is not None:
+            macs.append(f"{protein:.0f}")
+        if fats is not None:
+            macs.append(f"{fats:.0f}")
+        if carbs is not None:
+            macs.append(f"{carbs:.0f}")
+        if macs:
+            parts.append("Б/Ж/У " + "/".join(macs))
+        return ", ".join(parts)
+    if item.calc == "bmi":
+        value = metrics.get("avg_bmi")
+        if value is not None:
+            return f"ср. {value:.1f}"
+    if item.calc == "msd":
+        value = metrics.get("avg_ideal_weight")
+        if value is not None:
+            return f"≈{value:.1f} кг"
+    return ""
+
+
+def _format_calc_usage_line(item: CalcUsage) -> str:
+    label = escape(_CALC_LABELS.get(item.calc, item.calc or "—"))
+    metrics = _format_calc_metrics(item)
+    if metrics:
+        return f"{label} — {item.count} ({metrics})"
+    return f"{label} — {item.count}"
+
+
+def _format_calc_error(err: CalcErrorRecord) -> str:
+    ts = err.ts.strftime("%Y-%m-%d %H:%M") if err.ts else "—"
+    calc_label = escape(_CALC_LABELS.get(err.calc, err.calc))
+    step = escape(err.step or "—")
+    reason = escape(err.reason or "—")
+    raw = escape(err.raw_input or "—")
+    user = f"id {err.user_id}" if err.user_id else "anon"
+    return f"{ts} • {calc_label} [{step}] — {reason}. Ввод: <code>{raw}</code> ({user})"
 
 
 @router.message(Command("stats"))
@@ -62,6 +149,33 @@ async def stats(m: Message):
         "• /leads_csv — CSV последних 100\n"
         "• /leads_csv 500 — CSV последних 500"
     )
+
+
+@router.message(Command("calc_report"))
+async def calc_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    async with compat_session(session_scope) as session:
+        usage = await calc_usage_summary(session)
+        errors = await calc_errors_repo(session, limit=5)
+
+    lines = ["📐 <b>Калькуляторы</b>"]
+    if usage:
+        total = sum(item.count for item in usage)
+        lines.append(f"Всего расчётов: {total}")
+        lines.extend(_format_calc_usage_line(item) for item in usage)
+    else:
+        lines.append("Пока нет данных.")
+
+    lines.append("")
+    if errors:
+        lines.append("⚠️ Последние ошибки ввода:")
+        lines.extend(f"• {_format_calc_error(err)}" for err in errors)
+    else:
+        lines.append("Ошибок ввода не зафиксировано.")
+
+    await m.answer("\n".join(lines))
 
 
 @router.message(Command("leads"))

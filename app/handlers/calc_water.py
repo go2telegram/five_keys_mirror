@@ -11,7 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.handlers.quiz_common import send_product_cards
+from app.handlers.calc_common import log_calc_error, send_calc_summary
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -76,6 +76,13 @@ async def handle_message(message: Message) -> bool:
         weight = 0.0
 
     if weight <= 0 or weight > 300:
+        await log_calc_error(
+            message.from_user.id if message.from_user else None,
+            calc="water",
+            step="weight",
+            reason="invalid_weight",
+            raw_input=message.text,
+        )
         await message.answer(
             "Не удалось распознать вес. Пример: <code>72.5</code>",
             reply_markup=kb_back_home("calc:menu"),
@@ -170,10 +177,12 @@ async def _finalize(c: CallbackQuery, total: float, glasses: int) -> None:
         )
         await commit_safely(session)
 
-    await send_product_cards(
+    await send_calc_summary(
         c,
-        "Итог: водный баланс",
-        cards,
+        calc="water",
+        title="💧 Водный баланс",
+        summary=[f"Норма: <b>{total} л</b> (~{glasses} стаканов по 250 мл)."],
+        products=cards,
         headline=_headline(total, glasses),
         bullets=bullets,
         back_cb="calc:menu",
@@ -219,6 +228,12 @@ async def choose_climate(c: CallbackQuery) -> None:
     sess["climate"] = climate
     if weight <= 0:
         await c.answer()
+        await log_calc_error(
+            c.from_user.id if c.from_user else None,
+            calc="water",
+            step="climate",
+            reason="missing_weight",
+        )
         await c.message.answer(
             "Вес не указан. Запусти расчёт заново.",
             reply_markup=kb_back_home("calc:menu"),

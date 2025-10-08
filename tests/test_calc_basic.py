@@ -7,6 +7,7 @@ import pytest
 pytest.importorskip("aiosqlite")
 
 from app.handlers import calc
+import app.handlers.calc_common as calc_common
 
 
 @asynccontextmanager
@@ -29,7 +30,7 @@ async def test_msd_success_saves_plan_and_cards(monkeypatch):
     monkeypatch.setattr(calc, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc.events_repo, "log", AsyncMock())
     send_mock = AsyncMock()
-    monkeypatch.setattr(calc, "send_product_cards", send_mock)
+    monkeypatch.setattr(calc, "send_calc_summary", send_mock)
 
     user_id = 101
     calc.SESSIONS[user_id] = {"calc": "msd"}
@@ -51,7 +52,8 @@ async def test_msd_invalid_input_prompts_retry(monkeypatch):
     monkeypatch.setattr(calc.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(calc, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc.events_repo, "log", AsyncMock())
-    monkeypatch.setattr(calc, "send_product_cards", AsyncMock())
+    monkeypatch.setattr(calc, "send_calc_summary", AsyncMock())
+    monkeypatch.setattr(calc_common, "log_calc_error", AsyncMock())
 
     user_id = 202
     calc.SESSIONS[user_id] = {"calc": "msd"}
@@ -71,7 +73,7 @@ async def test_bmi_success_generates_cards(monkeypatch):
     monkeypatch.setattr(calc, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc.events_repo, "log", AsyncMock())
     send_mock = AsyncMock()
-    monkeypatch.setattr(calc, "send_product_cards", send_mock)
+    monkeypatch.setattr(calc, "send_calc_summary", send_mock)
 
     user_id = 303
     calc.SESSIONS[user_id] = {"calc": "bmi"}
@@ -93,7 +95,8 @@ async def test_bmi_invalid_input_prompts_retry(monkeypatch):
     monkeypatch.setattr(calc.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(calc, "set_last_plan", AsyncMock())
     monkeypatch.setattr(calc.events_repo, "log", AsyncMock())
-    monkeypatch.setattr(calc, "send_product_cards", AsyncMock())
+    monkeypatch.setattr(calc, "send_calc_summary", AsyncMock())
+    monkeypatch.setattr(calc_common, "log_calc_error", AsyncMock())
 
     user_id = 404
     calc.SESSIONS[user_id] = {"calc": "bmi"}

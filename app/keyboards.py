@@ -74,14 +74,26 @@ def kb_back_home(back_cb: str | None = None, home_cb: str = "home:main") -> Inli
 
 def kb_calc_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="MSD идеальный вес", callback_data="calc:msd")
-    kb.button(text="ИМТ", callback_data="calc:bmi")
-    kb.button(text="Водный баланс", callback_data="calc:water")
-    kb.button(text="Калории (BMR/TDEE)", callback_data="calc:kcal")
-    kb.button(text="БЖУ", callback_data="calc:macros")
+    kb.button(text="💧 Вода", callback_data="calc:water")
+    kb.button(text="🔥 Ккал", callback_data="calc:kcal")
+    kb.button(text="🥗 Макросы", callback_data="calc:macros")
+    kb.button(text="⚖️ BMI", callback_data="calc:bmi")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(2, 2, 1, 2)
+    kb.adjust(2, 2, 2)
+    return kb.as_markup()
+
+
+def kb_calc_result(calc: str, back_cb: str | None = "calc:menu") -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Персональные рекомендации", callback_data=f"calc:recommend:{calc}")
+    if back_cb:
+        kb.button(text="⬅️ Назад", callback_data=back_cb)
+    kb.button(text="🏠 Домой", callback_data="home:main")
+    if back_cb:
+        kb.adjust(1, 2)
+    else:
+        kb.adjust(1, 1)
     return kb.as_markup()
 
 
