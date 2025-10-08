@@ -39,3 +39,5 @@ jobs:
         run: pytest
       - name: Repository audit
         run: tools/audit_repo.sh
+      - name: Secret audit
+        run: python tools/audit_secrets.py
