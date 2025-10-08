@@ -12,6 +12,7 @@ DESCRIPTIONS_DIR = Path("tests/fixtures/catalog/descriptions_multi")
 
 DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
 IMAGES_DIR = Path("app/static/images/products")
+FIXTURE_IMAGES_DIR = Path("tests/fixtures/catalog/images")
 
 
 @pytest.mark.parametrize(
@@ -87,6 +88,8 @@ def test_slug_transliterates_yo() -> None:
 
 def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     output = tmp_path / "products.json"
+    if bp.BUILD_SUMMARY_PATH.exists():
+        bp.BUILD_SUMMARY_PATH.unlink()
     count, generated = bp.build_catalog(
         descriptions_path=str(DESCRIPTIONS_PATH),
         images_mode="local",
@@ -99,6 +102,12 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
     data = json.loads(output.read_text(encoding="utf-8"))
     assert len(data["products"]) == count
 
+    summary = json.loads(bp.BUILD_SUMMARY_PATH.read_text(encoding="utf-8"))
+    assert summary["built"] == count
+    assert summary["found_descriptions"] >= count
+    assert isinstance(summary["unmatched_images"], list)
+    assert isinstance(summary["missing_images"], list)
+
     for product in data["products"]:
         link = product["order"]["velavie_link"]
         params = parse_qs(urlparse(link).query)
@@ -106,9 +115,13 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
         assert params["utm_medium"] == ["catalog"]
         assert params["utm_content"] == [product["id"]]
         assert params["utm_campaign"]
-        assert product.get("images")
+        images = product.get("images")
+        if product.get("available") is False:
+            assert not images
+            continue
+        assert images
         if product.get("image"):
-            assert product["image"] == product["images"][0]
+            assert product["image"] == images[0]
             assert product["image"].startswith("/static/") or product["image"].startswith("http")
 
     validated = bp.validate_catalog(output)
@@ -168,3 +181,43 @@ def test_dedupe_products_removes_duplicates() -> None:
 
     without_dedupe = bp._dedupe_products([product.copy() for product in base_products], dedupe=False)
     assert [item["title"] for item in without_dedupe] == ["Product Alpha", "Product Alpha", "Product Bravo"]
+
+
+def test_build_summary_lists_missing_and_unmatched(tmp_path: Path) -> None:
+    output = tmp_path / "products.json"
+    if bp.BUILD_SUMMARY_PATH.exists():
+        bp.BUILD_SUMMARY_PATH.unlink()
+    count, _ = bp.build_catalog(
+        descriptions_path=str(DESCRIPTIONS_DIR),
+        images_mode="local",
+        images_dir=str(FIXTURE_IMAGES_DIR),
+        output=output,
+    )
+    summary = json.loads(bp.BUILD_SUMMARY_PATH.read_text(encoding="utf-8"))
+    assert summary["built"] == count
+    assert summary["found_descriptions"] == 5
+    assert "produkt-alfa" in summary["missing_images"]
+    assert "active-move.jpg" in summary["unmatched_images"]
+
+
+def test_main_fails_on_mismatch_when_requested(tmp_path: Path) -> None:
+    output = tmp_path / "products.json"
+    if bp.BUILD_SUMMARY_PATH.exists():
+        bp.BUILD_SUMMARY_PATH.unlink()
+    exit_code = bp.main(
+        [
+            "build",
+            "--descriptions-path",
+            str(DESCRIPTIONS_DIR),
+            "--images-mode",
+            "local",
+            "--images-dir",
+            str(FIXTURE_IMAGES_DIR),
+            "--output",
+            str(output),
+            "--expect-count",
+            "from=images",
+            "--fail-on-mismatch",
+        ]
+    )
+    assert exit_code == 1

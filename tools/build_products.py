@@ -31,6 +31,7 @@ from slugify import slugify as _fallback_slugify
 
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
 SCHEMA_PATH = ROOT / "app" / "data" / "products.schema.json"
+BUILD_SUMMARY_PATH = ROOT / "app" / "catalog" / "mapping" / "build_summary.json"
 
 # descriptions source (один из)
 DEFAULT_DESCRIPTIONS_URL = "https://github.com/go2telegram/media/tree/main/descriptions"
@@ -154,6 +155,13 @@ def _list_local_texts(path: Path) -> list[tuple[str, str]]:
             raise CatalogBuildError(f"No .txt files found in {path}")
         return items
     raise CatalogBuildError(f"Unknown descriptions source {path}")
+
+
+def _write_build_summary(summary: Mapping[str, object], *, destination: Path = BUILD_SUMMARY_PATH) -> Path:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(summary, ensure_ascii=False, indent=2) + "\n"
+    destination.write_text(payload, encoding="utf-8")
+    return destination
 
 
 def _parse_github_tree(url: str) -> tuple[str, str, str, str]:
@@ -621,13 +629,14 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
-) -> None:
+) -> ImageMatch | None:
     product_id = str(product["id"])
     match = _match_image(product_id, image_files)
     if not match:
         logging.warning("No image for %s", product_id)
         product["available"] = False
-        return
+        product["images"] = []
+        return None
     if match.alias is not None and match.alias != product_id:
         aliases = _build_aliases(product_id)
         if aliases:
@@ -643,6 +652,7 @@ def _resolve_image(
         rel_path = image_name.replace("\\", "/")
         product["image"] = base + rel_path
         product["images"] = [product["image"]]
+    return match
 
 
 def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str, str]]:
@@ -697,7 +707,8 @@ def build_catalog(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
-    products = _dedupe_products(_load_products(texts), dedupe=dedupe)
+    raw_products = _load_products(texts)
+    products = _dedupe_products(raw_products, dedupe=dedupe)
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -712,6 +723,8 @@ def build_catalog(
         image_base = _local_web_base(directory)
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
+    used_images: set[str] = set()
+    missing_images: set[str] = set()
     for product in products:
         product_id = str(product["id"])
         if product_id in unique_ids:
@@ -724,13 +737,31 @@ def build_catalog(
             "velavie_link": quoted_url,
             "utm": utm,
         }
-        _resolve_image(product, image_files=files, image_mode=mode, image_base=image_base)
+        match = _resolve_image(
+            product,
+            image_files=files,
+            image_mode=mode,
+            image_base=image_base,
+        )
+        if match:
+            used_images.add(match.name)
+        else:
+            missing_images.add(product_id)
         normalized.append(product)
 
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    unmatched_images = [name for name in files if name not in used_images]
+    summary = {
+        "found_images": len(files),
+        "found_descriptions": len(raw_products),
+        "built": len(normalized),
+        "unmatched_images": unmatched_images,
+        "missing_images": sorted(missing_images),
+    }
+    _write_build_summary(summary)
     return len(normalized), destination
 
 
@@ -769,7 +800,13 @@ def validate_catalog(path: Path | None = None) -> int:
         images = product.get("images")
         if image is not None and not isinstance(image, str):
             raise CatalogBuildError(f"{product_id}: image must be a string")
-        if not isinstance(images, list) or not images:
+        if not isinstance(images, list):
+            raise CatalogBuildError(f"{product_id}: images must be a list")
+        if not images:
+            if product.get("available") is False:
+                if image is not None:
+                    raise CatalogBuildError(f"{product_id}: image must be null when images list is empty")
+                continue
             raise CatalogBuildError(f"{product_id}: images must be a non-empty list")
         first_image = images[0]
         if not isinstance(first_image, str):
@@ -791,6 +828,8 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
     build_parser.add_argument("--dedupe", choices=("on", "off"), default="on")
+    build_parser.add_argument("--expect-count", default=None)
+    build_parser.add_argument("--fail-on-mismatch", action="store_true")
 
     validate_parser = subparsers.add_parser("validate", help="Validate an existing catalog file")
     validate_parser.add_argument("--source", type=Path, default=CATALOG_PATH)
@@ -798,11 +837,43 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _parse_expect_count_argument(value: str | None) -> tuple[int | None, str | None]:
+    if value is None:
+        return None, None
+    normalized = str(value).strip()
+    if not normalized:
+        return None, None
+    if normalized.startswith("from="):
+        source = normalized.split("=", 1)[1].strip()
+        if not source:
+            raise CatalogBuildError("--expect-count requires a source after 'from='")
+        return None, source
+    try:
+        return int(normalized), None
+    except ValueError as exc:  # pragma: no cover - defensive path
+        raise CatalogBuildError(f"Invalid --expect-count value: {value}") from exc
+
+
+def _expected_count_from_source(source: str, summary: Mapping[str, object]) -> int:
+    key_map = {
+        "images": "found_images",
+        "descriptions": "found_descriptions",
+    }
+    key = key_map.get(source)
+    if not key:
+        raise CatalogBuildError(f"Unknown --expect-count source '{source}'")
+    value = summary.get(key)
+    if not isinstance(value, int):
+        raise CatalogBuildError(f"Build summary missing integer '{key}'")
+    return value
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_cli(argv or sys.argv[1:])
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         if args.command == "build":
+            expected_direct, expected_source = _parse_expect_count_argument(args.expect_count)
             count, path = build_catalog(
                 descriptions_url=args.descriptions_url,
                 descriptions_path=args.descriptions_path,
@@ -813,6 +884,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                 dedupe=args.dedupe != "off",
             )
             print(f"Built catalog with {count} products → {path}")
+            summary: dict[str, object] | None = None
+            try:
+                summary = json.loads(BUILD_SUMMARY_PATH.read_text(encoding="utf-8"))
+            except OSError:
+                logging.warning("Build summary not found at %s", BUILD_SUMMARY_PATH)
+            if summary is not None:
+                print(json.dumps(summary, ensure_ascii=False, indent=2))
+            expected_count = expected_direct
+            if expected_source:
+                if summary is None:
+                    raise CatalogBuildError("Cannot resolve --expect-count without build summary")
+                expected_count = _expected_count_from_source(expected_source, summary)
+            if expected_count is not None and count != expected_count:
+                message = f"Expected {expected_count} products, built {count}"
+                if args.fail_on_mismatch:
+                    logging.error(message)
+                    return 1
+                logging.warning(message)
             return 0
         if args.command == "validate":
             count = validate_catalog(args.source)
