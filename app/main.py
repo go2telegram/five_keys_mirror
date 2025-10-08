@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import importlib
 import logging
 import time
 from pathlib import Path
 from typing import Iterable
-
 from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
@@ -15,7 +16,7 @@ from aiohttp import web
 
 from app import build_info
 from app.config import settings
-from app.db.session import init_db
+from app.db.session import init_db, session_scope
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
@@ -48,6 +49,7 @@ from app.handlers import (
 from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
 from app.middlewares import AuditMiddleware
+from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 
 try:
@@ -64,6 +66,14 @@ startup_log = logging.getLogger("startup")
 
 SERVICE_START_TS = time.time()
 
+_sentry_spec = importlib.util.find_spec("sentry_sdk")
+if _sentry_spec is not None:
+    sentry_sdk = importlib.import_module("sentry_sdk")
+    from sentry_sdk.integrations.aiohttp import AioHttpIntegration  # type: ignore[attr-defined]
+else:  # pragma: no cover - optional dependency
+    sentry_sdk = None
+    AioHttpIntegration = None  # type: ignore[assignment]
+
 
 def _resolve_log_level(value: str) -> int:
     try:
@@ -75,6 +85,33 @@ def _resolve_log_level(value: str) -> int:
     except TypeError:
         pass
     return logging.INFO
+
+
+def _init_sentry() -> None:
+    if sentry_sdk is None or AioHttpIntegration is None:
+        logging.getLogger("startup").info("sentry disabled: library not installed")
+        return
+
+    dsn = settings.SENTRY_DSN
+    if not dsn:
+        return
+
+    integrations = [AioHttpIntegration()]
+    init_kwargs: dict[str, object] = {
+        "dsn": dsn,
+        "integrations": integrations,
+        "traces_sample_rate": settings.SENTRY_TRACES_SAMPLE_RATE,
+    }
+
+    environment = getattr(settings, "ENVIRONMENT", None)
+    if environment:
+        init_kwargs["environment"] = environment
+
+    release = getattr(build_info, "GIT_COMMIT", None)
+    if release and release != "unknown":
+        init_kwargs["release"] = release
+
+    sentry_sdk.init(**init_kwargs)
 
 
 async def home_main(c: CallbackQuery) -> None:
@@ -116,6 +153,27 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     branch = getattr(build_info, "GIT_BRANCH", "unknown")
     commit = getattr(build_info, "GIT_COMMIT", "unknown")
     lines.append(f'five_keys_bot_build_info{{branch="{branch}",commit="{commit}"}} 1')
+
+    recommend_total: int | None = None
+    quiz_total: int | None = None
+    metrics_log = logging.getLogger("metrics")
+    try:
+        async with session_scope() as session:
+            recommend_total = await events_repo.stats(session, name="plan_generated")
+            quiz_total = await events_repo.stats(session, name="quiz_finish")
+    except Exception:
+        metrics_log.exception("metrics counters fetch failed")
+
+    lines.extend(
+        [
+            "# HELP five_keys_bot_recommend_requests_total Total recommendation plans generated",
+            "# TYPE five_keys_bot_recommend_requests_total counter",
+            f"five_keys_bot_recommend_requests_total {recommend_total if recommend_total is not None else 'nan'}",
+            "# HELP five_keys_bot_quiz_completed_total Total completed quizzes",
+            "# TYPE five_keys_bot_quiz_completed_total counter",
+            f"five_keys_bot_quiz_completed_total {quiz_total if quiz_total is not None else 'nan'}",
+        ]
+    )
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
@@ -143,6 +201,48 @@ async def _setup_service_app() -> web.AppRunner:
 async def _setup_tribute_webhook() -> web.AppRunner:
     startup_log.warning("_setup_tribute_webhook is deprecated; using _setup_service_app instead")
     return await _setup_service_app()
+
+
+async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]:
+    if not settings.DASHBOARD_ENABLED:
+        return None, None
+    if not settings.DASHBOARD_TOKEN:
+        logging.getLogger("startup").info("dashboard disabled: DASHBOARD_TOKEN is not configured")
+        return None, None
+
+    uvicorn_spec = importlib.util.find_spec("uvicorn")
+    if uvicorn_spec is None:
+        logging.getLogger("startup").info("dashboard disabled: uvicorn is not installed")
+        return None, None
+    uvicorn_module = importlib.import_module("uvicorn")
+
+    try:
+        from app.dashboard import app as dashboard_app
+    except ImportError:
+        logging.getLogger("startup").exception("dashboard import failed")
+        return None, None
+
+    config = uvicorn_module.Config(
+        dashboard_app,
+        host=settings.DASHBOARD_HOST,
+        port=settings.DASHBOARD_PORT,
+        loop="asyncio",
+        log_level="info",
+        access_log=False,
+    )
+    server = uvicorn_module.Server(config)
+    task = asyncio.create_task(server.serve())
+    started = getattr(server, "started", None)
+    if isinstance(started, asyncio.Event):
+        await started.wait()
+    else:  # pragma: no cover - fallback for older uvicorn
+        await asyncio.sleep(0)
+    logging.getLogger("startup").info(
+        "dashboard server running at http://%s:%s/admin/dashboard",
+        settings.DASHBOARD_HOST,
+        settings.DASHBOARD_PORT,
+    )
+    return server, task
 
 
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
@@ -225,6 +325,7 @@ async def _notify_admin_startup(bot: Bot, allowed_updates: Iterable[str]) -> Non
 
 
 async def main() -> None:
+    _init_sentry()
     setup_logging(
         log_dir=settings.LOG_DIR,
         level=_resolve_log_level(settings.LOG_LEVEL),
@@ -315,6 +416,19 @@ async def main() -> None:
     start_scheduler(bot)
 
     runner = await _setup_service_app()
+    dashboard_server: object | None = None
+    dashboard_task: asyncio.Task | None = None
+    try:
+        dashboard_server, dashboard_task = await _start_dashboard_server()
+    except Exception:
+        startup_log.exception("dashboard startup failed")
+    else:
+        if dashboard_task is None:
+            mark("S7a: dashboard skipped")
+            startup_log.info("dashboard not started (disabled)")
+        else:
+            mark("S7a: dashboard server started")
+
     mark("S7: start_polling enter")
     try:
         await dp.start_polling(
@@ -330,6 +444,11 @@ async def main() -> None:
         logging.info(">>> Polling stopped")
         if runner is not None:
             await runner.cleanup()
+        if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
+            dashboard_server.should_exit = True
+        if dashboard_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await dashboard_task
 
 
 if __name__ == "__main__":

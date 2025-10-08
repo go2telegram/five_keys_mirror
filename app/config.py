@@ -16,6 +16,14 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     TIMEZONE: str = "Europe/Moscow"
 
+    # CRM/экспорт
+    CRM_EXPORT_MODE: str = Field(default="csv")
+    CRM_EXPORT_CSV_PATH: str = Field(default="exports/crm_leads.csv")
+    GOOGLE_SHEET_ID: str | None = None
+    GOOGLE_WORKSHEET_TITLE: str = Field(default="Leads")
+    GOOGLE_SERVICE_ACCOUNT_FILE: str | None = None
+    GOOGLE_SERVICE_ACCOUNT_INFO: str | None = None
+
     # Логи
     LOG_LEVEL: str = "INFO"
     LOG_DIR: str = "logs"
@@ -56,6 +64,16 @@ class Settings(BaseSettings):
     TRIBUTE_PORT: int = 8080
 
     DEBUG_COMMANDS: bool = False
+
+    # Мониторинг/алерты
+    SENTRY_DSN: str | None = None
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    # Админ-панель / FastAPI dashboard
+    DASHBOARD_ENABLED: bool = True
+    DASHBOARD_HOST: str = "0.0.0.0"
+    DASHBOARD_PORT: int = 8081
+    DASHBOARD_TOKEN: str = ""
 
     # как распознать план по имени из вебхука
     SUB_BASIC_MATCH: str = "basic"

@@ -37,3 +37,4 @@ Thumbs.db
 /var/
 /dist/
 app/static/images/quiz/**/*
+exports/

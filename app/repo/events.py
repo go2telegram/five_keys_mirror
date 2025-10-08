@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Iterable, Optional, Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +60,35 @@ async def stats(
 
     result = await session.execute(stmt)
     return result.scalar_one()
+
+
+async def latest_by_users(
+    session: AsyncSession,
+    name: str,
+    user_ids: Iterable[int | None],
+) -> dict[int, Event]:
+    ids = sorted({int(uid) for uid in user_ids if uid is not None})
+    if not ids:
+        return {}
+
+    subq = (
+        select(Event.user_id, func.max(Event.ts).label("max_ts"))
+        .where(Event.name == name, Event.user_id.in_(ids))
+        .group_by(Event.user_id)
+        .subquery()
+    )
+
+    stmt = (
+        select(Event)
+        .join(
+            subq,
+            (Event.user_id == subq.c.user_id) & (Event.ts == subq.c.max_ts),
+        )
+        .where(Event.name == name)
+    )
+    result = await session.execute(stmt)
+    events = result.scalars().all()
+    return {event.user_id: event for event in events if event.user_id is not None}
 
 
 async def notify_recipients(session: AsyncSession) -> Sequence[int]:
