@@ -3,6 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -12,6 +13,20 @@ from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
 
 router = Router(name="subscription")
+
+
+async def _edit_message_safe(c: CallbackQuery, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+    message = c.message
+    if message is None:
+        return
+    if message.text == text and message.reply_markup == reply_markup:
+        return
+    try:
+        await message.edit_text(text, reply_markup=reply_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e):
+            return
+        raise
 
 
 def _kb_sub_menu() -> InlineKeyboardMarkup:
@@ -68,7 +83,8 @@ async def sub_menu(c: CallbackQuery):
         await commit_safely(session)
     await c.answer()
     markup = _kb_sub_menu()
-    await c.message.edit_text(
+    await _edit_message_safe(
+        c,
         "💎 <b>Подписка</b>\nПолучите доступ к Premium и закрытым материалам.",
         reply_markup=markup,
     )
@@ -100,9 +116,10 @@ async def sub_check(c: CallbackQuery):
         builder.button(text="Открыть Premium", callback_data="premium:menu")
         for row in kb_back_home("sub:menu").inline_keyboard:
             builder.row(*row)
-        await c.message.edit_text(text, reply_markup=builder.as_markup())
+        await _edit_message_safe(c, text, reply_markup=builder.as_markup())
     else:
-        await c.message.edit_text(
+        await _edit_message_safe(
+            c,
             "Подписка не найдена. Оплатите MITO в Tribute и дождитесь подтверждения вебхука.",
             reply_markup=_kb_sub_menu(),
         )
@@ -111,7 +128,8 @@ async def sub_check(c: CallbackQuery):
 @router.callback_query(F.data == "sub:renew")
 async def sub_renew(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text(
+    await _edit_message_safe(
+        c,
         "Выберите тариф MITO для продления доступа.",
         reply_markup=_kb_sub_renew(),
     )
