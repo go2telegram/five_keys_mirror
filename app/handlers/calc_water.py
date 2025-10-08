@@ -15,6 +15,7 @@ from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from reco.engine import derive_calculator_tags
 
 router = Router(name="calc_water")
 
@@ -155,19 +156,21 @@ async def _finalize(c: CallbackQuery, total: float, glasses: int) -> None:
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, user_id, c.from_user.username)
         await set_last_plan(session, user_id, plan_payload)
+        event_meta = {
+            "calc": "water",
+            "liters": total,
+            "glasses": glasses,
+            "activity": activity,
+            "climate": climate,
+            "weight": weight,
+        }
         await events_repo.log(
             session,
             user_id,
             "calc_finish",
-            {
-                "calc": "water",
-                "liters": total,
-                "glasses": glasses,
-                "activity": activity,
-                "climate": climate,
-                "weight": weight,
-            },
+            event_meta,
         )
+        derive_calculator_tags(user_id, event_meta)
         await commit_safely(session)
 
     await send_product_cards(

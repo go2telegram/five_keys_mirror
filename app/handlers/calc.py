@@ -12,6 +12,7 @@ from app.keyboards import kb_back_home, kb_calc_menu
 from app.reco import CTX, product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from reco.engine import derive_calculator_tags
 
 router = Router()
 
@@ -209,12 +210,14 @@ async def _process_bmi(message: Message) -> None:
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
         await set_last_plan(session, message.from_user.id, plan_payload)
+        event_meta = {"calc": "bmi", "bmi": bmi, "category": cat}
         await events_repo.log(
             session,
             message.from_user.id,
             "calc_finish",
-            {"calc": "bmi", "bmi": bmi, "category": cat},
+            event_meta,
         )
+        derive_calculator_tags(message.from_user.id, event_meta)
         await commit_safely(session)
 
     headline = (

@@ -13,6 +13,7 @@ from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from reco.engine import derive_calculator_tags
 
 router = Router(name="calc_macros")
 
@@ -150,21 +151,23 @@ async def _finalize(
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         await set_last_plan(session, c.from_user.id, plan_payload)
+        event_meta = {
+            "calc": "macros",
+            "calories": calories,
+            "protein": protein,
+            "fats": fats,
+            "carbs": carbs,
+            "goal": goal,
+            "preference": preference,
+            "weight": weight,
+        }
         await events_repo.log(
             session,
             c.from_user.id,
             "calc_finish",
-            {
-                "calc": "macros",
-                "calories": calories,
-                "protein": protein,
-                "fats": fats,
-                "carbs": carbs,
-                "goal": goal,
-                "preference": preference,
-                "weight": weight,
-            },
+            event_meta,
         )
+        derive_calculator_tags(c.from_user.id, event_meta)
         await commit_safely(session)
 
     await send_product_cards(
