@@ -41,6 +41,8 @@ DEFAULT_IMAGES_MODE = "local"  # or "remote"
 DEFAULT_IMAGES_BASE = "https://raw.githubusercontent.com/go2telegram/media/main/media/products/"
 DEFAULT_IMAGES_DIR = str(ROOT / "app" / "static" / "images" / "products")
 
+EXPECT_COUNT_FROM_IMAGES = "from=images"
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ORDER_KEYWORDS = ("ссылка", "заказ")
 SECTION_KEYWORDS: Mapping[str, tuple[str, ...]] = {
@@ -853,7 +855,7 @@ def build_catalog(
     dedupe: bool = True,
     strict_images: bool = False,
     strict_descriptions: bool = False,
-    expect_count: int | None = None,
+    expect_count: int | str | None = None,
     fail_on_mismatch: bool = False,
 ) -> tuple[int, Path]:
     texts = _load_description_texts(
@@ -875,6 +877,8 @@ def build_catalog(
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
+    resolved_expect_count = _resolve_expect_count(expect_count, files)
+
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
     for product in products:
@@ -906,10 +910,10 @@ def build_catalog(
     payload = {"products": normalized}
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     count = len(normalized)
-    if expect_count is not None and count != expect_count:
+    if resolved_expect_count is not None and count != resolved_expect_count:
         mismatch = (
             "Built product count mismatch: "
-            f"expected {expect_count}, got {count}"
+            f"expected {resolved_expect_count}, got {count}"
         )
         if fail_on_mismatch:
             raise CatalogBuildError(mismatch)
@@ -962,6 +966,39 @@ def validate_catalog(path: Path | None = None) -> int:
     return len(products)
 
 
+def _parse_expect_count(value: str) -> int | str:
+    normalized = value.strip()
+    if not normalized:
+        raise argparse.ArgumentTypeError("--expect-count cannot be empty")
+    lowered = normalized.lower()
+    if lowered == EXPECT_COUNT_FROM_IMAGES:
+        return EXPECT_COUNT_FROM_IMAGES
+    try:
+        parsed = int(normalized)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "--expect-count must be an integer or 'from=images'"
+        ) from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("--expect-count must be non-negative")
+    return parsed
+
+
+def _resolve_expect_count(
+    expect_count: int | str | None, image_files: Sequence[str]
+) -> int | None:
+    if expect_count is None:
+        return None
+    if isinstance(expect_count, int):
+        return expect_count
+    lowered = expect_count.strip().lower()
+    if lowered == EXPECT_COUNT_FROM_IMAGES:
+        return len(image_files)
+    raise CatalogBuildError(
+        "Unsupported --expect-count value: {value}".format(value=expect_count)
+    )
+
+
 def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and validate the catalog products file")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -982,9 +1019,12 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     )
     build_parser.add_argument(
         "--expect-count",
-        type=int,
+        type=_parse_expect_count,
         default=None,
-        help="Expected number of products in the generated catalog",
+        help=(
+            "Expected number of products in the generated catalog; "
+            "use 'from=images' to match the number of discovered images"
+        ),
     )
     build_parser.add_argument(
         "--fail-on-mismatch",
