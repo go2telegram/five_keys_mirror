@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
@@ -182,6 +183,34 @@ async def doctor_db(m: Message) -> None:
         )
 
     await m.answer(text)
+
+
+@router.message(Command("reco_report"))
+async def reco_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    async with compat_session(session_scope) as session:
+        total_served = await events_repo.stats(session, name="reco_served")
+        total_clicks = await events_repo.stats(session, name="reco_click")
+        recent = await events_repo.recent_by_name(session, "reco_served", limit=100)
+
+    tag_counter: Counter[str] = Counter()
+    for event in recent:
+        meta = event.meta if isinstance(event.meta, dict) else {}
+        tags = meta.get("tags")
+        if isinstance(tags, (list, tuple)):
+            tag_counter.update(str(tag) for tag in tags if tag)
+
+    ctr = (total_clicks / total_served * 100.0) if total_served else 0.0
+    top_tags = ", ".join(f"{tag}×{count}" for tag, count in tag_counter.most_common(5)) or "—"
+    report_text = (
+        "📈 <b>Отчёт по рекомендациям</b>\n"
+        f"Выдач: {total_served}\n"
+        f"Клики «Купить»: {total_clicks} (CTR {ctr:.1f}%)\n"
+        f"Топ тегов (последние 100): {top_tags}"
+    )
+    await m.answer(report_text)
 
 
 def _format_catalog_items(items: list[str], *, limit: int = 10) -> str:

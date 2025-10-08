@@ -1,4 +1,4 @@
-.PHONY: migrate upgrade db-check dev fmt lint hooks build-products validate-products
+.PHONY: migrate upgrade db-check dev fmt lint hooks build-products validate-products validate-reco
 
 migrate:
 	@alembic revision -m "$(msg)" --autogenerate
@@ -31,4 +31,7 @@ build-products:
 	@python tools/build_products.py build
 
 validate-products:
-	@python tools/build_products.py validate
+        @python tools/build_products.py validate
+
+validate-reco:
+        @python tools/validate_reco_map.py

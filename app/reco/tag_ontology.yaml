@@ -1,0 +1,232 @@
+version: 1
+groups:
+  goal:
+    title: "Цели"
+  system:
+    title: "Системы и органы"
+  lifestyle:
+    title: "Образ жизни"
+  format:
+    title: "Формат"
+tags:
+  energy:
+    title: "Энергия и выносливость"
+    description: "Помогает поддерживать суточный уровень энергии и работоспособность."
+    weight: 1.25
+    group: goal
+    aliases: ["support"]
+  tonus:
+    title: "Тонус и бодрость"
+    description: "Поддерживает лёгкий ежедневный тонус без перегрузки."
+    weight: 1.1
+    group: lifestyle
+  mitochondria:
+    title: "Митохондриальная поддержка"
+    description: "Укрепляет клеточное дыхание и производство АТФ."
+    weight: 1.3
+    group: system
+    aliases: ["mito", "mitup"]
+  recovery:
+    title: "Восстановление"
+    description: "Ускоряет восстановление после нагрузок и стресса."
+    weight: 1.15
+    group: goal
+  sleep_support:
+    title: "Качество сна"
+    description: "Помогает засыпанию и глубине сна."
+    weight: 1.2
+    group: goal
+  sleep_calm:
+    title: "Расслабление перед сном"
+    description: "Убирает вечернее напряжение и тревожность."
+    weight: 1.1
+    group: lifestyle
+  sleep_focus:
+    title: "Сон и концентрация"
+    description: "Улучшает восстановление когнитивных функций во сне."
+    weight: 1.05
+    group: lifestyle
+  sleep_ok:
+    title: "Гигиена сна"
+    description: "Поддерживает базовые привычки для здорового сна."
+    weight: 1.0
+    group: lifestyle
+    aliases: ["baseline_sleep"]
+  stress_support:
+    title: "Стресс-устойчивость"
+    description: "Снижает реакцию на стресс, поддерживает нервную систему."
+    weight: 1.2
+    group: goal
+  stress:
+    title: "Контроль стресса"
+    description: "Указывает на повышенную нагрузку на нервную систему."
+    weight: 1.05
+    group: lifestyle
+  magnesium:
+    title: "Магний"
+    description: "Минерал для расслабления мышц и нервной системы."
+    weight: 1.15
+    group: system
+  adaptogens:
+    title: "Адаптогены"
+    description: "Растительные комплексы для устойчивости к стрессу."
+    weight: 1.1
+    group: lifestyle
+  caffeine:
+    title: "Кофеин"
+    description: "Быстрая стимуляция и бодрость."
+    weight: 0.95
+    group: lifestyle
+  overstim:
+    title: "Перевозбуждение"
+    description: "Нужен мягкий режим без стимуляторов."
+    weight: 1.0
+    group: lifestyle
+  reduce_caffeine:
+    title: "Снижение кофеина"
+    description: "Предпочтительны безкофеиновые решения."
+    weight: 1.0
+    group: lifestyle
+  theanine:
+    title: "L-теанин"
+    description: "Аминокислота для концентрации и расслабления."
+    weight: 1.05
+    group: system
+  digest_support:
+    title: "Поддержка пищеварения"
+    description: "Нормализация ферментов, кислотности и работы ЖКТ."
+    weight: 1.15
+    group: system
+  probiotic:
+    title: "Пробиотики"
+    description: "Живые культуры или метабиотики для микробиома."
+    weight: 1.2
+    group: system
+  fiber:
+    title: "Клетчатка"
+    description: "Растворимые и нерастворимые волокна для микробиома."
+    weight: 1.15
+    group: system
+  gut:
+    title: "ЖКТ"
+    description: "Фокус на здоровье пищеварительного тракта."
+    weight: 1.2
+    group: goal
+  collagen:
+    title: "Коллаген"
+    description: "Восстановление кожи, связок и суставов."
+    weight: 1.2
+    group: system
+  immunity:
+    title: "Иммунитет"
+    description: "Защита от вирусов и сезонных простуд."
+    weight: 1.25
+    group: goal
+  vitamin_d3:
+    title: "Витамин D3"
+    description: "Гормональная регуляция, иммунитет, настроение."
+    weight: 1.2
+    group: system
+  vitamins:
+    title: "Витаминный комплекс"
+    description: "Широкий спектр витаминов и минералов."
+    weight: 1.1
+    group: system
+  steady:
+    title: "Стабильное состояние"
+    description: "Текущий уровень в норме, поддерживающие решения."
+    weight: 0.9
+    group: lifestyle
+    aliases: ["ok"]
+  watch:
+    title: "Повышенное внимание"
+    description: "Есть сигналы риска, нужен фокус на профилактике."
+    weight: 1.05
+    group: lifestyle
+  mct:
+    title: "MCT"
+    description: "Среднецепочные триглицериды для энергии мозга и тела."
+    weight: 1.1
+    group: format
+  glycine:
+    title: "Глицин"
+    description: "Аминокислота для спокойного сна и нервной системы."
+    weight: 1.05
+    group: system
+  cardio_support:
+    title: "Сердечно-сосудистая поддержка"
+    description: "Укрепляет сердце и сосуды, улучшает кровоток."
+    weight: 1.2
+    group: system
+  brain_support:
+    title: "Мозг и концентрация"
+    description: "Поддержка когнитивных функций и памяти."
+    weight: 1.2
+    group: system
+  focus:
+    title: "Фокус"
+    description: "Помогает концентрации и ясности ума."
+    weight: 1.1
+    group: lifestyle
+  beauty:
+    title: "Кожа и красота"
+    description: "Укрепляет кожу, волосы и ногти."
+    weight: 1.15
+    group: goal
+  joint_support:
+    title: "Связки и суставы"
+    description: "Снимает воспаление и улучшает подвижность."
+    weight: 1.15
+    group: system
+  detox:
+    title: "Детокс"
+    description: "Выведение токсинов, поддержка печени и лимфы."
+    weight: 1.1
+    group: goal
+  antiparasitic:
+    title: "Антипаразитарная поддержка"
+    description: "Комплекс для контроля паразитарной нагрузки."
+    weight: 1.2
+    group: goal
+  accessory:
+    title: "Аксессуар"
+    description: "Помощник для соблюдения режима и привычек."
+    weight: 0.8
+    group: format
+  bundle:
+    title: "Программа"
+    description: "Готовый комплекс с расписанным курсом."
+    weight: 1.0
+    group: format
+  certificate:
+    title: "Подарочный сертификат"
+    description: "Дает доступ к консультации или тесту."
+    weight: 0.9
+    group: format
+  omega3:
+    title: "Омега-3"
+    description: "Высокая концентрация EPA/DHA."
+    weight: 1.25
+    group: system
+  weight_management:
+    title: "Контроль веса"
+    description: "Комплексные решения для нормализации состава тела."
+    weight: 1.15
+    group: goal
+  antiage:
+    title: "Anti-age"
+    description: "Замедляет возрастные изменения, поддерживает регенерацию."
+    weight: 1.15
+    group: goal
+  mood:
+    title: "Настроение"
+    description: "Поддержка эмоционального фона."
+    weight: 1.05
+    group: lifestyle
+  liver_support:
+    title: "Печень"
+    description: "Укрепляет функции печени и желчевыведение."
+    weight: 1.1
+    group: system
+aliases:
+  baseline: steady

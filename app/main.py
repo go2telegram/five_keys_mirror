@@ -52,6 +52,7 @@ from app.logging_config import setup_logging
 from app.middlewares import AuditMiddleware
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
+from app.services import reco_service
 
 try:
     from app.handlers import health as h_health
@@ -184,6 +185,9 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web.router.add_get("/metrics", _handle_metrics)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    app_web.router.add_post("/recommend", reco_service.handle_recommend)
+    app_web.router.add_post("/recommend_full", reco_service.handle_recommend_full)
+    app_web.router.add_post("/recommend_click", reco_service.handle_recommend_click)
 
     runner = web.AppRunner(app_web)
     await runner.setup()

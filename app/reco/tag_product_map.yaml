@@ -1,0 +1,427 @@
+version: 1
+products:
+  - id: t8-beet-shot
+    category: drinks
+    weight: 1.1
+    freshness: 1.05
+    tags:
+      energy: 1.2
+      mitochondria: 1.2
+      tonus: 1.0
+      cardio_support: 1.1
+    audience:
+      athlete: 1.1
+      office: 0.95
+  - id: t8-era-brain-coffee
+    category: drinks
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      energy: 1.05
+      caffeine: 1.2
+      focus: 1.2
+      adaptogens: 1.05
+      stress_support: 1.0
+    audience:
+      office: 1.05
+      athlete: 1.0
+  - id: brain-oil
+    category: drinks
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      brain_support: 1.3
+      mct: 1.15
+      focus: 1.1
+      energy: 1.0
+    audience:
+      athlete: 1.05
+      office: 1.05
+  - id: t8-blend-90
+    category: drinks
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      immunity: 1.2
+      stress_support: 1.1
+      energy: 1.05
+      detox: 1.0
+      vitamins: 1.1
+    audience:
+      wellness: 1.05
+  - id: t8-drops
+    category: general
+    weight: 1.0
+    freshness: 1.0
+    tags:
+      adaptogens: 1.1
+      stress_support: 1.1
+      mood: 1.05
+      sleep_calm: 1.0
+    audience:
+      office: 1.05
+  - id: t8-extra-90-family-200ml
+    category: general
+    weight: 1.15
+    freshness: 1.02
+    tags:
+      mitochondria: 1.3
+      recovery: 1.2
+      energy: 1.2
+      immunity: 1.05
+    audience:
+      athlete: 1.1
+      wellness: 1.05
+  - id: t8-extra-90
+    category: general
+    weight: 1.2
+    freshness: 1.05
+    tags:
+      mitochondria: 1.35
+      recovery: 1.2
+      energy: 1.2
+      immunity: 1.05
+    audience:
+      athlete: 1.15
+      wellness: 1.05
+  - id: t8-era-lchf-cocoa
+    category: drinks
+    weight: 1.0
+    freshness: 1.0
+    tags:
+      mct: 1.1
+      energy: 1.05
+      sleep_support: 1.0
+      recovery: 1.0
+    audience:
+      office: 1.0
+      athlete: 1.0
+  - id: manana
+    category: drinks
+    weight: 1.0
+    freshness: 1.0
+    tags:
+      sleep_calm: 1.2
+      magnesium: 1.1
+      mood: 1.05
+      stress_support: 1.0
+    audience:
+      office: 1.1
+      wellness: 1.05
+  - id: t8-era-mit-up
+    category: general
+    weight: 1.2
+    freshness: 1.05
+    tags:
+      mitochondria: 1.25
+      collagen: 1.3
+      beauty: 1.2
+      joint_support: 1.2
+      antiage: 1.1
+    audience:
+      athlete: 1.05
+      wellness: 1.1
+  - id: mito-base
+    category: general
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      mitochondria: 1.2
+      recovery: 1.1
+      detox: 1.1
+      liver_support: 1.0
+    audience:
+      wellness: 1.05
+  - id: t8-mobio
+    category: drinks
+    weight: 1.15
+    freshness: 1.05
+    tags:
+      probiotic: 1.3
+      gut: 1.2
+      digest_support: 1.2
+      immunity: 1.05
+    audience:
+      wellness: 1.1
+      office: 1.05
+  - id: era-mitomatrix-lchf
+    category: supplements
+    weight: 1.1
+    freshness: 1.0
+    tags:
+      mitochondria: 1.25
+      mct: 1.15
+      energy: 1.1
+      recovery: 1.05
+    audience:
+      athlete: 1.1
+      wellness: 1.05
+  - id: nash-parakill
+    category: supplements
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      antiparasitic: 1.3
+      detox: 1.2
+      gut: 1.05
+      immunity: 1.0
+    audience:
+      wellness: 1.05
+  - id: t8-stekla-black-96
+    category: accessories
+    weight: 0.9
+    freshness: 1.0
+    tags:
+      accessory: 1.0
+      sleep_support: 1.1
+      sleep_calm: 1.0
+    audience:
+      office: 1.05
+      wellness: 1.0
+  - id: stekla-green-76
+    category: accessories
+    weight: 0.9
+    freshness: 1.0
+    tags:
+      accessory: 1.0
+      energy: 1.0
+      sleep_support: 1.05
+    audience:
+      office: 1.0
+  - id: t8-stone
+    category: supplements
+    weight: 1.0
+    freshness: 1.0
+    tags:
+      detox: 1.1
+      liver_support: 1.2
+      adaptogens: 1.0
+    audience:
+      wellness: 1.05
+  - id: t8-era-lchf-choco
+    category: drinks
+    weight: 1.0
+    freshness: 1.0
+    tags:
+      energy: 1.1
+      mct: 1.15
+      tonus: 1.05
+    audience:
+      athlete: 1.0
+      office: 1.0
+  - id: t8-era-tayga-tea-with-orange-lemon-and-lemongrass
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      immunity: 1.1
+      digest_support: 1.05
+      detox: 1.05
+      mood: 1.0
+    audience:
+      wellness: 1.0
+  - id: t8-era-to-go-biscuit
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      energy: 1.0
+      fiber: 1.1
+      tonus: 1.0
+    audience:
+      office: 1.0
+  - id: t8-era-to-go-choco
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      energy: 1.0
+      tonus: 1.0
+      mood: 1.0
+    audience:
+      office: 1.0
+  - id: t8-era-to-go-coconut
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      energy: 1.0
+      mct: 1.1
+      tonus: 1.0
+    audience:
+      athlete: 1.0
+  - id: t8-era-to-go-pear-chia
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      fiber: 1.15
+      gut: 1.05
+      energy: 0.95
+    audience:
+      office: 1.0
+  - id: t8-era-to-go-raspberry
+    category: drinks
+    weight: 0.95
+    freshness: 1.0
+    tags:
+      energy: 1.0
+      immunity: 1.0
+      tonus: 1.0
+    audience:
+      office: 1.0
+  - id: t8-feel
+    category: supplements
+    weight: 1.05
+    freshness: 1.02
+    tags:
+      mood: 1.2
+      stress_support: 1.1
+      adaptogens: 1.05
+    audience:
+      office: 1.05
+      wellness: 1.05
+  - id: t8-iq-code
+    category: supplements
+    weight: 1.1
+    freshness: 1.05
+    tags:
+      brain_support: 1.25
+      focus: 1.2
+      energy: 1.0
+      stress_support: 1.05
+    audience:
+      office: 1.1
+      athlete: 1.05
+  - id: t8-teo-green
+    category: drinks
+    weight: 1.2
+    freshness: 1.05
+    tags:
+      detox: 1.2
+      fiber: 1.25
+      gut: 1.2
+      digest_support: 1.2
+      weight_management: 1.05
+    audience:
+      wellness: 1.15
+      office: 1.05
+  - id: vimi
+    category: supplements
+    weight: 1.05
+    freshness: 1.05
+    tags:
+      vitamins: 1.2
+      beauty: 1.1
+      immunity: 1.1
+      mood: 1.0
+    audience:
+      wellness: 1.05
+      beauty: 1.05
+  - id: viten
+    category: general
+    weight: 1.1
+    freshness: 1.05
+    tags:
+      immunity: 1.25
+      recovery: 1.05
+      energy: 1.05
+    audience:
+      wellness: 1.1
+  - id: nash-vitamin-d3
+    category: supplements
+    weight: 1.05
+    freshness: 1.05
+    tags:
+      vitamin_d3: 1.3
+      immunity: 1.1
+      sleep_support: 1.05
+    audience:
+      wellness: 1.1
+      office: 1.05
+  - id: nash-magnii-b6
+    category: supplements
+    weight: 1.1
+    freshness: 1.05
+    tags:
+      magnesium: 1.3
+      sleep_calm: 1.2
+      stress_support: 1.15
+    audience:
+      office: 1.15
+      wellness: 1.1
+  - id: nash-omega-3
+    category: supplements
+    weight: 1.15
+    freshness: 1.05
+    tags:
+      omega3: 1.3
+      cardio_support: 1.2
+      brain_support: 1.15
+      recovery: 1.05
+    audience:
+      athlete: 1.1
+      wellness: 1.1
+  - id: nash-omega-3-150
+    category: supplements
+    weight: 1.2
+    freshness: 1.0
+    tags:
+      omega3: 1.3
+      cardio_support: 1.2
+      brain_support: 1.15
+      recovery: 1.05
+    audience:
+      athlete: 1.1
+      wellness: 1.1
+  - id: programma-korrektsii-pri-indekse-4-5
+    category: supplements
+    weight: 1.1
+    freshness: 1.0
+    tags:
+      bundle: 1.1
+      weight_management: 1.2
+      detox: 1.1
+    audience:
+      wellness: 1.1
+  - id: programma-korrektsii-pri-indekse-6-7
+    category: supplements
+    weight: 1.1
+    freshness: 1.0
+    tags:
+      bundle: 1.1
+      weight_management: 1.25
+      detox: 1.1
+    audience:
+      wellness: 1.1
+  - id: programma-korrektsii-pri-indekse-do-3
+    category: supplements
+    weight: 1.05
+    freshness: 1.0
+    tags:
+      bundle: 1.1
+      weight_management: 1.1
+      recovery: 1.0
+    audience:
+      wellness: 1.05
+  - id: sertifikat-o-test
+    category: supplements
+    weight: 0.9
+    freshness: 1.0
+    tags:
+      certificate: 1.0
+      watch: 1.0
+    audience:
+      wellness: 1.0
+  - id: t8-omo-deus-30-seconds
+    category: general
+    weight: 1.1
+    freshness: 1.05
+    tags:
+      beauty: 1.2
+      antiage: 1.2
+      mood: 1.0
+      sleep_support: 1.0
+    audience:
+      beauty: 1.1
+      wellness: 1.05

@@ -44,6 +44,17 @@ async def recent_events(session: AsyncSession, limit: int = 5) -> Sequence[Event
     return list(result.scalars())
 
 
+async def recent_by_name(session: AsyncSession, name: str, limit: int = 50) -> Sequence[Event]:
+    stmt = (
+        select(Event)
+        .where(Event.name == name)
+        .order_by(Event.ts.desc())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
 async def stats(
     session: AsyncSession,
     name: Optional[str] = None,

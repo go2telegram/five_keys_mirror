@@ -1,9 +1,11 @@
-from typing import List
+from __future__ import annotations
 
-from app.products import PRODUCTS
+from collections.abc import Iterable
+
+from app.catalog.api import product_meta
 
 # Контекстные подсказки, зависящие от ситуации
-CTX = {
+CTX: dict[str, dict[str, str]] = {
     # калькуляторы
     "msd": {
         "OMEGA3": "Поддерживает обмен липидов и чувствительность клеток к сигналам — легче держать вес.",
@@ -129,20 +131,47 @@ CTX = {
 }
 
 
-def product_lines(codes: List[str], context: str) -> List[str]:
-    """
-    Возвращает строки вида:
-    — <b>Название</b>: краткое описание из PRODUCTS
-      Как поможет сейчас: <i>контекстная фраза</i>
-    """
-    out = []
+_DEF_CONTEXT_KEYS = {ctx: {code: text for code, text in mapping.items()} for ctx, mapping in CTX.items()}
+
+
+def _resolve_context_hint(context: str, codes: Iterable[str]) -> dict[str, str]:
+    hints: dict[str, str] = {}
+    mapping = _DEF_CONTEXT_KEYS.get(context, {})
     for code in codes:
-        p = PRODUCTS.get(code, {})
-        title = p.get("title", code)
-        generic = p.get("bullets", [""])[0]
-        help_text = CTX.get(context, {}).get(code)
-        if help_text:
-            out.append(f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{help_text}</i>")
+        if code in mapping:
+            hints[code] = mapping[code]
+    return hints
+
+
+def _fallback_short(meta: dict) -> str:
+    props = meta.get("props") or []
+    if props:
+        return str(props[0])
+    short = meta.get("short")
+    if isinstance(short, str) and short:
+        return short
+    return ""
+
+
+def product_lines(codes: Iterable[str], context: str) -> list[str]:
+    """Return human readable lines for product plan summaries."""
+
+    out: list[str] = []
+    hints = _resolve_context_hint(context, codes)
+    for raw_code in codes:
+        meta = product_meta(raw_code)
+        if not meta:
+            title = raw_code
+            generic = ""
         else:
-            out.append(f"— <b>{title}</b>: {generic}")
+            title = meta.get("name") or meta.get("code") or raw_code
+            generic = _fallback_short(meta)
+        hint = hints.get(raw_code)
+        if not hint and meta:
+            hint = hints.get(meta.get("code", ""))
+        if hint:
+            out.append(f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{hint}</i>")
+        else:
+            line = f"— <b>{title}</b>: {generic}" if generic else f"— <b>{title}</b>"
+            out.append(line)
     return out

@@ -1,5 +1,18 @@
 {
   "aliases": {
-    "beet-shot-legacy": "t8-beet-shot"
+    "beet-shot-legacy": "t8-beet-shot",
+    "T8_EXTRA": "t8-extra-90",
+    "T8_EXTRA_FAMILY": "t8-extra-90-family-200ml",
+    "T8_EXTRA_90": "t8-extra-90",
+    "T8_BLEND": "t8-blend-90",
+    "VITEN": "viten",
+    "TEO_GREEN": "t8-teo-green",
+    "MOBIO": "t8-mobio",
+    "OMEGA3": "nash-omega-3",
+    "OMEGA3_150": "nash-omega-3-150",
+    "MAG_B6": "nash-magnii-b6",
+    "D3": "nash-vitamin-d3",
+    "ERA_MIT_UP": "t8-era-mit-up",
+    "ERA_MITUP": "t8-era-mit-up"
   }
 }
