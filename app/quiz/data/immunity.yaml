@@ -1,0 +1,84 @@
+title: "Иммунитет"
+cover: "immunity/cover.png"
+questions:
+  - id: infections
+    text: "Простужаешься чаще трёх раз в год?"
+    image: "immunity/q1.png"
+    options:
+      - key: rarely
+        text: "Редко или совсем нет"
+        score: 0
+        tags: ["steady"]
+      - key: sometimes
+        text: "Иногда, 1–2 раза"
+        score: 2
+        tags: ["watch"]
+      - key: often
+        text: "Часто, почти каждую простуду подхватываю"
+        score: 4
+        tags: ["immunity"]
+  - id: recovery
+    text: "Как быстро проходит болезнь?"
+    image: "immunity/q2.png"
+    options:
+      - key: fast
+        text: "Через пару дней уже в строю"
+        score: 0
+        tags: ["steady"]
+      - key: average
+        text: "Примерно неделя"
+        score: 2
+        tags: ["immunity"]
+      - key: slow
+        text: "Могу болеть дольше недели"
+        score: 4
+        tags: ["vitamin_d3"]
+  - id: lifestyle
+    text: "Есть хронический стресс или недосып?"
+    image: "immunity/q3.png"
+    options:
+      - key: calm
+        text: "Нет, график и сон стабильны"
+        score: 0
+        tags: ["steady"]
+      - key: sometimes
+        text: "Иногда, но стараюсь контролировать"
+        score: 2
+        tags: ["stress"]
+      - key: always
+        text: "Постоянно не высыпаюсь или нервничаю"
+        score: 4
+        tags: ["probiotic"]
+  - id: digestion
+    text: "Регулярно ли есть овощи, клетчатка и пробиотики?"
+    image: "immunity/q4.png"
+    options:
+      - key: balanced
+        text: "Да, ем овощи и ферментированные продукты ежедневно"
+        score: 0
+        tags: ["steady"]
+      - key: mixed
+        text: "Получается через день"
+        score: 2
+        tags: ["fiber"]
+      - key: poor
+        text: "Редко, почти не слежу за питанием"
+        score: 4
+        tags: ["fiber", "probiotic"]
+result:
+  thresholds:
+    - min: 0
+      max: 4
+      label: "Хороший иммунитет"
+      advice: "Продолжай поддерживать режим сна, прогулки и разнообразное питание."
+      tags: ["immunity"]
+    - min: 5
+      max: 8
+      label: "Иммунитет требует внимания"
+      advice: "Укрепляй барьеры: добавь витамин D3, пробиотики и цельные овощи."
+      tags: ["immunity", "vitamin_d3", "probiotic"]
+    - min: 9
+      max: 16
+      label: "Иммунитет ослаблён"
+      advice: "Поддержи организм: обсуди с врачом витамин D3, пробиотики и клетчатку."
+      tags: ["immunity", "vitamin_d3", "probiotic", "fiber"]
