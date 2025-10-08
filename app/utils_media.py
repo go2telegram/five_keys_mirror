@@ -1,132 +1,94 @@
-from io import BytesIO
-from typing import List, Tuple
+from __future__ import annotations
 
-import httpx
+import logging
+from typing import List
+
 from aiogram import Bot
-from aiogram.types import BufferedInputFile, InputMediaPhoto
+from aiogram.types import InputMediaPhoto
 
-from app.config import settings
-from app.products import PRODUCTS
+from app.catalog.loader import product_by_alias, product_by_id
+from app.utils.image_resolver import resolve_media_reference
 
-try:
-    from PIL import Image
-
-    PIL_OK = True
-except Exception:
-    PIL_OK = False
+LOG = logging.getLogger(__name__)
 
 
-def _is_valid_url(u: str | None) -> bool:
-    if not u:
-        return False
-    u = u.strip()
-    return u.startswith("http")
-
-
-async def _download(url: str) -> bytes | None:
-    """
-    Скачивает картинку по URL. Работает без системных прокси (trust_env=False).
-    Если в .env указан HTTP_PROXY_URL, то используем его.
-    """
-    proxies = None
-    if getattr(settings, "HTTP_PROXY_URL", None):
-        proxies = settings.HTTP_PROXY_URL
-
-    try:
-        async with httpx.AsyncClient(
-            timeout=30.0,
-            follow_redirects=True,
-            headers={"User-Agent": "TelegramBot/1.0"},
-            trust_env=False,
-            proxies=proxies,
-        ) as cli:
-            r = await cli.get(url)
-            r.raise_for_status()
-            return r.content
-    except Exception as e:
-        print(f"[media] download fail {url}: {e}")
+def _resolve_product(code: str) -> dict | None:
+    if not code:
         return None
+    product = product_by_id(code)
+    if product:
+        return product
+    return product_by_alias(code)
 
 
-def _to_jpeg_bytes(raw: bytes, target_name: str) -> Tuple[bytes, str]:
-    """
-    Если доступен Pillow — приводим к JPEG (RGB), макс. размер 1600px, качество 85.
-    """
-    if not PIL_OK:
-        return raw, target_name
-
-    try:
-        im = Image.open(BytesIO(raw))
-        im = im.convert("RGB")
-
-        max_side = 1600
-        w, h = im.size
-        scale = min(max_side / max(w, h), 1.0)
-        if scale < 1.0:
-            im = im.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-
-        buf = BytesIO()
-        im.save(buf, format="JPEG", optimize=True, quality=85)
-        buf.seek(0)
-        return buf.read(), (target_name.rsplit(".", 1)[0] + ".jpg")
-    except Exception as e:
-        print(f"[media] pillow fail ({target_name}): {e}; sending raw bytes")
-        return raw, target_name
+def _collect_image_refs(product: dict) -> list[str]:
+    refs: list[str] = []
+    raw_images = product.get("images")
+    if isinstance(raw_images, list):
+        for image in raw_images:
+            if isinstance(image, str) and image and image not in refs:
+                refs.append(image)
+    primary = product.get("image")
+    if isinstance(primary, str) and primary:
+        if primary not in refs:
+            refs.insert(0, primary)
+    return refs
 
 
-async def _prepare_files(urls: List[str]) -> List[InputMediaPhoto]:
-    """
-    Скачиваем и нормализуем список URL → готовим InputMediaPhoto.
-    """
-    media: List[InputMediaPhoto] = []
-    for u in urls:
-        data = await _download(u)
-        if not data:
+def _build_media_group(refs: List[str]) -> list[InputMediaPhoto]:
+    media: list[InputMediaPhoto] = []
+    for ref in refs:
+        resolved = resolve_media_reference(ref)
+        if not resolved:
             continue
-        name = u.split("/")[-1] or "image.jpg"
-        data, name = _to_jpeg_bytes(data, name)
-        media.append(InputMediaPhoto(media=BufferedInputFile(data, filename=name)))
-        print(f"[media] prepared {name} ({len(data)} bytes)")
+        media.append(InputMediaPhoto(media=resolved))
     return media
 
 
 async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
-    """
-    Гарантированная отправка картинок:
-    - качаем и нормализуем все файлы;
-    - если 2+ фото → пробуем альбом;
-    - если альбом не удался → шлём по одному.
-    """
-    urls: List[str] = []
+    """Send a media album with catalog images for the given product codes."""
+
+    collected: list[str] = []
+    seen: set[str] = set()
     for code in codes:
-        img = PRODUCTS.get(code, {}).get("image_url")
-        ok = _is_valid_url(img)
-        print(f"[media] url {code}: {img} -> {'OK' if ok else 'BAD'}")
-        if ok:
-            urls.append(img)
+        product = _resolve_product(code)
+        if not product:
+            LOG.warning("send_product_album: unknown product %s", code)
+            continue
+        for ref in _collect_image_refs(product):
+            if ref in seen:
+                continue
+            if not resolve_media_reference(ref):
+                continue
+            collected.append(ref)
+            seen.add(ref)
+            break
+        else:
+            LOG.warning("send_product_album: no local images for %s", code)
 
-    if not urls:
-        print("[media] no urls to send")
+    if not collected:
+        LOG.info("send_product_album: nothing to send for %s", codes)
         return
 
-    files = await _prepare_files(urls)
-    if not files:
-        print("[media] no files after prepare")
+    media_group = _build_media_group(collected)
+    if not media_group:
+        LOG.info("send_product_album: failed to build media group for %s", collected)
         return
 
-    # 2+ файлов → альбом
-    if len(files) >= 2:
+    if len(media_group) >= 2:
         try:
-            await bot.send_media_group(chat_id, media=files)
-            print(f"[media] album sent: {len(files)} items")
+            await bot.send_media_group(chat_id, media=media_group)
+            LOG.debug("send_product_album: sent media group (%d items)", len(media_group))
             return
-        except Exception as e:
-            print(f"[media] album send fail: {e}; fallback singles")
+        except Exception:
+            LOG.exception("send_product_album: media group failed; falling back to singles")
 
-    # fallback или 1 файл → по одному
-    for f in files:
+    for ref in collected:
+        source = resolve_media_reference(ref)
+        if not source:
+            continue
         try:
-            await bot.send_photo(chat_id, photo=f.media)
-            print(f"[media] single sent {f.media.file_name}")
-        except Exception as e:
-            print(f"[media] single fail: {e}")
+            await bot.send_photo(chat_id, photo=source)
+            LOG.debug("send_product_album: sent single %s", ref)
+        except Exception:
+            LOG.exception("send_product_album: failed to send %s", ref)

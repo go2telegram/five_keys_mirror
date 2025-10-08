@@ -10,6 +10,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home
+from app.utils.image_resolver import resolve_media_reference
 
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
@@ -169,7 +170,10 @@ async def send_product_cards(
 
     media = MediaGroupBuilder(caption=None)
     for img in _collect_media(cards):
-        media.add_photo(media=img)
+        resolved = resolve_media_reference(img)
+        if not resolved:
+            continue
+        media.add_photo(media=resolved)
     try:
         built = media.build()
     except Exception:  # pragma: no cover - defensive guard for aiogram internals
