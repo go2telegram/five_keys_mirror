@@ -14,40 +14,34 @@
 
 Структуру каталогов можно расширять подпапками — главное, чтобы в них попадали файлы нужного типа.
 
+### Быстрая сборка (online по умолчанию)
+
+```bash
+python tools/build_products.py build
+python tools/build_products.py validate
+```
+
+Импортёр использует pinned SHA `1312d74492d26a8de5b8a65af38293fe6bf8ccc5` из медиарепозитория и подставляет RAW-URL вида `https://raw.githubusercontent.com/go2telegram/media/<sha>/media/products/...`. Так Telegram сразу подтянет изображения по ссылке. Параметр `--images-base` позволяет временно переключиться на другую ревизию или ветку (`main` и т.п.).
+
+Флаги `--strict-images` и `--strict-descriptions` заставляют импортёр автоматически фиксировать новые артефакты в `build_summary.json` и падать, если что-то потеряно. Пара `--expect-count from=images --fail-on-mismatch` продолжает гарантировать, что количество собранных продуктов равно количеству картинок.
+
 ### Сборка локально (offline)
 
-Перед сборкой обновите локальную ветку:
+Если нужно полностью офлайн-собирание (например, при работе с новыми моками), переключите режим на локальный и укажите каталог с изображениями:
 
 ```bash
-git fetch --all --prune
-git switch main && git pull --ff-only
-```
+export IMAGES_MODE=catalog_local
 
-```bash
 python tools/build_products.py build \
   --descriptions-path "app/catalog/descriptions" \
-  --images-dir "app/catalog/images/products" \
-  --strict-images add --strict-descriptions add \
+  --images-dir "app/static/images/products" \
+  --strict-images --strict-descriptions \
   --expect-count from=images --fail-on-mismatch
 
 python tools/build_products.py validate
 ```
 
-✅ В логе сборки ищем `found_descriptions=…  found_images=38  built=38`, а валидация должна закончиться сообщением `Catalog OK (38 products)`.
-
-### Сборка из GitHub (online)
-
-```bash
-python tools/build_products.py build \
-  --descriptions-url https://github.com/go2telegram/media/tree/main/descriptions \
-  --images-base https://raw.githubusercontent.com/go2telegram/media/main/media/products \
-  --strict-images add --strict-descriptions add \
-  --expect-count from=images --fail-on-mismatch
-
-python tools/build_products.py validate
-```
-
-`--strict-* add` заставляет импортёр автоматически фиксировать новые артефакты в `build_summary.json` и падать, если что-то потеряно. `--expect-count from=images --fail-on-mismatch` гарантирует, что количество собранных продуктов будет равно количеству картинок.
+Можно также передать все параметры напрямую без изменения окружения.
 
 ### Отчётность и контроль «38/38»
 
@@ -57,6 +51,33 @@ python tools/build_products.py validate
 - в продовой среде запросите `/catalog_report` и убедитесь, что бот показывает `built=38`.
 
 Команда `/catalog_reload` в Telegram подтянет свежий `products.json` без рестарта бота.
+
+### Переключение онлайн/офлайн-режимов
+
+В `.env` доступны переменные для тонкой настройки источников:
+
+```env
+IMAGES_MODE=catalog_remote   # или catalog_local для офлайн-сборки
+IMAGES_BASE=.../media/products
+IMAGES_DIR=app/static/images/products
+QUIZ_IMAGE_MODE=remote       # переключите на local, чтобы слать картинки с диска
+QUIZ_IMG_BASE=.../media/quizzes
+```
+
+Поменяли значение — перезапустите бота или перезапустите команду сборки, и новые настройки подтянутся автоматически.
+
+### Run checks локально vs CI
+
+В песочнице Codex все проверки выполняются офлайн, поэтому достаточно запустить:
+
+```bash
+python -m pip install -r requirements.txt
+python tools/build_products.py validate
+pytest -q
+```
+
+Шаги, требующие выхода в интернет (онлайн-сборка каталога и `tools/head_check.py`), остаются только в GitHub Actions. Там окружение
+получает доступ к медиарепозиторию и гарантирует, что изображения по удалённым URL отвечают.
 
 ### FAQ
 
