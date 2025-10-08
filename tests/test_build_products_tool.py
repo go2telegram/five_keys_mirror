@@ -14,6 +14,26 @@ DESCRIPTIONS_PATH = Path("app/catalog/descriptions/Полное описание
 IMAGES_DIR = Path("app/static/images/products")
 
 
+def test_normalize_images_directory_flattens_nested_structure(tmp_path: Path) -> None:
+    base = tmp_path / "products"
+    nested = base / "images"
+    deeper = nested / "more"
+    deeper.mkdir(parents=True)
+    (nested / "alpha.jpg").write_bytes(b"alpha")
+    (deeper / "beta.png").write_bytes(b"beta")
+
+    listed = bp._list_local_images(base)
+    assert sorted(listed) == ["alpha.jpg", "more/beta.png"]
+    assert nested.exists()
+
+    changed = bp.normalize_images_directory(base)
+    assert changed is True
+    assert not nested.exists()
+
+    files = sorted(p.relative_to(base).as_posix() for p in base.rglob("*") if p.is_file())
+    assert files == ["alpha.jpg", "more/beta.png"]
+
+
 @pytest.mark.parametrize(
     "raw, expected",
     [

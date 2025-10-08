@@ -625,15 +625,72 @@ def _list_remote_images(images_base: str) -> tuple[str, list[str]]:
     return images_base + "/", sorted(set(files))
 
 
+def _normalize_image_relative_path(relative: Path) -> tuple[Path, bool]:
+    parts = list(relative.parts)
+    trimmed = False
+    while parts and parts[0] == "images":
+        parts = parts[1:]
+        trimmed = True
+    normalized = Path(*parts) if parts else Path(relative.name)
+    return normalized, trimmed
+
+
+def normalize_images_directory(images_dir: Path) -> bool:
+    """Physically flatten nested images directories, returning True when changes were made."""
+
+    if not images_dir.exists() or not images_dir.is_dir():
+        return False
+
+    nested = images_dir / "images"
+    if not nested.is_dir():
+        return False
+
+    logging.warning("Nested images directory detected: %s — flattening", nested)
+    modified = False
+    conflicts = False
+    files = [path for path in nested.rglob("*") if path.is_file()]
+    for source in sorted(files):
+        relative = source.relative_to(nested)
+        target_relative, _ = _normalize_image_relative_path(relative)
+        target = images_dir / target_relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            conflicts = True
+            logging.error("Cannot move %s to %s: target already exists", source, target)
+            continue
+        source.rename(target)
+        modified = True
+    if not conflicts:
+        try:
+            for directory in sorted(nested.glob("**/*"), reverse=True):
+                if directory.is_dir():
+                    directory.rmdir()
+        except OSError:
+            pass
+        try:
+            nested.rmdir()
+        except OSError:
+            pass
+    return modified
+
+
 def _list_local_images(images_dir: Path) -> list[str]:
     if not images_dir.exists():
         raise CatalogBuildError(f"Images directory {images_dir} not found")
-    files = [
-        str(file.relative_to(images_dir)).replace(os.sep, "/")
-        for file in images_dir.rglob("*")
-        if file.is_file() and file.suffix.lower() in IMAGE_EXTENSIONS
-    ]
-    return sorted(files)
+    normalized: list[str] = []
+    warned = False
+    for file in images_dir.rglob("*"):
+        if not file.is_file() or file.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+        relative = file.relative_to(images_dir)
+        normalized_path, trimmed = _normalize_image_relative_path(relative)
+        if trimmed and not warned:
+            logging.warning(
+                "Nested images directory detected under %s — treating as flattened", images_dir
+            )
+            warned = True
+        normalized.append(normalized_path.as_posix())
+    return sorted(set(normalized))
 
 
 def _local_web_base(images_dir: Path) -> str:
