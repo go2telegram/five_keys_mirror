@@ -9,9 +9,9 @@ pytest.importorskip("aiosqlite")
 from app.handlers import (
     quiz_deficits,
     quiz_skin_joint,
-    quiz_sleep,
     quiz_stress2,
 )
+from app.quiz.engine import load_quiz
 
 
 @asynccontextmanager
@@ -90,5 +90,6 @@ async def test_quiz_skin_joint_flow(monkeypatch):
     send_mock.assert_awaited()
 
 
-def test_sleep_quiz_expanded():
-    assert len(quiz_sleep.SLEEP_QUESTIONS) >= 9
+def test_sleep_quiz_yaml_structure():
+    definition = load_quiz("sleep")
+    assert 5 <= len(definition.questions) <= 7

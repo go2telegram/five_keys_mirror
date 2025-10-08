@@ -1,0 +1,116 @@
+title: "Сон"
+cover: "sleep/cover.png"
+questions:
+  - id: q1
+    text: "Во сколько обычно ложишься спать?"
+    image: "sleep/q1.png"
+    options:
+      - key: before_23
+        text: "До 23:00"
+        score: 1
+        tags: ["sleep_support"]
+      - key: around_midnight
+        text: "Около полуночи"
+        score: 2
+        tags: ["sleep_support", "sleep_calm"]
+      - key: after_1
+        text: "Позже 01:00"
+        score: 3
+        tags: ["sleep_support", "sleep_calm", "mct"]
+  - id: q2
+    text: "Есть ли расслабляющий ритуал перед сном (душ, чтение, дыхание)?"
+    image: "sleep/q2.png"
+    options:
+      - key: yes
+        text: "Да, каждый вечер"
+        score: 1
+        tags: ["sleep_calm"]
+      - key: sometimes
+        text: "Иногда вспоминаю"
+        score: 2
+        tags: ["sleep_calm", "glycine"]
+      - key: never
+        text: "Почти никогда"
+        score: 3
+        tags: ["sleep_calm", "glycine", "magnesium"]
+  - id: q3
+    text: "Сколько экранного времени остаётся за последний час до сна?"
+    image: "sleep/q3.png"
+    options:
+      - key: detox
+        text: "Практически без экранов"
+        score: 1
+        tags: ["sleep_support"]
+      - key: short
+        text: "30–60 минут"
+        score: 2
+        tags: ["sleep_support", "sleep_calm"]
+      - key: long
+        text: "Больше часа"
+        score: 3
+        tags: ["sleep_support", "sleep_calm", "magnesium"]
+  - id: q4
+    text: "Бывает ли кофеин после 14:00 (кофе, чай, мате, энергетики)?"
+    image: "sleep/q4.png"
+    options:
+      - key: no
+        text: "Нет"
+        score: 1
+        tags: ["sleep_support"]
+      - key: rarely
+        text: "Редко"
+        score: 2
+        tags: ["sleep_support", "magnesium"]
+      - key: often
+        text: "Часто"
+        score: 3
+        tags: ["sleep_support", "magnesium", "mct"]
+  - id: q5
+    text: "Просыпаешься ли ночью и трудно ли снова уснуть?"
+    image: "sleep/q5.png"
+    options:
+      - key: never
+        text: "Почти не просыпаюсь"
+        score: 1
+        tags: ["sleep_calm"]
+      - key: sometimes
+        text: "Иногда приходится"
+        score: 2
+        tags: ["sleep_calm", "glycine"]
+      - key: often
+        text: "Да, бывает часто"
+        score: 3
+        tags: ["sleep_calm", "glycine", "magnesium"]
+  - id: q6
+    text: "Лёгко ли просыпаешься и чувствуешь себя отдохнувшим утром?"
+    image: "sleep/q6.png"
+    options:
+      - key: refreshed
+        text: "Да, бодро"
+        score: 1
+        tags: ["sleep_support"]
+      - key: neutral
+        text: "Средне"
+        score: 2
+        tags: ["sleep_support", "mct"]
+      - key: exhausted
+        text: "С трудом"
+        score: 3
+        tags: ["sleep_support", "mct", "magnesium"]
+result:
+  thresholds:
+    - min: 6
+      max: 9
+      label: "Сон в балансе"
+      advice: "Сохраняй текущий режим: стабильный отбой, цифровой детокс и вечерние ритуалы."
+      tags: ["sleep_support"]
+    - min: 10
+      max: 13
+      label: "Нужна мягкая поддержка"
+      advice: "Добавь больше расслабления вечером, проветривай комнату и попробуй магний/глицин."
+      tags: ["sleep_support", "sleep_calm", "magnesium", "glycine"]
+    - min: 14
+      max: 18
+      label: "Сон сильно просел"
+      advice: "Стоит пересмотреть вечерние привычки, добавить нутрицевтики и утренний свет."
+      tags: ["sleep_support", "sleep_calm", "magnesium", "glycine", "mct"]
