@@ -58,6 +58,8 @@ class Settings(BaseSettings):
 
     TRIBUTE_API_KEY: str = ""
     TRIBUTE_WEBHOOK_PATH: str = "/tribute/webhook"
+    SERVICE_HOST: str = "127.0.0.1"
+    HEALTH_PORT: int = 8080
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
     RUN_TRIBUTE_WEBHOOK: bool = False

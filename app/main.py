@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import errno
 import importlib
 import logging
 import time
@@ -177,7 +178,7 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
-async def _setup_service_app() -> web.AppRunner:
+async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web = web.Application()
     app_web.router.add_get("/ping", _handle_ping)
     app_web.router.add_get("/metrics", _handle_metrics)
@@ -186,21 +187,50 @@ async def _setup_service_app() -> web.AppRunner:
 
     runner = web.AppRunner(app_web)
     await runner.setup()
-    port = settings.TRIBUTE_PORT if settings.RUN_TRIBUTE_WEBHOOK else settings.WEB_PORT
-    site = web.TCPSite(runner, host=settings.WEB_HOST, port=port)
-    await site.start()
-    logging.info(
+    host = settings.SERVICE_HOST
+    port = settings.HEALTH_PORT
+    log = logging.getLogger("startup")
+
+    bound_host = host
+    bound_port = port
+
+    async def _start(site: web.TCPSite) -> web.BaseSite:
+        nonlocal bound_host, bound_port
+        await site.start()
+        server = getattr(site, "_server", None)
+        sockets = getattr(server, "sockets", None)
+        if sockets:
+            sock = next(iter(sockets))
+            bound_host, bound_port = sock.getsockname()[:2]
+            log.info("service bound to %s:%s", bound_host, bound_port)
+        else:  # pragma: no cover - defensive branch
+            log.info("service started without socket info")
+        return site
+
+    try:
+        site = web.TCPSite(runner, host=host, port=port)
+        await _start(site)
+    except OSError as exc:
+        if getattr(exc, "errno", None) in (errno.EADDRINUSE, 10048) and port != 0:
+            log.warning("port %s busy, retry with ephemeral 0", port)
+            site = web.TCPSite(runner, host=host, port=0)
+            await _start(site)
+        else:
+            raise
+
+    log.info(
         "Service server at http://%s:%s (webhook=%s)",
-        settings.WEB_HOST,
-        port,
+        bound_host,
+        bound_port,
         settings.TRIBUTE_WEBHOOK_PATH if settings.RUN_TRIBUTE_WEBHOOK else "disabled",
     )
-    return runner
+    return runner, site
 
 
 async def _setup_tribute_webhook() -> web.AppRunner:
     startup_log.warning("_setup_tribute_webhook is deprecated; using _setup_service_app instead")
-    return await _setup_service_app()
+    runner, _site = await _setup_service_app()
+    return runner
 
 
 async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]:
@@ -415,7 +445,9 @@ async def main() -> None:
 
     start_scheduler(bot)
 
-    runner = await _setup_service_app()
+    runner: web.AppRunner | None = None
+    site: web.BaseSite | None = None
+    runner, site = await _setup_service_app()
     dashboard_server: object | None = None
     dashboard_task: asyncio.Task | None = None
     try:
@@ -442,6 +474,8 @@ async def main() -> None:
     finally:
         mark("S9: shutdown sequence")
         logging.info(">>> Polling stopped")
+        if site is not None:
+            await site.stop()
         if runner is not None:
             await runner.cleanup()
         if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
