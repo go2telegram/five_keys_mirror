@@ -50,14 +50,28 @@ def _fetch_revision_sync(db_url: str) -> str | None:
         engine.dispose()
 
 
-def _alembic_upgrade_head_sync(db_url: str) -> None:
-    from alembic import command
+def _build_alembic_config(db_url: str):
     from alembic.config import Config
 
     cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", "alembic")
     cfg.set_main_option("sqlalchemy.url", db_url)
+    return cfg
+
+
+def _alembic_upgrade_head_sync(db_url: str) -> None:
+    from alembic import command
+
+    cfg = _build_alembic_config(db_url)
     command.upgrade(cfg, "head")
+
+
+def _alembic_head_revision_sync(db_url: str) -> str | None:
+    from alembic.script import ScriptDirectory
+
+    cfg = _build_alembic_config(db_url)
+    script = ScriptDirectory.from_config(cfg)
+    return script.get_current_head()
 
 
 try:
@@ -164,11 +178,40 @@ async def current_revision(db_url: str | None = None) -> str | None:
         return None
 
 
+async def head_revision(db_url: str | None = None) -> str | None:
+    url = db_url or settings.DB_URL
+    try:
+        return await asyncio.to_thread(_alembic_head_revision_sync, url)
+    except Exception:
+        log.exception("DB: get head revision failed")
+        return None
+
+
+async def upgrade_to_head(db_url: str | None = None, *, timeout: float | None = 15.0) -> bool:
+    url = db_url or settings.DB_URL
+    log.info("DB: alembic upgrade head — start")
+    task = asyncio.to_thread(_alembic_upgrade_head_sync, url)
+    try:
+        if timeout is None:
+            await task
+        else:
+            await asyncio.wait_for(task, timeout=timeout)
+    except asyncio.TimeoutError:
+        log.error("DB: migration timeout, continue without blocking startup")
+        return False
+    except Exception:
+        log.exception("DB: migration failed, continue without blocking startup")
+        return False
+
+    log.info("DB: alembic upgrade head — done")
+    return True
+
+
 async def init_db(engine: AsyncEngine | None = None) -> str | None:
     """Apply migrations with timeout and never block startup."""
 
     db_url = settings.DB_URL
-    log.info("DB: url=%s migrate_on_start=%s", db_url, settings.DB_MIGRATE_ON_START)
+    log.info("DB: url=%s migrate_on_start=%s", db_url, settings.MIGRATE_ON_START)
 
     _ensure_sqlite_dir(db_url)
 
@@ -183,23 +226,13 @@ async def init_db(engine: AsyncEngine | None = None) -> str | None:
     else:
         log.warning("DB: async engine unavailable; skipping connectivity check")
 
-    if not settings.DB_MIGRATE_ON_START:
+    if not settings.MIGRATE_ON_START:
         log.warning("DB: migrations skipped by flag")
         revision = await current_revision(db_url)
         log.info("DB: current revision=%s", revision or "unknown")
         return revision
 
-    try:
-        log.info("DB: alembic upgrade head — start")
-        await asyncio.wait_for(
-            asyncio.to_thread(_alembic_upgrade_head_sync, db_url),
-            timeout=15.0,
-        )
-        log.info("DB: alembic upgrade head — done")
-    except asyncio.TimeoutError:
-        log.error("DB: migration timeout, continue without blocking startup")
-    except Exception:
-        log.exception("DB: migration failed, continue without blocking startup")
+    await upgrade_to_head(db_url=db_url, timeout=15.0)
 
     revision = await current_revision(db_url)
     log.info("DB: current revision=%s", revision or "unknown")

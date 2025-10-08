@@ -9,7 +9,13 @@ from aiogram.types import BufferedInputFile, Message
 
 from app.catalog.report import CatalogReportError, get_catalog_report
 from app.config import settings
-from app.db.session import compat_session, session_scope
+from app.db.session import (
+    compat_session,
+    current_revision,
+    head_revision,
+    session_scope,
+    upgrade_to_head,
+)
 from app.repo import (
     events as events_repo,
     leads as leads_repo,
@@ -131,6 +137,51 @@ async def leads_csv(m: Message):
         BufferedInputFile(csv_bytes, filename=fname),
         caption=f"Экспорт лидов ({len(items)})",
     )
+
+
+@router.message(Command("doctor_db"))
+async def doctor_db(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    db_url = settings.DB_URL
+    current = await current_revision(db_url)
+    head = await head_revision(db_url)
+
+    lines = [
+        "🩺 <b>Doctor DB</b>",
+        f"Текущая ревизия: {current or '—'}",
+        f"Последняя миграция: {head or '—'}",
+    ]
+
+    if not head:
+        lines.append("⚠️ Не удалось определить последнюю ревизию Alembic.")
+        await m.answer("\n".join(lines))
+        return
+
+    if current == head:
+        lines.append("✅ База данных уже в актуальном состоянии.")
+        await m.answer("\n".join(lines))
+        return
+
+    lines.append("⚙️ Применяем миграции…")
+    await m.answer("\n".join(lines))
+
+    applied = await upgrade_to_head(db_url=db_url, timeout=None)
+    updated_revision = await current_revision(db_url)
+
+    if applied:
+        text = (
+            "✅ Миграции применены.\n"
+            f"Текущая ревизия: {updated_revision or '—'}"
+        )
+    else:
+        text = (
+            "❌ Не удалось применить миграции. Подробности в логах.\n"
+            f"Текущая ревизия: {updated_revision or current or '—'}"
+        )
+
+    await m.answer(text)
 
 
 def _format_catalog_items(items: list[str], *, limit: int = 10) -> str:

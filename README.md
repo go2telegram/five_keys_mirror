@@ -188,7 +188,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\doctor.ps1
 ```
 BOT_TOKEN=123:ABC
 DB_URL=sqlite+aiosqlite:///./var/bot.db
-DB_MIGRATE_ON_START=true
+MIGRATE_ON_START=true
 TIMEZONE=Europe/Moscow
 VELAVIE_URL=https://velavie.example/landing
 RUN_TRIBUTE_WEBHOOK=false
