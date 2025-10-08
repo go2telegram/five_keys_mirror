@@ -65,6 +65,22 @@ questions:
         text: "Редко, почти не слежу за питанием"
         score: 4
         tags: ["fiber", "probiotic"]
+  - id: support
+    text: "Принимаешь ли курсы витаминов или пробиотиков?"
+    image: "immunity/q5.png"
+    options:
+      - key: regular
+        text: "Да, прохожу поддерживающие курсы"
+        score: 0
+        tags: ["steady"]
+      - key: sometimes
+        text: "Иногда, когда вспоминаю"
+        score: 2
+        tags: ["immunity"]
+      - key: never
+        text: "Нет, редко или никогда"
+        score: 4
+        tags: ["vitamin_d3", "probiotic"]
 result:
   thresholds:
     - min: 0

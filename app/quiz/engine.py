@@ -435,12 +435,19 @@ async def _send_default_result(
     if not message:
         return
 
-    tags = result.threshold.tags
-    tag_line = "\n\n" + " ".join(f"#{tag}" for tag in tags) if tags else ""
+    threshold_tags = result.threshold.tags
+    tag_line = ", ".join(threshold_tags) if threshold_tags else "—"
     text = (
         f"Тест «{definition.title}» завершён!\n\n"
-        f"<b>{result.threshold.label}</b>\n{result.threshold.advice}{tag_line}"
+        f"score: {result.total_score}\n"
+        f"label: {result.threshold.label}\n"
+        f"advice: {result.threshold.advice}\n"
+        f"tags: {tag_line}"
     )
+    if result.collected_tags:
+        answers_line = ", ".join(result.collected_tags)
+        text += f"\nanswers: {answers_line}"
+
     await message.answer(text)
 
 
