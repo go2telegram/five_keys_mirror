@@ -47,6 +47,7 @@ from app.handlers import (
     subscription as h_subscription,
     tribute_webhook as h_tw,
 )
+from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
 from app.middlewares import AuditMiddleware
 from app.scheduler.service import start_scheduler
@@ -269,6 +270,7 @@ async def main() -> None:
         h_calc_kcal.router,
         h_calc_macros.router,
         h_quiz_menu.router,
+        quiz_engine_handlers.router,
         h_quiz_energy.router,
         h_quiz_deficits.router,
         h_quiz_immunity.router,

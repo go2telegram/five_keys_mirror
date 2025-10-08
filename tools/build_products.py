@@ -37,9 +37,23 @@ DEFAULT_DESCRIPTIONS_URL = "https://github.com/go2telegram/media/tree/main/descr
 DEFAULT_DESCRIPTIONS_PATH = str(ROOT / "app" / "catalog" / "descriptions")
 
 # images
-DEFAULT_IMAGES_MODE = "local"  # or "remote"
-DEFAULT_IMAGES_BASE = "https://raw.githubusercontent.com/go2telegram/media/main/media/products/"
-DEFAULT_IMAGES_DIR = str(ROOT / "app" / "static" / "images" / "products")
+PINNED_MEDIA_SHA = "1312d74492d26a8de5b8a65af38293fe6bf8ccc5"
+
+DEFAULT_IMAGES_MODE = "remote"  # or "local"
+_ENV_IMAGES_MODE = os.getenv("IMAGES_MODE", "").lower()
+if _ENV_IMAGES_MODE == "catalog_local":
+    DEFAULT_IMAGES_MODE = "local"
+elif _ENV_IMAGES_MODE == "catalog_remote":
+    DEFAULT_IMAGES_MODE = "remote"
+
+DEFAULT_IMAGES_BASE = os.getenv(
+    "IMAGES_BASE",
+    f"https://raw.githubusercontent.com/go2telegram/media/{PINNED_MEDIA_SHA}/media/products",
+)
+DEFAULT_IMAGES_DIR = os.getenv(
+    "IMAGES_DIR",
+    str(ROOT / "app" / "static" / "images" / "products"),
+)
 
 EXPECT_COUNT_FROM_IMAGES = "from=images"
 

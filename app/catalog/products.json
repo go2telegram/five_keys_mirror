@@ -33,9 +33,9 @@
         "t8_beet_shot",
         "t8beetshot"
       ],
-      "image": "/static/images/products/t8-beet-shot.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-beet-shot.jpg",
       "images": [
-        "/static/images/products/t8-beet-shot.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-beet-shot.jpg"
       ]
     },
     {
@@ -70,9 +70,9 @@
         "t8_era_brain_coffee",
         "t8erabraincoffee"
       ],
-      "image": "/static/images/products/brain-coffee_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/brain-coffee_main.jpg",
       "images": [
-        "/static/images/products/brain-coffee_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/brain-coffee_main.jpg"
       ]
     },
     {
@@ -104,9 +104,9 @@
         "brainoil",
         "oil"
       ],
-      "image": "/static/images/products/brain-coffee_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/brain-coffee_main.jpg",
       "images": [
-        "/static/images/products/brain-coffee_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/brain-coffee_main.jpg"
       ]
     },
     {
@@ -144,9 +144,9 @@
         "t8_blend_90",
         "t8blend90"
       ],
-      "image": "/static/images/products/blend-90_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg",
       "images": [
-        "/static/images/products/blend-90_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg"
       ]
     },
     {
@@ -170,9 +170,9 @@
       },
       "available": false,
       "contra": "индивидуальная непереносимость компонентов. Перед применением необходимо проконсультироваться со специалистом.\nвода дистиллированная, калия карбонат, калия бикарбонат (или натрия бикарбонат), калия гидроксид, магния цитрат, кальция цитрат, серебро коллоидное, кремний коллоидный.\n15 мл.\nКроме раствора, упаковка T8 DROPS включает в себя 10 тест-полосок  для измерения pH-баланса.\nХранить при температуре не ниже 0 °С и не выше +25 °С\nСрок годности: 1 год\nРоссия",
-      "image": "/static/images/products/t8-drops.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-drops.jpg",
       "images": [
-        "/static/images/products/t8-drops.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-drops.jpg"
       ]
     },
     {
@@ -212,9 +212,9 @@
         "t8_extra_90_family_200ml",
         "t8extra90family200ml"
       ],
-      "image": "/static/images/products/blend-90_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg",
       "images": [
-        "/static/images/products/blend-90_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg"
       ]
     },
     {
@@ -251,9 +251,9 @@
         "t8_extra_90",
         "t8extra90"
       ],
-      "image": "/static/images/products/blend-90_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg",
       "images": [
-        "/static/images/products/blend-90_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/blend-90_main.jpg"
       ]
     },
     {
@@ -289,9 +289,9 @@
         "t8_era_lchf_cocoa",
         "t8eralchfcocoa"
       ],
-      "image": "/static/images/products/t8-era-lchf-cocoa.png",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png",
       "images": [
-        "/static/images/products/t8-era-lchf-cocoa.png"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png"
       ]
     },
     {
@@ -316,9 +316,9 @@
       "available": false,
       "contra": "индивидуальная непереносимость компонентов.",
       "composition": "сухое кокосовое молоко (36% в составе продукта), семена чиа, ежевика сушеная измельченная, сухое молоко (не более 2% в составе продукта), эритрит, каррагинан.\nсухое кокосовое молоко (36% в составе продукта), семена чиа, клубника сушеная измельченная, сухое молоко (не более 2% в составе продукта), эритрит, каррагинан.\nВес брутто: 130 г (5 порций по 26 г).\nПищевая и энергетическая ценность T8 Manana с терпкой ежевикой:\nПищевая ценность на 100 г. продукта\tСухой продукт\tРазведенный продукт\nжиры\t32,1\t9,6\nбелки\t3,5\t1,1\nуглеводы\t13,5\t4,1\nккал\t357\t104,1\nПищевая и энергетическая ценность T8 Manana с сочной клубникой:\nПищевая ценность на 100 г. продукта\tСухой продукт\tРазведенный продукт\nжиры\t31,5\t9,4\nбелки\t3,7\t1,1\nуглеводы\t16,1\t4,8\nккал\t362,4\t108,7\nУсловия хранения: хранить вдали от солнечных лучей и воздействия нагревательных приборов при температуре не выше +25 С по Цельсию и относительной влажности более 70%.\nСрок годности: 1 год.\nРоссия.",
-      "image": "/static/images/products/manana.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/manana.jpg",
       "images": [
-        "/static/images/products/manana.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/manana.jpg"
       ]
     },
     {
@@ -356,9 +356,9 @@
         "up",
         "ERA_MIT_UP"
       ],
-      "image": "/static/images/products/mitup_main.png",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/mitup_main.png",
       "images": [
-        "/static/images/products/mitup_main.png"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/mitup_main.png"
       ]
     },
     {
@@ -382,9 +382,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/mito-base.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/mito-base.jpg",
       "images": [
-        "/static/images/products/mito-base.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/mito-base.jpg"
       ]
     },
     {
@@ -409,9 +409,9 @@
       "available": false,
       "usage": "взрослым 2-3 раза в день по 5 г (1 чайная ложка или по метке крышки-дозатора). Концентрат предварительно растворяют в небольшом количестве жидкости (30 мл), исключая молоко.",
       "contra": "индивидуальная непереносимость компонентов. Перед применением необходимо проконсультироваться с специалистом.\nМетафильтрат Bifidobacterium bifidum, метафильтрат Bifidobacterium adolescentis, метафильтрат Bifidobacterium longum, метафильтрат Lactobacillus acidophilus, метафильтрат Lactobacillus salivarius, метафильтрат Lactobacillus helveticus, лактулоза, инстантгам (гуммиарабик), метафильтрат Propionibacterium freudenreichii, глицерин (носитель), молочная кислота пищевая (регулятор кислотности).\n250 г.\nПищевая ценность продукта 100 г продукта:\tГраммы:\nЖиры\t0\nБелки\t0\nУглеводы\t0\nСахароспирты (за исключением эритрита)\t50\nПищевые волокна\t6\nОрганические кислоты\t2\nЭнерг. ценность\t590 кДж/140 кКал\nУсловия хранения: Хранить в недоступном для детей месте при температуре от 0 °С до +25 °C\nСрок годности: 2 года\nРоссия",
-      "image": "/static/images/products/t8-mobio.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-mobio.jpg",
       "images": [
-        "/static/images/products/t8-mobio.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-mobio.jpg"
       ],
       "aliases": [
         "MOBIO"
@@ -448,9 +448,9 @@
         "mitomatrix",
         "mitomatrixlchf"
       ],
-      "image": "/static/images/products/t8-era-lchf-cocoa.png",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png",
       "images": [
-        "/static/images/products/t8-era-lchf-cocoa.png"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png"
       ]
     },
     {
@@ -474,9 +474,9 @@
       },
       "available": false,
       "contra": "индивидуальная непереносимость компонентов, беременность, лактация. Перед приемом необходимо проконсультироваться со специалистом.\nБАД. Не является лекарственным средством.\nСвидетельство о государственной регистрации № АМ.01.07.01.003.R.001095.10.22 от 24.10.2022\nэкстракт гвоздики, экстракт грецкого ореха, экстракт золототысячника, экстракт пижмы, экстракт корня аира болотного, экстракт коры дуба, экстракт хвоща, экстракт коры осины, экстракт тысячелистника, экстракт бессмертника, тальк пищевой (антислеживающий агент), капсула (желатин).\nМасса нетто: 30 грамм.\nФорма выпуска: 60 капсул по 400 мг.\nМасса (количество) продукта, г.\tПищевая ценность сухого продукта (средние значения), г.\tЭнергетическая ценность\nбелки\tжиры\tуглеводы\tккал\tкДж\n100\t0\t0\t65\t211\t882\n0,4\t0\t0\t0\t1\t4\n*Показатели пищевой и энергетической ценности БАД определены расчетным путем\nУсловия хранения: хранить в сухом недоступном для детей месте при температуре не выше 25° С.\nСрок годности: 3 года. Дату изготовления см. на упаковке.\nРоссия",
-      "image": "/static/images/products/nash-parakill.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/nash-parakill.jpg",
       "images": [
-        "/static/images/products/nash-parakill.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/nash-parakill.jpg"
       ]
     },
     {
@@ -518,9 +518,9 @@
         "t8_stekla_black_96",
         "t8steklablack96"
       ],
-      "image": "/static/images/products/t8-stekla-black-96.webp",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stekla-black-96.webp",
       "images": [
-        "/static/images/products/t8-stekla-black-96.webp"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stekla-black-96.webp"
       ]
     },
     {
@@ -557,9 +557,9 @@
         "steklagreen",
         "steklagreen76"
       ],
-      "image": "/static/images/products/t8-stekla-black-96.webp",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stekla-black-96.webp",
       "images": [
-        "/static/images/products/t8-stekla-black-96.webp"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stekla-black-96.webp"
       ]
     },
     {
@@ -584,9 +584,9 @@
       "available": false,
       "usage": "суточная дозировка составляет 2 мл разделенных на два приема.  Первый прием — 1 мл утром после завтрака и второй прием — 1 мл вечером перед сном. Концентрат нужно растворять в 250 мл бутилированной (не водопроводной!) воды. Полный курс составляет 25 дней, после чего необходим недельный перерыв.",
       "contra": "индивидуальная непереносимость, беременность, кормление грудью. Перед приемом необходимо проконсультироваться с врачом.\n**Перед применением рекомендуется проконсультироваться со специалистом\nКомплекс солей гуминовых, гиматомелановых и фульвовых кислот, азотно-кислое серебро (Ag +), вода дистиллированная.\n50 мл.\nУсловия хранения: при температуре от +1 до +25 °C\nСрок годности: 3 года с даты изготовления\nРоссия",
-      "image": "/static/images/products/t8-stone.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stone.jpg",
       "images": [
-        "/static/images/products/t8-stone.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-stone.jpg"
       ]
     },
     {
@@ -622,9 +622,9 @@
         "t8_era_lchf_choco",
         "t8eralchfchoco"
       ],
-      "image": "/static/images/products/t8-era-lchf-cocoa.png",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png",
       "images": [
-        "/static/images/products/t8-era-lchf-cocoa.png"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-lchf-cocoa.png"
       ]
     },
     {
@@ -670,9 +670,9 @@
         "tea",
         "with"
       ],
-      "image": "/static/images/products/night-tea_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/night-tea_main.jpg",
       "images": [
-        "/static/images/products/night-tea_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/night-tea_main.jpg"
       ]
     },
     {
@@ -698,9 +698,9 @@
       },
       "available": false,
       "composition": "Витамин С (аскорбиновая кислота), мг\t80\nВитамин Е (токоферол), мг\t12\nВитамин В1 (тиамин), мг\t1,1\nВитамин В2 (рибофлавин), мг\t1,4\nВитамин В3 (ниацинамид), мг\t16\nВитамин В5 (пантотеновая кислота), мг\t6\nВитамин В6 (пиридоксин), мг\t1,4\nВитамин В7 (биотин), мг\t0,05\nВитамин Витамин В9 (фолиевая кислота безв.), мг\t0,2\nВитамин B12 (цианокобаламин), мг\t0,0025\nМасса нетто: 500 г (10 саше по 50 г.)\nПищевая ценность\t50 г сухого продукта\t100 г сухого продукта\nБелки\t23,5 г\t47 г\nЖиры\t10 г\t20 г\nУглеводы \t6,43 г\t12, 86 г\nЭнергетическая ценность\t187 ккал/784 кДж\t374 ккал/1568 кДж\nУсловия хранения: хранить в сухом, защищенном от света и недоступном для детей месте при относительной влажности воздуха не более 85% и температуре от -2 °С. до не выше + 25 °С.\nСрок годности: 24 месяца\nРоссия",
-      "image": "/static/images/products/t8-era-to-go-biscuit.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-biscuit.jpg",
       "images": [
-        "/static/images/products/t8-era-to-go-biscuit.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-biscuit.jpg"
       ]
     },
     {
@@ -725,9 +725,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/t8-era-to-go-choco.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-choco.jpg",
       "images": [
-        "/static/images/products/t8-era-to-go-choco.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-choco.jpg"
       ]
     },
     {
@@ -752,9 +752,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/t8-era-to-go-coconut.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-coconut.jpg",
       "images": [
-        "/static/images/products/t8-era-to-go-coconut.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-coconut.jpg"
       ]
     },
     {
@@ -780,9 +780,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/t8-era-to-go-pear-chia.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-pear-chia.jpg",
       "images": [
-        "/static/images/products/t8-era-to-go-pear-chia.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-pear-chia.jpg"
       ]
     },
     {
@@ -807,9 +807,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/t8-era-to-go-raspberry.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-raspberry.jpg",
       "images": [
-        "/static/images/products/t8-era-to-go-raspberry.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-era-to-go-raspberry.jpg"
       ]
     },
     {
@@ -834,9 +834,9 @@
       "available": false,
       "usage": "1 мл (2 нажатия на колпачок пипетки или ⅔ пипетки) растворить в 50-100 мл питьевой не горячей воды. Принимать два раза в день.",
       "contra": "индивидуальная непереносимость компонентов. В периоды беременности и лактации перед применением необходима консультация врача.\n*Перед применением рекомендуется проконсультироваться со специалистом\nГлицерин, вода, хвойный хлорофиллин натрия.\nСодержание чистого хлорофилла в 2 мл (суточная порция): 6,25 мг\nОбъем T8 FEEL составляет 50 мл\nПищевая и энергетическая ценность T8 FEEL на 100 мл продукта составляет:\nБелки – 0 г, жиры – 0 г, углеводы – 0 г; энергетическая ценность – 0 ккал/0 кдж.\nУсловия хранения: T8 FEEL следует хранить в сухом, защищенном от прямых солнечных лучей  месте при температуре от +1 до +25 °C.\nСрок годности: 3 года.\nРоссия",
-      "image": "/static/images/products/t8-feel.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-feel.jpg",
       "images": [
-        "/static/images/products/t8-feel.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-feel.jpg"
       ]
     },
     {
@@ -862,9 +862,9 @@
       "available": false,
       "usage": "взрослым по 1 стику (суточная порция) в день во время еды. Продолжительность приема – 1 месяц, при необходимости прием можно повторить.",
       "contra": "индивидуальная непереносимость компонентов, беременность, кормление грудью, склонность к расстройствам функции кишечника.Перед применением рекомендуется проконсультироваться с врачом.\nБАД. Не является лекарственным средством.\nСвидетельство о государственной регистрации № АМ.01.04.01.003.R.000049.02.25 от 07.02.2025\nВода, подсластитель – эритрит, сок концентрированный вишневый, загуститель – ксантановая камедь, холина битартрат, L-тирозин, экстракт сухой бакопы, экстракт сухой корня астрагала, экстракт сухой цветков шафрана, витаминный премикс (содержит витамин С (L-аскорбиновая кислота), ниацин (никотинамид), пантотеновая кислота (D-пантотенат кальция), витамин Е (DL-альфа-токоферола ацетат), витамин А (ретинола ацетат), витамин В6 (пиридоксина гидрохлорид), витамин В2 (рибофлавин), витамин В1 (тиамина мононитрат), фолиевая кислота, D-биотин, витамин D3 (холекальциферол), витамин В12 (цианокобаламин)), экстракт сухой травы гиностеммы, ароматизатор натуральный «Вишня» (содержит носитель – пропиленгликоль), консервант – сорбат калия.\nСодержит сахара и подсластитель. При чрезмерном употреблении может оказывать слабительное действие.\nСодержание биологически активных веществ в суточной порции продукта:\nБиологически активные вещества\tСодержание в 1 стике (суточной порции)\t% от АУП1 или РУСП2\nХолин\t123,3 мг\t251\nТирозин\t300 мг\t71\nВитамин А\t669,3 мкг РЭ\t842\nВитамин С\t41,31 мг\t692\nВитамин В1\t0,77 мг\t552\nВитамин В2\t0,77 мг\t482\nВитамин В6\t0,81 мг\t412\nВитамин В12\t1,62 мкг\t1622/*\nВитамин Е\t3,33 мг ТЭ\t332\nВитамин D3\t5 мкг (200 МЕ)\t1002\nБиотин\t98,55 мкг\t1972/*\nНиацин\t8,91 мг\t502\nПантотеновая кислота\t3,38 мг\t562\nФолиевая кислота\t270 мкг\t1352/*\n1 - адекватный уровень потребления согласно Единым санитарно-эпидемиологическим и гигиеническим требованиям к товарам, подлежащим санитарно-эпидемиологическому надзору (контролю), Глава II, Раздел 1, Приложение 5;\n2 - рекомендуемый уровень суточного потребления согласно ТР ТС 022/2011 «Пищевая продукция в части ее маркировки», Приложение 2;\n* - не превышает верхний допустимый уровень потребления согласно Единым санитарно-эпидемиологическим и гигиеническим требованиям к товарам, подлежащим санитарно-эпидемиологическому надзору (контролю), Глава II, Раздел 1, п. 1.5.\n30 стиков по 15 г\nПищевая и энергетическая ценность  (на 100 г / на 1 порцию (15 г)) составляет:\nБелки – 2,6 г/0,39 г\nЖиры – 0 г\nУглеводы – 10, 33 г /1,55 г\nЭнергетическая ценность: 50 ккал/200 кДж (на 100 г), 7,75 ккал/32,44 кДж (на 1 порцию (15 г)).\nУсловия хранения: хранить в сухом, защищенном от прямых солнечных лучей и недоступном для детей месте при температуре не выше +25°C и относительной влажности не более 75%.\nСрок годности: 2 года.\nРоссия",
-      "image": "/static/images/products/t8-iq-code.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-iq-code.jpg",
       "images": [
-        "/static/images/products/t8-iq-code.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-iq-code.jpg"
       ]
     },
     {
@@ -889,9 +889,9 @@
       },
       "available": false,
       "usage": "чтобы приготовить смузи, растворите 1 порцию сухого продукта в 200-250 мл воды. Интенсивно размешайте до однородной консистенции (можно использовать шейкер). Дайте минуту настояться, после чего продукт готов к употреблению.\nT8 TEO GREEN можно использовать в качестве добавки к коктейлям, блюдам и соусам.\nвозможна индивидуальная непереносимость компонентов. В период беременности и лактации перед употреблением продукта необходима консультация врача.\n*Перед применением рекомендуется проконсультироваться со специалистом\nИнулин (из корня цикория), яблочная клетчатка, пшеничная клетчатка, камедь акации (экстракт смолы дерева), базилик лист, клетчатка шиповника, мята перечная, хлорелла, мука из семян чиа, псиллиум (оболочка семян подорожника), спирулина, альгинат натрия (экстракт морских водорослей), минеральный комплекс (железо, йод, калий, кальций, магний, марганец, медь, селен, цинк), витаминный комплекс (С, В3, В5, В6, В1, В9, Н, В12), подсластитель (эритрит, сукралоза).\nМинералы\t% РСП (рекомендуемой суточной потребности) на 1 порцию = 10 г\nКальций\t0,8\nКалий\t0,17\nМагний\t1,45\nЖелезо\t16,4\nЦинк\t9,47\nМедь\t19\nМарганец\t7,5\nЙод\t14,3\nСелен\t9,7\nВитамины\t% РСП (рекомендуемой суточной потребности) на 1 порцию = 10 г\nС\t14,7\nВ3\t13,3\nВ5\t14\nВ6\t18\nВ1\t23,6\nВ9\t13,5\nН\t30\nВ12\t30\nМасса нетто: 210 г (21 порция по 10 г).\nна 100 г продукта\tна 1 порцию = 10 г\nБелки, г\t8,00\t0,8\nЖиры, г\t1,50\t0,15\nУглеводы, г\t74,20\t7,4\nв т.ч. пищевые волокна, г (среднее значение)\t57,60\t5,7\nЭнергетическая ценность, кДж / ккал\t650 / 155\t65 / 15,5\nУсловия хранения: в темном прохладном месте при температуре от 0 °C до 25 °C и относительной влажности не более 75%\nСрок годности: 18 месяцев.\nРоссия",
-      "image": "/static/images/products/t8-teo-green.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-teo-green.jpg",
       "images": [
-        "/static/images/products/t8-teo-green.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-teo-green.jpg"
       ],
       "aliases": [
         "TEO_GREEN"
@@ -918,9 +918,9 @@
       },
       "available": false,
       "contra": "индивидуальная непереносимость компонентов, беременность, кормление грудью, состояния, при которых противопоказаны препараты йода. Перед применением рекомендуется проконсультироваться с врачом. Лицам с заболеванием щитовидной железы и/или принимающим препараты йода рекомендуется проконсультироваться с врачом-эндокринологом\nБАД. Не является лекарственным средством\nСвидетельство о государственной регистрации № АМ.01.01.01.003.R.000509.07.24 от 16.07.2024\nL-аскорбиновая кислота (витамин С), кальция цитрат, оболочка капсулы (желатин), носитель – микрокристаллическая целлюлоза, магния бисглицинат, ацетил-L-карнитина гидрохлорид, калия цитрат, DL-альфа-токоферола ацетат (витамин Е), экстракт листьев зеленого чая, холина битартрат, экстракт соцветий брокколи, цинка бисглицинат, альфа-липоевая кислота, инозит, никотинамид (ниацин), D-пантотенат кальция (пантотеновая кислота), ресвератрол (из косточки винограда культурного), ароматизатор «Мята перечная», марганца глюконат, меди глюконат, тиамина гидрохлорид (витамин В1), ретинола ацетат (витамин А), рибофлавин (витамин В2), холекальциферол (витамин D3), пиридоксаль-5-фосфат моногидрат (витамин В6), метилфолат (L-5-метилтетрагидрофолат) кальция (фолиевая кислота), хрома пиколинат, D-биотин, метилкобаламин (витамин В12), калия йодат.\nРекомендуемый прием (2 капсулы в день) содержит:\nКомпонент\tКоличество\t%\nВитамин А\t672 мкг\t84*\nВитамин Е\t20 мг\t200*(***)\nВитамин С\t250 мг\t417*(***)\nВитамин D3\t15 мкг (600 МЕ)\t300*(***)\nВитамин В1\t5 мг\t357*(***)\nВитамин В2\t6 мг\t375*(***)\nВитамин В3 / РР (ниацин)\t15 мг\t83*\nВитамин В5 (пантотеновая кислота)\t12 мг\t200*(***)\nВитамин В6\t2 мг\t100*\nВитамин В7 (биотин)\t50 мкг\t100*\nВитамин В12\t9 мкг\t900*(***)\nФолиевая кислота\t600 мкг\t300*(***)\nМагний\t20 мкг\t5*\nЦинк\t5 мкг\t33*\nЙод\t37 мкг\t25*\nКальций\t51 мкг\t5*\nКалий\t23 мкг\t1*\nМедь\t1 мкг\t100*\nМарганец\t1 мкг\t50*\nХром\t50 мкг\t100*\nИнозит\t14,8мкг\t3**\nАцетил-L-карнитин\t65 мкг\t22**\nЛипоевая кислота\t15 мкг\t50**\nРесвератрол\t5 мкг\t17**\nКатехины\t18,4 мкг\t18**\nХолин\t15 мкг\t3**\n– от рекомендуемого уровня суточного потребления (согласно ТР ТС 022/2011 (приложение 2)),\n** – от адекватного уровня потребления (согласно  \"Единым санитарно-эпидемиологическим  и гигиеническим требованиям к товарам, подлежащим санитарно-эпидемиологическому надзору (контролю)\" (глава II, раздел 1, приложение 5),\n*** – не превышает верхний допустимый уровень потребления (согласно \"Единым санитарно-эпидемиологическим и гигиеническим требованиям к товарам, подлежащим санитарно-эпидемиологическому надзору (контролю)\" (глава II, раздел 1, приложение 5)\n60 капсул массой 800 мг\nУсловия хранения: хранить в недоступном для детей месте при температуре не выше +25 °С и относительной влажности воздуха не более 75 %.\nСрок годности: 2 года\nРоссия",
-      "image": "/static/images/products/vimi.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/vimi.jpg",
       "images": [
-        "/static/images/products/vimi.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/vimi.jpg"
       ]
     },
     {
@@ -944,9 +944,9 @@
       },
       "available": true,
       "contra": "индивидуальная непереносимость компонентов, период беременности и лактации. Перед употреблением продукта необходима консультация специалиста.\nRNK complex (экстрагированная алтайская пшеница, экстракт кедрового ореха, экстракт липы), вытяжка соснового лишайника, экстракт березы, порошок мяты, экстракт фасоли, вытяжка из стержня шишки кедровой сосны, безводная лимонная кислота.\nНе содержит глютен\n5 г (5 упаковок по 1г)\nУсловия хранения: в сухом прохладном месте при температуре от 0 ºС до +25 ºС. Избегать воздействия прямых солнечных лучей.\nСрок годности: 2 года.\nРоссия",
-      "image": "/static/images/products/viten_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/viten_main.jpg",
       "images": [
-        "/static/images/products/viten_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/viten_main.jpg"
       ]
     },
     {
@@ -981,9 +981,9 @@
         "vitamin-d3",
         "vitamind3"
       ],
-      "image": "/static/images/products/vitamin-d3_main.png",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/vitamin-d3_main.png",
       "images": [
-        "/static/images/products/vitamin-d3_main.png"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/vitamin-d3_main.png"
       ]
     },
     {
@@ -1009,9 +1009,9 @@
       "available": false,
       "usage": "Взрослым по 3 капсулы в день во время еды в течение одного месяца, при необходимости курс можно повторить.",
       "contra": "индивидуальная непереносимость, беременность, период лактации, перед применением необходимо проконсультироваться со специалистом.\nБАД. Не является лекарственным средством.\nСвидетельство о государственной регистрации № RU.77.99.11.003.R.000751.03.22 от 11.03.2022г\nМагния оксид, магния цитрат, оболочка капсулы (желатин), агент антислеживающий тальк, агент антислеживающий кремния диоксид, пиридоксина гидрохлорид (витамин В6).\nБиологически активное вещество\tСодержание, мг в 1 капсуле\tСодержание, мг в 3 капсулах (суточная порция)\tУровень суточного потребления, мг\t% от суточного потребления\nМагний\t133,333\t400\t400\t100\nВитамин B6\t1,444\t4,433\t2\t221,651\n1 - не превышает верхний допустимый уровень суточного потребления.\nМасса нетто: 45 грамм.\nКапсула массой: 500 мг.\nФорма выпуска: 90 капсул.\nПищевая и энергетическая ценность ценность на 100 гр: 0 белки, 0 жиры, 0 углеводы, 0 кКал/кДж.\nУсловия хранения: хранить в сухом, недоступном для детей месте при температуре не выше +25 °C.\nСрок годности: 2 года.\nРоссия",
-      "image": "/static/images/products/nash-magnii-b6.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/nash-magnii-b6.jpg",
       "images": [
-        "/static/images/products/nash-magnii-b6.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/nash-magnii-b6.jpg"
       ],
       "aliases": [
         "MAG_B6"
@@ -1050,9 +1050,9 @@
         "omega-3",
         "omega3"
       ],
-      "image": "/static/images/products/omega3_main.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/omega3_main.jpg",
       "images": [
-        "/static/images/products/omega3_main.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/omega3_main.jpg"
       ]
     },
     {
@@ -1091,9 +1091,9 @@
         "omega-3-150",
         "omega3150"
       ],
-      "image": "/static/images/products/omega3_150.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/omega3_150.jpg",
       "images": [
-        "/static/images/products/omega3_150.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/omega3_150.jpg"
       ]
     },
     {
@@ -1122,9 +1122,9 @@
       },
       "available": false,
       "composition": "В состав программы коррекции при омега-3 индексе 4-5,9% входят три упаковки TEO GREEN, восемь упаковок «NASH Омега-3», две упаковки MOBIO+ и три упаковки EXTRA 90%.\n«NASH Омега-3»  (8 шт) — незаменимый источник полиненасыщенных жирных кислот из норвежского сырья с оптимальным содержанием полиненасыщенных жирных кислот 600 EPA / 240 DHA.\nMOBIO + (2 шт) — метабиотик для нормализации работы кишечника и восстановления микробиоты с высокой биодоступностью.\nTEO GREEN (3 шт) — смузи с клетчаткой, обогащенный витаминами и минералами, для поддержания здоровья микробиоты и комфортной работы ЖКТ.\nEXTRA 90% (3 шт) — натуральный концентрат на основе SibXP Complex с полипренолами, клеточным соком пихты и хвойным комплексом для повышения энергии и укрепления здоровья организма.\n*Подробное описание каждого из продуктов, способ применения и противопоказания указаны на упаковках продуктов, а также в карточках продуктов в нашем магазине.",
-      "image": "/static/images/products/programma-korrektsii-pri-indekse-4-5.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-4-5.jpg",
       "images": [
-        "/static/images/products/programma-korrektsii-pri-indekse-4-5.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-4-5.jpg"
       ]
     },
     {
@@ -1153,9 +1153,9 @@
       },
       "available": false,
       "composition": "В состав программы коррекции при омега-3 индексе 6-7,9% входят три упаковки TEO GREEN, четыре упаковки «NASH Омега-3» и две упаковки MOBIO+.\n«NASH Омега-3» (4 шт) — незаменимый источник полиненасыщенных жирных кислот из норвежского сырья с оптимальным содержанием полиненасыщенных жирных кислот 600 EPA / 240 DHA.\nMOBIO + (2 шт) — метабиотик с высокой биодоступностью для нормализации работы кишечника и восстановления микробиоты.\nTEO GREEN (3 шт) — смузи с клетчаткой, обогащенный витаминами и минералами, для поддержания здоровья микробиоты и комфортной работы ЖКТ.\n*Подробное описание каждого из продуктов, способ применения и противопоказания указаны на упаковках продуктов, а также в карточках продуктов в нашем магазине.",
-      "image": "/static/images/products/programma-korrektsii-pri-indekse-6-7.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-6-7.jpg",
       "images": [
-        "/static/images/products/programma-korrektsii-pri-indekse-6-7.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-6-7.jpg"
       ]
     },
     {
@@ -1184,9 +1184,9 @@
       },
       "available": false,
       "composition": "В состав программы коррекции при омега-3 индексе до 3,9 % входят три упаковки TEO GREEN, две упаковки MOBIO+, восемь упаковок «NASH Омега-3», три упаковки EXTRA 90%, три упаковки STONE и шесть упаковок ERA BRAIN OIL.\n«NASH Омега-3» (8 шт.) — незаменимый источник полиненасыщенных жирных кислот из норвежского сырья с оптимальным содержанием полиненасыщенных жирных кислот 600 EPA / 240 DHA.\nMOBIO + (2 шт.) — метабиотик с высокой биодоступностью для нормализации работы кишечника и восстановления микробиоты с высокой биодоступностью.\nTEO GREEN (3 шт.) — смузи с клетчаткой, обогащенный витаминами и минералами, для поддержания здоровья микробиоты и комфортной работы ЖКТ.\nEXTRA 90% (3 шт.) — натуральный концентрат на основе SibXP Complex с полипренолами, клеточным соком пихты и хвойным комплексом для повышения энергии и укрепления здоровья организма.\nSTONE (3 шт.) — натуральный концентрат на основе гуминовых кислот для детоксикации организма, антиоксидантной защиты и усиления биодоступности полезных веществ.\nERA BRAIN OIL (6 шт.) — это МСТ-масло, изготовленное из натурального кокосового масла с добавлением полипренолов. Оно способствует повышению общего уровня энергии организма, ускорению обменных процессов и улучшению состояния микробиоты. Используется в программе коррекции для помощи в восстановлении репарационных механизмов мембран всех клеток организма.\n*Подробное описание каждого из продуктов, способ применения и противопоказания указаны на упаковках продуктов, а также в карточках продуктов в нашем магазине.",
-      "image": "/static/images/products/programma-korrektsii-pri-indekse-do-3.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-do-3.jpg",
       "images": [
-        "/static/images/products/programma-korrektsii-pri-indekse-do-3.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/programma-korrektsii-pri-indekse-do-3.jpg"
       ]
     },
     {
@@ -1211,9 +1211,9 @@
         }
       },
       "available": false,
-      "image": "/static/images/products/sertifikat-o-test.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/sertifikat-o-test.jpg",
       "images": [
-        "/static/images/products/sertifikat-o-test.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/sertifikat-o-test.jpg"
       ]
     },
     {
@@ -1240,9 +1240,9 @@
       },
       "available": false,
       "contra": "индивидуальная непереносимость компонентов.\nButylene glycol, Glycerin, Niacinamide, Polysorbate 20, Urea, Pullulan, Cellulose gum, Carrageenan, Ceratonia siliqua gum, Sucrose, Sodium hyaluronate, Menthyl PCA, Lactamide MEA, Menthane carboxamide ethylpyridine, Hinokitiol, SibXP Complex, Fragrance, Disodium EDTA.\n30 мл.\nУсловия хранения: при температуре не выше +25 ℃ в защищенном от света месте.\nСрок годности: 3 года.\nРоссия",
-      "image": "/static/images/products/t8-omo-deus-30-seconds.jpg",
+      "image": "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-omo-deus-30-seconds.jpg",
       "images": [
-        "/static/images/products/t8-omo-deus-30-seconds.jpg"
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products/t8-omo-deus-30-seconds.jpg"
       ]
     }
   ]

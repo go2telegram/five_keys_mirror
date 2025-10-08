@@ -29,7 +29,11 @@ Thumbs.db
 /logs/
 *.log
 
+# Build artifacts
+/build/
+
 # Offline artifacts
 /wheels/
 /var/
 /dist/
+app/static/images/quiz/**/*

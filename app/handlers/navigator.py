@@ -86,8 +86,9 @@ def kb_nav_root():
     kb.button(text="💊 Продукты", callback_data="nav:cat:products")
     kb.button(text="🥤 Функциональное питание", callback_data="nav:cat:functional")
     kb.button(text="🌿 Образ жизни", callback_data="nav:cat:lifestyle")
+    kb.button(text="🧪 Тесты", callback_data="nav:tests")
     kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(1, 1, 1, 1, 1, 1)
+    kb.adjust(1, 1, 1, 1, 1, 1, 1)
     return kb.as_markup()
 
 
@@ -100,6 +101,23 @@ def kb_nav_category(cat_key: str):
     kb.button(text="⬅️ Назад", callback_data="nav:root")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2)  # 2 в ряд; последняя строка — две кнопки
+    return kb.as_markup()
+
+
+def kb_nav_tests():
+    kb = InlineKeyboardBuilder()
+    tests = [
+        ("⚡ Энергия", "energy"),
+        ("😴 Сон", "sleep"),
+        ("😰 Стресс", "stress"),
+        ("🛡️ Иммунитет", "immunity"),
+        ("🦠 ЖКТ", "gut"),
+    ]
+    for title, slug in tests:
+        kb.button(text=title, callback_data=f"tests:{slug}")
+    kb.button(text="⬅️ Назад", callback_data="nav:root")
+    kb.button(text="🏠 Домой", callback_data="home:main")
+    kb.adjust(1)
     return kb.as_markup()
 
 
@@ -122,3 +140,10 @@ async def nav_category(c: CallbackQuery):
     body = f"{title}\nВыбери, что открыть:"
     await c.answer()
     await c.message.edit_text(body, reply_markup=kb_nav_category(cat_key))
+
+
+@router.callback_query(F.data == "nav:tests")
+async def nav_tests(c: CallbackQuery):
+    await c.answer()
+    text = "🧪 Выбери тест, который хочешь пройти:"
+    await c.message.edit_text(text, reply_markup=kb_nav_tests())
