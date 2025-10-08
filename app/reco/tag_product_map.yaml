@@ -1,0 +1,597 @@
+version: 1
+products:
+  - product: t8-beet-shot
+    weight: 1.20
+    utm_category: energy
+    match:
+      threshold: 0.35
+      tags:
+        energy: 1.0
+        tonus: 0.7
+        recovery: 0.5
+        electrolytes: 0.4
+        mitochondria: 0.6
+    audience:
+      - any: ["athlete"]
+        factor: 1.15
+        label: "Активные тренировки"
+    freshness:
+      base: 1.0
+      decay_days: 21
+      floor: 0.5
+    notes: "Быстрый энергетический шот перед тренировками."
+
+  - product: t8-era-brain-coffee
+    weight: 1.10
+    utm_category: focus
+    match:
+      threshold: 0.40
+      tags:
+        focus: 1.0
+        energy: 0.8
+        caffeine: 0.4
+        adaptogens: 0.4
+        brain-coffee: 0.7
+        nootropics: 0.5
+    exclude_tags: ["overstim"]
+    freshness:
+      base: 0.95
+      decay_days: 14
+      floor: 0.5
+    notes: "Оставляем за пользователем выбор — не показываем при теге overstim."
+
+  - product: brain-oil
+    weight: 0.95
+    utm_category: focus
+    match:
+      threshold: 0.30
+      tags:
+        focus: 0.6
+        omega3: 0.8
+        anti_inflammatory: 0.5
+        mood: 0.4
+        support: 0.3
+    exclude_allergens: ["fish"]
+    freshness:
+      base: 1.0
+      decay_days: 45
+      floor: 0.6
+
+  - product: t8-blend-90
+    weight: 1.05
+    utm_category: immunity
+    match:
+      threshold: 0.30
+      tags:
+        immunity: 1.0
+        recovery: 0.5
+        adaptogens: 0.5
+        anti_inflammatory: 0.4
+        energy: 0.3
+    freshness:
+      base: 0.9
+      decay_days: 30
+      floor: 0.5
+
+  - product: t8-drops
+    weight: 0.85
+    utm_category: sleep
+    match:
+      threshold: 0.35
+      tags:
+        sleep_support: 0.8
+        calm_evening: 0.8
+        stress_balance: 0.5
+        adaptogens: 0.3
+    freshness:
+      base: 0.9
+      decay_days: 30
+      floor: 0.5
+
+  - product: t8-extra-90-family-200ml
+    weight: 1.00
+    utm_category: energy
+    match:
+      threshold: 0.30
+      tags:
+        energy: 1.0
+        mitochondria: 0.9
+        recovery: 0.6
+        support: 0.3
+    freshness:
+      base: 0.95
+      decay_days: 30
+      floor: 0.5
+
+  - product: t8-extra-90
+    weight: 1.25
+    utm_category: energy
+    match:
+      threshold: 0.40
+      tags:
+        energy: 1.0
+        mitochondria: 1.0
+        tonus: 0.6
+        recovery: 0.5
+        anti_inflammatory: 0.3
+    audience:
+      - any: ["athlete", "biohacker"]
+        factor: 1.10
+        label: "Эксперты по энергии"
+    freshness:
+      base: 1.0
+      decay_days: 35
+      floor: 0.6
+
+  - product: t8-era-lchf-cocoa
+    weight: 0.90
+    utm_category: energy
+    match:
+      threshold: 0.30
+      tags:
+        energy: 0.7
+        mood: 0.5
+        lchf: 0.6
+        mct: 0.5
+        adaptogens: 0.3
+    freshness:
+      base: 0.85
+      decay_days: 21
+      floor: 0.4
+
+  - product: manana
+    weight: 1.05
+    utm_category: sleep
+    match:
+      threshold: 0.35
+      tags:
+        sleep_support: 1.0
+        calm_evening: 0.8
+        stress_balance: 0.6
+        adaptogens: 0.4
+    audience:
+      - any: ["female"]
+        factor: 1.10
+        label: "Вечерние ритуалы"
+    freshness:
+      base: 0.95
+      decay_days: 25
+      floor: 0.5
+
+  - product: t8-era-mit-up
+    weight: 1.10
+    utm_category: beauty
+    match:
+      threshold: 0.35
+      tags:
+        beauty_skin: 1.0
+        collagen: 0.8
+        joint_support: 0.6
+        mitochondria: 0.5
+        mitup: 0.6
+    freshness:
+      base: 0.95
+      decay_days: 40
+      floor: 0.6
+
+  - product: mito-base
+    weight: 1.00
+    utm_category: metabolism
+    match:
+      threshold: 0.35
+      tags:
+        mitochondria: 1.0
+        energy: 0.8
+        metabolic_reset: 0.6
+        recovery: 0.4
+    freshness:
+      base: 0.9
+      decay_days: 45
+      floor: 0.5
+
+  - product: t8-mobio
+    weight: 1.05
+    utm_category: gut
+    match:
+      threshold: 0.35
+      tags:
+        microbiome: 1.0
+        gut_balance: 0.8
+        fiber: 0.5
+        detox: 0.4
+    freshness:
+      base: 0.95
+      decay_days: 35
+      floor: 0.5
+
+  - product: era-mitomatrix-lchf
+    weight: 0.95
+    utm_category: energy
+    match:
+      threshold: 0.30
+      tags:
+        mitochondria: 0.8
+        energy: 0.7
+        lchf: 0.6
+        tonus: 0.4
+        metabolic_reset: 0.4
+    freshness:
+      base: 0.85
+      decay_days: 30
+      floor: 0.5
+
+  - product: nash-parakill
+    weight: 0.90
+    utm_category: gut
+    match:
+      threshold: 0.30
+      tags:
+        parasite: 1.0
+        detox: 0.7
+        gut_balance: 0.4
+    freshness:
+      base: 0.9
+      decay_days: 60
+      floor: 0.5
+
+  - product: t8-stekla-black-96
+    weight: 0.80
+    utm_category: lifestyle
+    match:
+      threshold: 0.30
+      tags:
+        blue_light: 1.0
+        sleep_focus: 0.6
+        digital_detox: 0.5
+    freshness:
+      base: 0.8
+      decay_days: 120
+      floor: 0.6
+
+  - product: stekla-green-76
+    weight: 0.78
+    utm_category: lifestyle
+    match:
+      threshold: 0.30
+      tags:
+        blue_light: 0.8
+        focus: 0.6
+        digital_detox: 0.5
+    freshness:
+      base: 0.8
+      decay_days: 120
+      floor: 0.6
+
+  - product: t8-stone
+    weight: 0.92
+    utm_category: stress
+    match:
+      threshold: 0.30
+      tags:
+        stress_balance: 0.8
+        adaptogens: 0.7
+        recovery: 0.5
+        mood: 0.4
+    freshness:
+      base: 0.85
+      decay_days: 25
+      floor: 0.4
+
+  - product: t8-era-lchf-choco
+    weight: 0.85
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 0.8
+        travel: 0.6
+        lchf: 0.5
+        mood: 0.4
+    freshness:
+      base: 0.8
+      decay_days: 14
+      floor: 0.4
+
+  - product: t8-era-tayga-tea-with-orange-lemon-and-lemongrass
+    weight: 0.80
+    utm_category: lifestyle
+    match:
+      threshold: 0.30
+      tags:
+        adaptogenic_tea: 0.9
+        hydration: 0.6
+        immunity: 0.4
+        mood: 0.3
+    freshness:
+      base: 0.85
+      decay_days: 30
+      floor: 0.4
+
+  - product: t8-era-to-go-biscuit
+    weight: 0.78
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 1.0
+        travel: 0.6
+        fiber: 0.4
+        energy: 0.3
+    freshness:
+      base: 0.8
+      decay_days: 10
+      floor: 0.4
+
+  - product: t8-era-to-go-choco
+    weight: 0.78
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 1.0
+        travel: 0.6
+        mood: 0.4
+        energy: 0.3
+    freshness:
+      base: 0.8
+      decay_days: 10
+      floor: 0.4
+
+  - product: t8-era-to-go-coconut
+    weight: 0.80
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 1.0
+        travel: 0.6
+        lchf: 0.5
+        energy: 0.3
+    freshness:
+      base: 0.8
+      decay_days: 10
+      floor: 0.4
+
+  - product: t8-era-to-go-pear-chia
+    weight: 0.80
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 1.0
+        travel: 0.6
+        fiber: 0.5
+        mood: 0.3
+    freshness:
+      base: 0.8
+      decay_days: 10
+      floor: 0.4
+
+  - product: t8-era-to-go-raspberry
+    weight: 0.80
+    utm_category: snacks
+    match:
+      threshold: 0.30
+      tags:
+        snack: 1.0
+        travel: 0.6
+        mood: 0.4
+        energy: 0.3
+    freshness:
+      base: 0.8
+      decay_days: 10
+      floor: 0.4
+
+  - product: t8-feel
+    weight: 0.92
+    utm_category: stress
+    match:
+      threshold: 0.30
+      tags:
+        mood: 0.8
+        stress_balance: 0.7
+        adaptogens: 0.6
+        calm_evening: 0.4
+    freshness:
+      base: 0.9
+      decay_days: 20
+      floor: 0.4
+
+  - product: t8-iq-code
+    weight: 1.00
+    utm_category: focus
+    match:
+      threshold: 0.35
+      tags:
+        focus: 1.0
+        nootropics: 0.8
+        energy: 0.5
+        adaptogens: 0.4
+    freshness:
+      base: 0.95
+      decay_days: 30
+      floor: 0.5
+
+  - product: t8-teo-green
+    weight: 1.10
+    utm_category: gut
+    match:
+      threshold: 0.35
+      tags:
+        fiber: 1.0
+        microbiome: 0.8
+        gut_balance: 0.8
+        detox: 0.5
+    freshness:
+      base: 1.0
+      decay_days: 30
+      floor: 0.6
+
+  - product: vimi
+    weight: 0.90
+    utm_category: immunity
+    match:
+      threshold: 0.30
+      tags:
+        immunity: 0.8
+        anti_inflammatory: 0.5
+        support: 0.4
+        tonus: 0.3
+    freshness:
+      base: 0.9
+      decay_days: 30
+      floor: 0.5
+
+  - product: viten
+    weight: 1.00
+    utm_category: immunity
+    match:
+      threshold: 0.30
+      tags:
+        immunity: 1.0
+        recovery: 0.6
+        adaptogens: 0.5
+        support: 0.4
+    freshness:
+      base: 0.95
+      decay_days: 45
+      floor: 0.5
+
+  - product: nash-vitamin-d3
+    weight: 0.88
+    utm_category: immunity
+    match:
+      threshold: 0.30
+      tags:
+        vitamin-d3: 1.0
+        immunity: 0.6
+        sleep_focus: 0.4
+        support: 0.3
+    freshness:
+      base: 0.9
+      decay_days: 45
+      floor: 0.5
+
+  - product: nash-magnii-b6
+    weight: 0.98
+    utm_category: sleep
+    match:
+      threshold: 0.35
+      tags:
+        sleep_support: 1.0
+        calm_evening: 0.8
+        stress_balance: 0.7
+        b-complex: 0.4
+    audience:
+      - any: ["female"]
+        factor: 1.10
+        label: "Баланс нервной системы"
+    freshness:
+      base: 0.95
+      decay_days: 30
+      floor: 0.5
+
+  - product: nash-omega-3
+    weight: 0.92
+    utm_category: stress
+    match:
+      threshold: 0.30
+      tags:
+        omega3: 1.0
+        anti_inflammatory: 0.7
+        mood: 0.5
+        sleep_focus: 0.4
+    exclude_allergens: ["fish"]
+    freshness:
+      base: 0.95
+      decay_days: 30
+      floor: 0.5
+
+  - product: nash-omega-3-150
+    weight: 0.90
+    utm_category: stress
+    match:
+      threshold: 0.30
+      tags:
+        omega3: 1.0
+        anti_inflammatory: 0.7
+        mood: 0.5
+        recovery: 0.3
+    exclude_allergens: ["fish"]
+    freshness:
+      base: 0.95
+      decay_days: 30
+      floor: 0.5
+
+  - product: programma-korrektsii-pri-indekse-4-5
+    weight: 1.15
+    utm_category: metabolism
+    match:
+      threshold: 0.35
+      tags:
+        program_support: 1.0
+        weight_loss: 0.8
+        metabolic_reset: 0.7
+        gut_balance: 0.4
+    freshness:
+      base: 1.0
+      decay_days: 60
+      floor: 0.6
+
+  - product: programma-korrektsii-pri-indekse-6-7
+    weight: 1.20
+    utm_category: metabolism
+    match:
+      threshold: 0.35
+      tags:
+        program_support: 1.0
+        weight_loss: 0.8
+        metabolic_reset: 0.8
+        detox: 0.4
+    freshness:
+      base: 1.0
+      decay_days: 60
+      floor: 0.6
+
+  - product: programma-korrektsii-pri-indekse-do-3
+    weight: 1.10
+    utm_category: metabolism
+    match:
+      threshold: 0.35
+      tags:
+        program_support: 1.0
+        metabolic_reset: 0.7
+        gut_balance: 0.5
+        support: 0.4
+    freshness:
+      base: 1.0
+      decay_days: 60
+      floor: 0.6
+
+  - product: sertifikat-o-test
+    weight: 0.75
+    utm_category: lifestyle
+    match:
+      threshold: 0.25
+      tags:
+        gift: 1.0
+        support: 0.4
+        lifestyle: 0.3
+    freshness:
+      base: 0.85
+      decay_days: 180
+      floor: 0.6
+
+  - product: t8-omo-deus-30-seconds
+    weight: 0.90
+    utm_category: beauty
+    match:
+      threshold: 0.35
+      tags:
+        beauty_skin: 1.0
+        serum: 0.8
+        collagen: 0.5
+    freshness:
+      base: 0.9
+      decay_days: 90
+      floor: 0.6

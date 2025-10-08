@@ -1,0 +1,244 @@
+version: 1
+updated: 2024-05-01
+
+# Tag dictionary. Each tag describes a need, mechanism or context that can be
+# produced by quizzes, calculators or manual profile updates. Tags are grouped by
+# "goal", "mechanism" or "context" categories to help human editors.
+tags:
+  energy:
+    title: "Энергия и выносливость"
+    description: "Запрос на повышение базового уровня сил и устойчивости к нагрузкам."
+    group: goal
+    sources: ["quiz.energy", "quiz.stress", "profile.goals"]
+  mitochondria:
+    title: "Митохондриальная поддержка"
+    description: "Фокус на восстановление митохондрий и клеточного дыхания."
+    group: mechanism
+    sources: ["quiz.energy"]
+    implies: ["energy"]
+  tonus:
+    title: "Тонус и бодрость"
+    description: "Потребность в мягком тонусе без резких стимуляторов."
+    group: goal
+    sources: ["quiz.energy", "quiz.stress"]
+    implies: ["energy"]
+  recovery:
+    title: "Восстановление после нагрузок"
+    description: "Акцент на регенерацию и антиоксидантную защиту."
+    group: mechanism
+    sources: ["quiz.energy", "quiz.stress"]
+  support:
+    title: "Базовая поддержка"
+    description: "Общие рекомендации для сохранения достигнутого уровня."
+    group: context
+    sources: ["quiz.energy", "quiz.sleep", "quiz.gut"]
+  adaptogens:
+    title: "Адаптогены"
+    description: "Нужна адаптационная поддержка для стрессовых периодов."
+    group: mechanism
+    sources: ["quiz.energy", "quiz.stress"]
+  caffeine:
+    title: "Кофеин и стимуляторы"
+    description: "Допустима мягкая стимуляция кофеином."
+    group: context
+    sources: ["quiz.energy"]
+  electrolytes:
+    title: "Электролиты"
+    description: "Важна поддержка водно-солевого баланса."
+    group: mechanism
+    sources: ["quiz.energy", "calc.water"]
+  mct:
+    title: "MCT и быстрые жиры"
+    description: "Подходит кетопитание и быстрые источники энергии."
+    group: mechanism
+    sources: ["quiz.energy", "calc.kcal"]
+  brain-coffee:
+    title: "Brain Coffee"
+    description: "Предпочтение функциональному напитку Brain Coffee."
+    group: context
+    sources: ["quiz.energy"]
+  vitamin-d3:
+    title: "Витамин D3"
+    description: "Нужна коррекция уровня витамина D3."
+    group: mechanism
+    sources: ["quiz.immunity", "quiz.sleep", "profile.labs"]
+  sleep_focus:
+    title: "Фокус на гигиену сна"
+    description: "Нужно восстановить режим и глубину сна."
+    group: goal
+    sources: ["quiz.sleep", "quiz.stress"]
+  sleep_support:
+    title: "Поддержка засыпания"
+    description: "Нужны мягкие средства для расслабления перед сном."
+    group: goal
+    sources: ["quiz.sleep"]
+  sleep_ok:
+    title: "Сон в норме"
+    description: "Сон стабильный, требуются поддерживающие рекомендации."
+    group: context
+    sources: ["quiz.sleep"]
+  stress_balance:
+    title: "Управление стрессом"
+    description: "Необходима поддержка нервной системы и снижение тревожности."
+    group: goal
+    sources: ["quiz.stress", "profile.goals"]
+  calm_evening:
+    title: "Спокойный вечер"
+    description: "Ритуалы и добавки для расслабления перед сном."
+    group: context
+    sources: ["quiz.sleep", "quiz.stress"]
+  mood:
+    title: "Настроение и фокус"
+    description: "Важно улучшить настроение и концентрацию."
+    group: goal
+    sources: ["quiz.energy", "quiz.stress", "profile.goals"]
+  focus:
+    title: "Когнитивная производительность"
+    description: "Нужно усилить внимание и скорость мышления."
+    group: goal
+    sources: ["quiz.energy", "profile.goals"]
+  nootropics:
+    title: "Нутропная поддержка"
+    description: "Нужны мягкие ноотропы и нейропротекция."
+    group: mechanism
+    sources: ["quiz.energy"]
+  omega3:
+    title: "Омега-3"
+    description: "Высокая потребность в омега-3 кислотах."
+    group: mechanism
+    sources: ["quiz.energy", "quiz.deficits"]
+  anti_inflammatory:
+    title: "Противовоспалительная поддержка"
+    description: "Важна коррекция системного воспаления."
+    group: mechanism
+    sources: ["quiz.stress", "quiz.immunity"]
+  immunity:
+    title: "Иммунитет"
+    description: "Цель — повысить устойчивость к простудам и вирусам."
+    group: goal
+    sources: ["quiz.immunity", "profile.goals"]
+  microbiome:
+    title: "Микробиом"
+    description: "Фокус на полезной микрофлоре и ферментации."
+    group: mechanism
+    sources: ["quiz.gut", "calc.bmi"]
+  fiber:
+    title: "Клетчатка"
+    description: "Необходима дополнительная клетчатка в рационе."
+    group: mechanism
+    sources: ["quiz.gut", "calc.macros"]
+  gut_balance:
+    title: "Баланс ЖКТ"
+    description: "Жалобы на ЖКТ, нужна мягкая коррекция рациона."
+    group: goal
+    sources: ["quiz.gut", "profile.goals"]
+  detox:
+    title: "Детокс и вывод токсинов"
+    description: "Задача — поддержать печень и вывод метаболитов."
+    group: mechanism
+    sources: ["quiz.gut", "profile.detox"]
+  parasite:
+    title: "Антипаразитарная поддержка"
+    description: "Есть запрос на очистку от паразитов и патогенов."
+    group: mechanism
+    sources: ["profile.detox"]
+  beauty_skin:
+    title: "Кожа и волосы"
+    description: "Важна поддержка кожи, волос и ногтей."
+    group: goal
+    sources: ["quiz.skin_joint", "profile.goals"]
+  collagen:
+    title: "Коллаген"
+    description: "Нужны источники коллагена для соединительной ткани."
+    group: mechanism
+    sources: ["quiz.skin_joint", "profile.goals"]
+  joint_support:
+    title: "Суставы и связки"
+    description: "Требуется восстановление суставов и связок."
+    group: goal
+    sources: ["quiz.skin_joint"]
+  hydration:
+    title: "Гидратация"
+    description: "Нужно следить за уровнем воды и электролитов."
+    group: goal
+    sources: ["calc.water", "profile.goals"]
+  lchf:
+    title: "LCHF / кето"
+    description: "Пользователь придерживается низкоуглеводного питания."
+    group: context
+    sources: ["calc.kcal", "profile.diet"]
+  metabolic_reset:
+    title: "Метаболический перезапуск"
+    description: "Нужна комплексная работа с метаболическим здоровьем."
+    group: goal
+    sources: ["calc.bmi", "profile.goals"]
+  weight_loss:
+    title: "Снижение веса"
+    description: "Основная цель — мягкое снижение массы тела."
+    group: goal
+    sources: ["calc.bmi", "profile.goals"]
+  snack:
+    title: "Полезные перекусы"
+    description: "Важны готовые полезные перекусы без сахара."
+    group: context
+    sources: ["profile.lifestyle"]
+  travel:
+    title: "Формат to-go"
+    description: "Нужны удобные решения для офиса и путешествий."
+    group: context
+    sources: ["profile.lifestyle"]
+  blue_light:
+    title: "Синий свет"
+    description: "Есть жалобы на экранную усталость, нужен контроль света."
+    group: mechanism
+    sources: ["profile.lifestyle", "quiz.sleep"]
+  digital_detox:
+    title: "Цифровой детокс"
+    description: "Фокус на гигиене сна и снижении экранной нагрузки."
+    group: goal
+    sources: ["profile.lifestyle", "quiz.sleep"]
+  adaptogenic_tea:
+    title: "Адаптогенные чаи"
+    description: "Предпочтение мягким травяным напиткам."
+    group: context
+    sources: ["profile.goals"]
+  serum:
+    title: "Сыворотки и косметика"
+    description: "Запрос на косметический уход и anti-age."
+    group: goal
+    sources: ["profile.beauty"]
+  gift:
+    title: "Подарок"
+    description: "Нужно готовое решение в подарок."
+    group: context
+    sources: ["profile.lifestyle"]
+  lifestyle:
+    title: "Образ жизни"
+    description: "Широкие lifestyle-продукты и сертификаты."
+    group: context
+    sources: ["profile.lifestyle"]
+  program_support:
+    title: "Программа сопровождения"
+    description: "Готовность следовать структурированной программе."
+    group: context
+    sources: ["calc.bmi", "profile.goals"]
+  b-complex:
+    title: "Витамины группы B"
+    description: "Выявлен запрос на витаминовую поддержку группы B."
+    group: mechanism
+    sources: ["quiz.energy", "quiz.deficits"]
+  ok:
+    title: "Норма"
+    description: "Состояние в норме, рекомендовать поддерживающие продукты."
+    group: context
+    sources: ["quiz.energy", "quiz.sleep", "quiz.immunity"]
+  overstim:
+    title: "Перевозбуждение"
+    description: "Следует избегать жестких стимуляторов."
+    group: context
+    sources: ["quiz.energy"]
+  mitup:
+    title: "MIT UP"
+    description: "Целевой тег для комплекса MIT UP."
+    group: mechanism
+    sources: ["quiz.skin_joint"]

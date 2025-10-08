@@ -12,20 +12,15 @@ from app.products import BUY_URLS, PRODUCTS
 def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
-    kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
-    kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
-    kb.button(text="🎁 Регистрация", callback_data="reg:open")
-    kb.button(text="💎 Премиум", callback_data="premium:menu")
+    kb.button(text="🧪 Тесты", callback_data="quiz:menu")
+    kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
+    kb.button(text="💊 Подбор продукта", callback_data="pick:menu")
     kb.button(text="👤 Профиль", callback_data="profile:open")
-    kb.button(text="🔗 Реф. ссылка", callback_data="ref:menu")
     kb.button(text="🎫 Подписка", callback_data="sub:menu")
-    kb.button(text="🧭 Навигатор", callback_data="nav:root")
-    kb.button(text="🧾 PDF отчёт", callback_data="report:last")
-    kb.button(text="🔔 Уведомления", callback_data="notify:help")
+    kb.button(text="❓ Помощь", callback_data="help:menu")
 
-    kb.adjust(2, 2, 2, 2, 2, 1, 1)
+    kb.adjust(2, 2, 2, 1)
     return kb.as_markup()
 
 
@@ -39,11 +34,8 @@ def kb_quiz_menu() -> InlineKeyboardMarkup:
     kb.button(text="🌿 ЖКТ", callback_data="quiz:gut")
     kb.button(text="😴 Сон", callback_data="quiz:sleep")
     kb.button(text="🧠 Стресс", callback_data="quiz:stress")
-    kb.button(text="🩸 Дефициты", callback_data="quiz:deficits")
-    kb.button(text="🧘 Стресс 2.0", callback_data="quiz:stress2")
-    kb.button(text="✨ Кожа и суставы", callback_data="quiz:skin_joint")
     kb.button(text="⬅️ Назад", callback_data="home:main")
-    kb.adjust(2, 2, 2, 2, 1)
+    kb.adjust(2, 2, 1, 1)
     return kb.as_markup()
 
 
@@ -74,14 +66,13 @@ def kb_back_home(back_cb: str | None = None, home_cb: str = "home:main") -> Inli
 
 def kb_calc_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="MSD идеальный вес", callback_data="calc:msd")
-    kb.button(text="ИМТ", callback_data="calc:bmi")
-    kb.button(text="Водный баланс", callback_data="calc:water")
-    kb.button(text="Калории (BMR/TDEE)", callback_data="calc:kcal")
-    kb.button(text="БЖУ", callback_data="calc:macros")
+    kb.button(text="💧 Вода", callback_data="calc:water")
+    kb.button(text="🔥 Калории", callback_data="calc:kcal")
+    kb.button(text="⚖️ BMI", callback_data="calc:bmi")
+    kb.button(text="🍽️ БЖУ", callback_data="calc:macros")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.button(text="🏠 Домой", callback_data="home:main")
-    kb.adjust(2, 2, 1, 2)
+    kb.adjust(2, 2, 2)
     return kb.as_markup()
 
 
