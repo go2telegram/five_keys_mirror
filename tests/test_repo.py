@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.models import Base
-from app.repo import events, leads, referrals, subscriptions, users
+from app.repo import calculator_results, events, leads, referrals, subscriptions, users
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
@@ -163,5 +163,40 @@ def test_events_notify():
             recipients = await events.notify_recipients(session)
             assert 1 in recipients
             assert 2 not in recipients
+
+    run(_test())
+
+
+def test_calculator_results_repo():
+    async def _test():
+        async with SessionManager() as session:
+            await calculator_results.log_success(
+                session,
+                11,
+                "water",
+                input_data={"weight": 70},
+                result_data={"total": 2.4},
+                tags=["electrolytes"],
+            )
+            await calculator_results.log_error(
+                session,
+                11,
+                "water",
+                step="weight",
+                raw_value="abc",
+                error="parse_error",
+            )
+            await session.commit()
+
+            summary = await calculator_results.usage_summary(session)
+            summary_map = {item.calculator: item for item in summary}
+            assert summary_map["water"].ok == 1
+            assert summary_map["water"].error == 1
+
+            errors = await calculator_results.recent_errors(session)
+            assert len(errors) == 1
+            err = errors[0]
+            assert err.error == "parse_error"
+            assert err.input_data.get("raw") == "abc"
 
     run(_test())

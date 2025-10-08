@@ -76,6 +76,7 @@ class CalculationResult:
     cards_ctx: str | None = None
     back_cb: str = "calc:menu"
     with_actions: bool = True
+    tags: Sequence[str] = ()
 
 
 @dataclass(slots=True)
@@ -210,6 +211,9 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
     total, glasses = _water_compute_total(weight, activity, climate)
     bullets = _water_bullets(activity, climate)
     cards = pick_for_context("calc_water", None, ["TEO_GREEN", "OMEGA3"])
+    tags: list[str] = []
+    if total < 2.0:
+        tags.append("electrolytes")
 
     plan_payload = {
         "title": "План: водный баланс",
@@ -245,6 +249,7 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
         plan_payload=plan_payload,
         event_payload=event_payload,
         cards_ctx=None,
+        tags=tags,
     )
 
 
@@ -515,6 +520,10 @@ def _build_macro_result(ctx: CalculationContext) -> CalculationResult:
 
     rec_codes = ["OMEGA3", "T8_BLEND", "TEO_GREEN"]
     cards = pick_for_context("calc_macros", goal, rec_codes)
+    tags: list[str] = []
+    baseline_protein = weight * 1.6
+    if protein < int(round(baseline_protein / 5.0) * 5):
+        tags.extend(["protein_low", "collagen"])
 
     plan_payload = {
         "title": "План: белки/жиры/углеводы",
@@ -555,6 +564,7 @@ def _build_macro_result(ctx: CalculationContext) -> CalculationResult:
         plan_payload=plan_payload,
         event_payload=event_payload,
         cards_ctx=goal,
+        tags=tags,
     )
 
 
@@ -661,6 +671,10 @@ def _build_bmi_result(ctx: CalculationContext) -> CalculationResult:
         f"\n{hint}"
     )
 
+    tags: list[str] = []
+    if not (18.5 <= bmi < 25):
+        tags.append("weight_management")
+
     return CalculationResult(
         cards_title="Итог: индекс массы тела",
         cards=cards,
@@ -669,6 +683,7 @@ def _build_bmi_result(ctx: CalculationContext) -> CalculationResult:
         plan_payload=plan_payload,
         event_payload=event_payload,
         cards_ctx=ctx_key,
+        tags=tags,
     )
 
 

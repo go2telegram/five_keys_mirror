@@ -18,7 +18,12 @@ from app.calculators.engine import (
 )
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
-from app.repo import events as events_repo, users as users_repo
+from app.keyboards import kb_calc_result_actions
+from app.repo import (
+    calculator_results as calculator_results_repo,
+    events as events_repo,
+    users as users_repo,
+)
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
 
 router = Router(name="calc_unified")
@@ -121,13 +126,23 @@ async def _finish(
     user = target.from_user
     context = CalculationContext(data=data, user_id=user.id, username=getattr(user, "username", None))
     result: CalculationResult = definition.build_result(context)
+    input_payload = dict(data)
+    result_payload = dict(result.event_payload)
 
     async with compat_session(session_scope) as db:
         await users_repo.get_or_create_user(db, user.id, getattr(user, "username", None))
         await set_last_plan(db, user.id, dict(result.plan_payload))
-        payload = dict(result.event_payload)
+        payload = dict(result_payload)
         payload.setdefault("calc", definition.slug)
         await events_repo.log(db, user.id, "calc_finish", payload)
+        await calculator_results_repo.log_success(
+            db,
+            user.id,
+            definition.slug,
+            input_data=input_payload,
+            result_data=result_payload,
+            tags=result.tags,
+        )
         await commit_safely(db)
 
     await send_product_cards(
@@ -139,6 +154,7 @@ async def _finish(
         back_cb=result.back_cb,
         with_actions=result.with_actions,
         ctx=result.cards_ctx,
+        reply_markup=kb_calc_result_actions(result.back_cb),
     )
     SESSIONS.pop(user.id, None)
 
@@ -155,6 +171,16 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
     except ValueError:
         markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
         await message.answer(f"{step.error}\n\n{step.prompt}", reply_markup=markup)
+        async with compat_session(session_scope) as db:
+            await calculator_results_repo.log_error(
+                db,
+                message.from_user.id,
+                definition.slug,
+                step=step.key,
+                raw_value=text,
+                error="parse_error",
+            )
+            await commit_safely(db)
         return
 
     for validator in step.validators:
@@ -162,6 +188,16 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         if error:
             markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
             await message.answer(f"{error}\n\n{step.prompt}", reply_markup=markup)
+            async with compat_session(session_scope) as db:
+                await calculator_results_repo.log_error(
+                    db,
+                    message.from_user.id,
+                    definition.slug,
+                    step=step.key,
+                    raw_value=text,
+                    error=error,
+                )
+                await commit_safely(db)
             return
 
     data = session.setdefault("data", {})

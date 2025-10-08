@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -8,6 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
 from app.catalog.report import CatalogReportError, get_catalog_report
+from app.calculators.engine import CALCULATORS
 from app.config import settings
 from app.db.session import (
     compat_session,
@@ -17,6 +18,7 @@ from app.db.session import (
     upgrade_to_head,
 )
 from app.repo import (
+    calculator_results as calc_results_repo,
     events as events_repo,
     leads as leads_repo,
     referrals as referrals_repo,
@@ -33,6 +35,15 @@ def _is_admin(user_id: int | None) -> bool:
     allowed = set(settings.ADMIN_USER_IDS or [])
     allowed.add(settings.ADMIN_ID)
     return user_id in allowed
+
+
+def _calculator_label(slug: str) -> str:
+    definition = CALCULATORS.get(slug)
+    if definition is not None:
+        return definition.title
+    if slug == "msd":
+        return "Калькулятор MSD"
+    return slug
 
 
 @router.message(Command("stats"))
@@ -62,6 +73,81 @@ async def stats(m: Message):
         "• /leads_csv — CSV последних 100\n"
         "• /leads_csv 500 — CSV последних 500"
     )
+
+
+@router.message(Command("calc_report"))
+async def calc_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    text = (m.text or "").strip()
+    parts = text.split()
+    days = 7
+    if len(parts) > 1:
+        try:
+            days = int(parts[1])
+        except Exception:
+            days = 7
+
+    since = None
+    period_label = "за всё время"
+    if days > 0:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        period_label = f"за последние {days} дн."
+
+    async with compat_session(session_scope) as session:
+        usage = await calc_results_repo.usage_summary(session, since=since)
+        errors = await calc_results_repo.recent_errors(session, since=since, limit=5)
+
+    if not usage and not errors:
+        await m.answer("🧮 Калькуляторы: пока нет данных для отчёта.")
+        return
+
+    lines = [f"🧮 Отчёт по калькуляторам ({period_label})"]
+
+    if usage:
+        total_ok = sum(item.ok for item in usage)
+        total_err = sum(item.error for item in usage)
+        lines.append("")
+        lines.append("Использование:")
+        for item in usage:
+            label = _calculator_label(item.calculator)
+            if item.error:
+                lines.append(f"• {label}: {item.ok} заверш., {item.error} ошибок")
+            else:
+                lines.append(f"• {label}: {item.ok} заверш.")
+        lines.append(f"Всего: {total_ok} заверш., {total_err} ошибок")
+
+    if errors:
+        lines.append("")
+        lines.append("Ошибки (последние):")
+        tz = ZoneInfo(settings.TIMEZONE) if getattr(settings, "TIMEZONE", None) else None
+        for record in errors:
+            label = _calculator_label(record.calculator)
+            ts = record.created
+            if ts and tz:
+                ts = ts.astimezone(tz)
+            ts_text = ts.strftime("%Y-%m-%d %H:%M") if ts else "—"
+            payload = record.input_data or {}
+            step = payload.get("step") if isinstance(payload, dict) else None
+            raw_value = payload.get("raw") if isinstance(payload, dict) else None
+            raw_text = str(raw_value or "")
+            if len(raw_text) > 40:
+                raw_text = raw_text[:37] + "…"
+            detail = f"шаг: {step}" if step else ""
+            if detail and raw_text:
+                detail = f"{detail}, ввод: {raw_text}"
+            elif raw_text:
+                detail = f"ввод: {raw_text}"
+            if record.user_id:
+                detail = f"uid {record.user_id}{(', ' + detail) if detail else ''}"
+            error_text = record.error or "ошибка"
+            if detail:
+                lines.append(f"• {ts_text} — {label}: {error_text} ({detail})")
+            else:
+                lines.append(f"• {ts_text} — {label}: {error_text}")
+
+    await m.answer("\n".join(lines))
 
 
 @router.message(Command("leads"))

@@ -6,6 +6,7 @@ import logging
 from typing import Iterable, Sequence
 
 from aiogram.types import CallbackQuery, Message
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
@@ -152,6 +153,7 @@ async def send_product_cards(
     bullets: Sequence[str] | None = None,
     back_cb: str | None = None,
     with_actions: bool = True,
+    reply_markup: InlineKeyboardMarkup | None = None,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
@@ -164,7 +166,7 @@ async def send_product_cards(
     if not cards:
         await message.answer(
             "Каталог временно недоступен. Попробуйте позже или свяжитесь с консультантом.",
-            reply_markup=kb_back_home(back_cb=back_cb),
+            reply_markup=reply_markup or kb_back_home(back_cb=back_cb),
         )
         return
 
@@ -202,7 +204,12 @@ async def send_product_cards(
         lines.append("")
 
     text = "\n".join(lines).strip()
-    markup = kb_actions(cards, back_cb=back_cb) if with_actions else kb_back_home(back_cb)
+    if reply_markup is not None:
+        markup = reply_markup
+    elif with_actions:
+        markup = kb_actions(cards, back_cb=back_cb)
+    else:
+        markup = kb_back_home(back_cb)
 
     if len(text) > MAX_TEXT:
         midpoint = len(lines) // 2

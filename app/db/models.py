@@ -118,3 +118,22 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class CalculatorResult(Base):
+    __tablename__ = "calculator_results"
+    __table_args__ = (
+        Index("ix_calc_results_calc", "calculator"),
+        Index("ix_calc_results_status", "status"),
+        Index("ix_calc_results_created", "created"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
+    calculator: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ok")
+    input_data: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    result_data: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    tags: Mapped[list[str]] = mapped_column(_json_meta_type, nullable=False, default=list)
+    error: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

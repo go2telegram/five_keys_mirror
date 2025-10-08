@@ -55,7 +55,7 @@ def _cards_with_overrides(codes: list[str], context_key: str) -> list[dict]:
 @router.callback_query(F.data == "calc:menu")
 async def calc_menu(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("Выбери калькулятор:", reply_markup=kb_calc_menu())
+    await c.message.edit_text("🧮 Калькуляторы — выбери расчёт:", reply_markup=kb_calc_menu())
 
 
 # --- MSD (идеальный вес по росту) ---
