@@ -7,7 +7,9 @@ import os
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List
 
-CATALOG_PATH = os.path.join(os.path.dirname(__file__), "products.json")
+CATALOG_DIR = os.path.dirname(__file__)
+CATALOG_PATH = os.path.join(CATALOG_DIR, "products.json")
+ALIASES_PATH = os.path.join(CATALOG_DIR, "aliases.json")
 
 
 class CatalogError(RuntimeError):
@@ -49,6 +51,45 @@ def _read_raw() -> Dict[str, Any]:
     raise CatalogError("products.json must contain a non-empty 'products' array")
 
 
+def _load_manual_aliases() -> Dict[str, str]:
+    try:
+        with open(ALIASES_PATH, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError as exc:
+        raise CatalogError("aliases.json is not valid JSON") from exc
+
+    if isinstance(payload, dict):
+        aliases = payload.get("aliases", payload)
+    else:
+        aliases = payload
+
+    manual: Dict[str, str] = {}
+    if isinstance(aliases, dict):
+        items = aliases.items()
+    elif isinstance(aliases, list):
+        items = []
+        for entry in aliases:
+            if not isinstance(entry, dict):
+                continue
+            alias_raw = entry.get("alias") or entry.get("name") or entry.get("source")
+            target_raw = entry.get("id") or entry.get("product") or entry.get("target")
+            if alias_raw and target_raw:
+                items.append((alias_raw, target_raw))
+    else:
+        items = []
+
+    for alias_raw, target_raw in items:
+        alias = str(alias_raw).strip()
+        target = str(target_raw).strip()
+        if not alias or not target:
+            continue
+        manual[alias.lower()] = target
+
+    return manual
+
+
 @lru_cache(maxsize=1)
 def load_catalog(refresh: bool = False) -> Dict[str, Any]:
     """Load and index the catalog, optionally bypassing the cache."""
@@ -85,6 +126,13 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
                     by_alias[alias.lower()] = canonical
         by_alias[canonical.lower()] = canonical
         by_alias[canonical.upper()] = canonical
+
+    manual_aliases = _load_manual_aliases()
+    for alias, target in manual_aliases.items():
+        canonical = by_id.get(target)
+        if not canonical:
+            continue
+        by_alias[alias] = target
 
     return {
         "products": by_id,
