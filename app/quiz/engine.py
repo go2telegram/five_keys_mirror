@@ -38,7 +38,8 @@ QUIZ_REMOTE_BASE = os.getenv("QUIZ_IMG_BASE", DEFAULT_REMOTE_BASE).rstrip("/")
 class QuizSession(StatesGroup):
     """Aiogram FSM state for an active quiz."""
 
-    IN_PROGRESS = State()
+    # Dynamic states will be created per question (Q1..Qn) via :func:`_question_state`.
+    pass
 
 
 @dataclass
@@ -91,6 +92,7 @@ class QuizResultContext:
     chosen_options: dict[str, QuizOption]
     collected_tags: list[str]
     threshold: QuizThreshold
+    origin: CallbackQuery | None = None
 
 
 @dataclass
@@ -98,8 +100,7 @@ class QuizHooks:
     """Optional lifecycle hooks to customize quiz behaviour."""
 
     on_finish: (
-        Callable[[CallbackQuery, QuizDefinition, QuizResultContext], Awaitable[bool]]
-        | None
+        Callable[[int, QuizDefinition, QuizResultContext], Awaitable[bool]] | None
     ) = None
 
 
@@ -128,10 +129,11 @@ def load_quiz(name: str) -> QuizDefinition:
     questions = [_parse_question(q) for q in raw.get("questions", [])]
     thresholds = [_parse_threshold(t) for t in raw.get("result", {}).get("thresholds", [])]
 
-    if not questions:
-        raise ValueError(f"Quiz {name} must contain at least one question")
+    if len(questions) < 5:
+        raise ValueError(f"Quiz {name} must contain at least five questions")
     if not thresholds:
         raise ValueError(f"Quiz {name} must define result thresholds")
+    _validate_thresholds(name, thresholds)
 
     return QuizDefinition(
         name=name,
@@ -165,7 +167,7 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
         await entry.answer()
 
     await state.clear()
-    await state.set_state(QuizSession.IN_PROGRESS)
+    await state.set_state(_question_state(0))
     await state.update_data(
         quiz=name,
         index=0,
@@ -223,6 +225,11 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
         await call.answer()
         return
 
+    current_index = int(data.get("index", 0))
+    if question_idx != current_index:
+        await call.answer()
+        return
+
     option = question.options[option_idx]
 
     total_score = int(data.get("score", 0)) + option.score
@@ -243,12 +250,14 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
             chosen_options=chosen_options,
             collected_tags=_unique(tags),
             threshold=threshold,
+            origin=call,
         )
 
         handled = False
         hooks = QUIZ_HOOKS.get(quiz_name)
         if hooks and hooks.on_finish:
-            handled = await hooks.on_finish(call, definition, result_context)
+            user_id = call.from_user.id if call.from_user else 0
+            handled = await hooks.on_finish(user_id, definition, result_context)
 
         if not handled:
             await _send_default_result(call, definition, result_context)
@@ -259,9 +268,63 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
                 await call.message.delete()
         return
 
-    await state.update_data(score=total_score, tags=tags, answers=answer_keys, index=next_index)
+    await state.update_data(
+        score=total_score,
+        tags=tags,
+        answers=answer_keys,
+        index=next_index,
+    )
+    await state.set_state(_question_state(next_index))
     if call.message:
         await _send_question(call.message, definition, next_index)
+        with suppress(Exception):
+            await call.message.delete()
+
+
+async def back_callback(call: CallbackQuery, state: FSMContext) -> None:
+    """Handle "back" navigation within an active quiz."""
+
+    if not call.data or not call.data.startswith("tests:back:"):
+        return
+
+    parts = call.data.split(":")
+    if len(parts) != 4:
+        return
+
+    _, _, quiz_name, current_idx_raw = parts
+    try:
+        current_idx = int(current_idx_raw)
+    except ValueError:
+        await call.answer()
+        return
+
+    data = await state.get_data()
+    if data.get("quiz") != quiz_name:
+        await call.answer()
+        return
+
+    if current_idx <= 0:
+        await call.answer()
+        return
+
+    try:
+        definition = load_quiz(quiz_name)
+    except FileNotFoundError:
+        await call.answer("Тест недоступен")
+        return
+
+    answers = dict(data.get("answers", {}))
+    prev_index = current_idx - 1
+    question = definition.questions[prev_index]
+    answers.pop(question.id, None)
+    score, tags = _recalculate_progress(definition, answers)
+
+    await state.update_data(index=prev_index, answers=answers, score=score, tags=tags)
+    await state.set_state(_question_state(prev_index))
+
+    await call.answer()
+    if call.message:
+        await _send_question(call.message, definition, prev_index)
         with suppress(Exception):
             await call.message.delete()
 
@@ -300,6 +363,23 @@ def _parse_threshold(raw: dict[str, Any]) -> QuizThreshold:
     return QuizThreshold(min=min_score, max=max_score, label=label, advice=advice, tags=tags)
 
 
+def _validate_thresholds(name: str, thresholds: list[QuizThreshold]) -> None:
+    prev_max: int | None = None
+    for threshold in thresholds:
+        if threshold.min > threshold.max:
+            raise ValueError(
+                f"Quiz {name} has invalid threshold range: {threshold.min}>{threshold.max}"
+            )
+        if prev_max is not None and threshold.min > prev_max + 1:
+            logger.warning(
+                "Quiz %s thresholds have gaps between %s and %s",
+                name,
+                prev_max,
+                threshold.min,
+            )
+        prev_max = max(prev_max or threshold.max, threshold.max)
+
+
 def _entry_message(entry: CallbackQuery | Message) -> Message | None:
     if isinstance(entry, CallbackQuery):
         return entry.message
@@ -329,6 +409,11 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
         kb.button(
             text=option.text,
             callback_data=f"{ANSWER_PREFIX}:{definition.name}:{index}:{opt_idx}",
+        )
+    if index > 0:
+        kb.button(
+            text="⬅️ Назад",
+            callback_data=f"tests:back:{definition.name}:{index}",
         )
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)
@@ -538,8 +623,30 @@ def _unique(items: Sequence[str]) -> list[str]:
     return result
 
 
+def _question_state(index: int) -> State:
+    return State(f"{QuizSession.__name__}:Q{index + 1}")
+
+
+def _recalculate_progress(
+    definition: QuizDefinition, answers: dict[str, str]
+) -> tuple[int, list[str]]:
+    score = 0
+    tags: list[str] = []
+    for question in definition.questions:
+        key = answers.get(question.id)
+        if not key:
+            continue
+        for option in question.options:
+            if option.key == key:
+                score += option.score
+                tags.extend(option.tags)
+                break
+    return score, _unique(tags)
+
+
 __all__ = [
     "ANSWER_PREFIX",
+    "back_callback",
     "QuizDefinition",
     "QuizHooks",
     "QuizOption",

@@ -8,7 +8,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .engine import ANSWER_PREFIX, answer_callback, list_quizzes, load_quiz, start_quiz
+from .engine import (
+    ANSWER_PREFIX,
+    answer_callback,
+    back_callback,
+    list_quizzes,
+    load_quiz,
+    start_quiz,
+)
 
 router = Router()
 
@@ -54,6 +61,8 @@ async def quiz_callback(call: CallbackQuery, state: FSMContext) -> None:
     data = call.data or ""
     if data.startswith(f"{ANSWER_PREFIX}:"):
         return
+    if data.startswith("tests:back:"):
+        return
 
     _, _, name = data.partition(":")
     name = name.strip().lower()
@@ -73,3 +82,8 @@ async def quiz_callback(call: CallbackQuery, state: FSMContext) -> None:
 @router.callback_query(F.data.startswith(f"{ANSWER_PREFIX}:"))
 async def quiz_answer(call: CallbackQuery, state: FSMContext) -> None:
     await answer_callback(call, state)
+
+
+@router.callback_query(F.data.startswith("tests:back:"))
+async def quiz_back(call: CallbackQuery, state: FSMContext) -> None:
+    await back_callback(call, state)
