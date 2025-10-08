@@ -12,11 +12,14 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import yaml
+import aiohttp
+from aiohttp import ClientError
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, FSInputFile, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, FSInputFile, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from urllib.parse import urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(__file__).resolve().parent / "data"
@@ -461,38 +464,79 @@ async def _send_photo(
     if not path_str:
         return False
 
-    for source, candidate in _iter_photo_candidates(path_str):
-        try:
-            if source == "local":
+    session: aiohttp.ClientSession | None = None
+    try:
+        for source, candidate in _iter_photo_candidates(path_str):
+            try:
+                if source == "local":
+                    await message.answer_photo(
+                        photo=FSInputFile(str(candidate)),
+                        caption=caption,
+                        reply_markup=reply_markup,
+                    )
+                    return True
+
+                session = session or aiohttp.ClientSession()
+                proxy = await _download_remote_candidate(session, str(candidate))
+                if not proxy:
+                    continue
+
                 await message.answer_photo(
-                    photo=FSInputFile(str(candidate)),
+                    photo=proxy,
                     caption=caption,
                     reply_markup=reply_markup,
                 )
-            else:
-                await message.answer_photo(
-                    photo=candidate,
-                    caption=caption,
-                    reply_markup=reply_markup,
+                return True
+            except TelegramBadRequest as exc:
+                logger.warning(
+                    "Failed to send quiz image %s via %s: %s",
+                    path_str,
+                    source,
+                    exc,
                 )
-            return True
-        except TelegramBadRequest as exc:
-            logger.warning(
-                "Failed to send quiz image %s via %s: %s",
-                path_str,
-                source,
-                exc,
-            )
-        except Exception as exc:  # pragma: no cover - network/runtime failures
-            logger.warning(
-                "Unexpected error sending quiz image %s via %s: %s",
-                path_str,
-                source,
-                exc,
-            )
+            except Exception as exc:  # pragma: no cover - network/runtime failures
+                logger.warning(
+                    "Unexpected error sending quiz image %s via %s: %s",
+                    path_str,
+                    source,
+                    exc,
+                )
+    finally:
+        if session:
+            await session.close()
 
     logger.warning("Quiz image unavailable, using text fallback: %s", path_str)
     return False
+
+
+async def _download_remote_candidate(
+    session: aiohttp.ClientSession, url: str
+) -> BufferedInputFile | None:
+    try:
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                logger.warning(
+                    "Failed to fetch quiz image %s via proxy: status %s", url, resp.status
+                )
+                return None
+            data = await resp.read()
+    except ClientError as exc:
+        logger.warning("Network error fetching quiz image %s: %s", url, exc)
+        return None
+    except Exception as exc:  # pragma: no cover - unexpected runtime failures
+        logger.warning("Unexpected error fetching quiz image %s: %s", url, exc)
+        return None
+
+    filename = _quiz_filename(url)
+    return BufferedInputFile(data, filename=filename)
+
+
+def _quiz_filename(url: str) -> str:
+    parsed = urlparse(url)
+    name = Path(parsed.path).name
+    if not name:
+        return "image"
+    return name
 
 
 def build_quiz_image_url(path: str) -> str:

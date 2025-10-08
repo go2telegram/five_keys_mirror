@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import List
 
+import aiohttp
 from aiogram import Bot
-from aiogram.types import InputMediaPhoto
+from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
+from aiohttp import ClientError
 
 from app.catalog.loader import product_by_alias, product_by_id
 from app.utils.image_resolver import resolve_media_reference
@@ -35,14 +38,65 @@ def _collect_image_refs(product: dict) -> list[str]:
     return refs
 
 
-def _build_media_group(refs: List[str]) -> list[InputMediaPhoto]:
+async def _build_media_group(refs: List[str]) -> list[InputMediaPhoto]:
     media: list[InputMediaPhoto] = []
-    for ref in refs:
-        resolved = resolve_media_reference(ref)
-        if not resolved:
-            continue
-        media.append(InputMediaPhoto(media=resolved))
+    session: aiohttp.ClientSession | None = None
+    try:
+        for ref in refs:
+            source, session = await _resolve_media_source(ref, session)
+            if not source:
+                continue
+            media.append(InputMediaPhoto(media=source))
+    finally:
+        if session:
+            await session.close()
     return media
+
+
+async def _resolve_media_source(
+    ref: str, session: aiohttp.ClientSession | None
+) -> tuple[FSInputFile | BufferedInputFile | None, aiohttp.ClientSession | None]:
+    resolved = resolve_media_reference(ref)
+    if isinstance(resolved, FSInputFile):
+        return resolved, session
+    if isinstance(resolved, str):
+        session = session or aiohttp.ClientSession()
+        proxy = await _download_via_proxy(session, resolved)
+        if proxy:
+            return proxy, session
+        return None, session
+    return None, session
+
+
+async def _download_via_proxy(
+    session: aiohttp.ClientSession, url: str
+) -> BufferedInputFile | None:
+    try:
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                LOG.warning(
+                    "Failed to fetch media %s via proxy: status %s", url, resp.status
+                )
+                return None
+            data = await resp.read()
+    except ClientError as exc:
+        LOG.warning("Network error fetching media %s: %s", url, exc)
+        return None
+    except Exception:
+        LOG.exception("Unexpected error fetching media %s", url)
+        return None
+
+    filename = _extract_filename(url)
+    return BufferedInputFile(data, filename=filename)
+
+
+def _extract_filename(url: str) -> str:
+    name = Path(url).name
+    if not name:
+        return "image"
+    if "?" in name:
+        return name.split("?")[0] or "image"
+    return name
 
 
 async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
@@ -70,7 +124,7 @@ async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
         LOG.info("send_product_album: nothing to send for %s", codes)
         return
 
-    media_group = _build_media_group(collected)
+    media_group = await _build_media_group(collected)
     if not media_group:
         LOG.info("send_product_album: failed to build media group for %s", collected)
         return
@@ -83,12 +137,17 @@ async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
         except Exception:
             LOG.exception("send_product_album: media group failed; falling back to singles")
 
-    for ref in collected:
-        source = resolve_media_reference(ref)
-        if not source:
-            continue
-        try:
-            await bot.send_photo(chat_id, photo=source)
-            LOG.debug("send_product_album: sent single %s", ref)
-        except Exception:
-            LOG.exception("send_product_album: failed to send %s", ref)
+    session: aiohttp.ClientSession | None = None
+    try:
+        for ref in collected:
+            source, session = await _resolve_media_source(ref, session)
+            if not source:
+                continue
+            try:
+                await bot.send_photo(chat_id, photo=source)
+                LOG.debug("send_product_album: sent single %s", ref)
+            except Exception:
+                LOG.exception("send_product_album: failed to send %s", ref)
+    finally:
+        if session:
+            await session.close()
