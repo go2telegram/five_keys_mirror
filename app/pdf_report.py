@@ -1,11 +1,10 @@
-import importlib.util
 import logging
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-if importlib.util.find_spec("reportlab") is not None:
+try:  # pragma: no cover - optional dependency
     from reportlab.graphics.barcode import qr
     from reportlab.graphics.shapes import Drawing
     from reportlab.lib import colors
@@ -25,7 +24,7 @@ if importlib.util.find_spec("reportlab") is not None:
         TableStyle,
     )
     REPORTLAB_OK = True
-else:  # pragma: no cover - optional dependency missing
+except Exception:  # pragma: no cover - optional dependency missing
     REPORTLAB_OK = False
     qr = None  # type: ignore[assignment]
     Drawing = Any  # type: ignore[assignment]
@@ -199,10 +198,10 @@ def build_pdf(
     channel_note: str = "telegram-канал «Пять ключей здоровья»",
     recommended_products: list[str] | None = None,
     context: str | None = None,
-) -> bytes:
+) -> bytes | None:
     if not REPORTLAB_OK:
         log.warning("PDF disabled (reportlab missing)")
-        return b""
+        return None
 
     reg_font, bold_font = _pick_fonts()
 
