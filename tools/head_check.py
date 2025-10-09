@@ -34,7 +34,7 @@ DEFAULT_TIMEOUT = 10
 def main() -> int:
     if os.getenv("NO_NET", "0") == "1":
         print("NO_NET=1 -> skip head checks")
-        sys.exit(0)
+        return 0
 
     urls = set(_collect_product_urls())
     urls.update(_collect_quiz_urls())

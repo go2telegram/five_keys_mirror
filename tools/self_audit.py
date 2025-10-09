@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import errno
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -130,10 +132,29 @@ def _render_markdown(metadata: dict, results: Dict[str, SectionResult]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _is_network_error(exc: Exception) -> bool:
+    if isinstance(exc, (ConnectionError, TimeoutError, socket.gaierror)):
+        return True
+    if isinstance(exc, OSError):
+        if exc.errno in {
+            errno.ECONNREFUSED,
+            errno.EHOSTUNREACH,
+            errno.ECONNRESET,
+            errno.ENETUNREACH,
+            errno.ETIMEDOUT,
+        }:
+            return True
+    module = type(exc).__module__
+    if module.startswith("aiohttp") or module.startswith("urllib3"):
+        return True
+    name = type(exc).__name__.lower()
+    return "http" in module or "network" in name or "timeout" in name
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     args = _parse_args(argv)
 
-    reports_path = args.out if isinstance(args.out, Path) else Path(args.out)
+    reports_path = (args.out if isinstance(args.out, Path) else Path(args.out)).resolve()
     reports_dir = reports_path.parent
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -162,12 +183,20 @@ def main(argv: Iterable[str] | None = None) -> int:
         try:
             result = handler(context)
         except Exception as exc:  # pragma: no cover - defensive
-            result = SectionResult(
-                name=name,
-                status="error",
-                summary=f"Исключение в секции {name}.",
-                details=[str(exc)],
-            )
+            if context.no_net and _is_network_error(exc):
+                result = SectionResult(
+                    name=name,
+                    status="skip",
+                    summary=f"Секция {name} пропущена из-за --no-net (сетевые ошибки).",
+                    details=[str(exc)],
+                )
+            else:
+                result = SectionResult(
+                    name=name,
+                    status="error",
+                    summary=f"Исключение в секции {name}.",
+                    details=[str(exc)],
+                )
         end = time.perf_counter()
         timings[name] = round(end - start, 3)
         results[name] = result

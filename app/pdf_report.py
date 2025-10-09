@@ -4,46 +4,101 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-try:  # pragma: no cover - optional dependency
-    from reportlab.graphics.barcode import qr
-    from reportlab.graphics.shapes import Drawing
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.units import cm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import (
-        HRFlowable,
-        ListFlowable,
-        ListItem,
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
+log = logging.getLogger(__name__)
+
+REPORTLAB_OK = False
+_REPORTLAB_ATTEMPTED = False
+_REPORTLAB_ERROR: str | None = None
+
+qr: Any | None = None
+Drawing: Any = Any  # type: ignore[assignment]
+colors: Any = SimpleNamespace(HexColor=lambda *_a, **_k: "#000000")
+A4: tuple[float, float] = (0.0, 0.0)
+ParagraphStyle: Any = Any  # type: ignore[assignment]
+getSampleStyleSheet: Any = lambda: {}  # type: ignore[assignment]
+cm: float = 1.0
+pdfmetrics: Any = SimpleNamespace(
+    registerFont=lambda *_a, **_k: None,
+    getRegisteredFontNames=lambda: (),
+)
+TTFont: Any = object  # type: ignore[assignment]
+HRFlowable: Any = object  # type: ignore[assignment]
+ListFlowable: Any = object  # type: ignore[assignment]
+ListItem: Any = object  # type: ignore[assignment]
+Paragraph: Any = object  # type: ignore[assignment]
+SimpleDocTemplate: Any = object  # type: ignore[assignment]
+Spacer: Any = object  # type: ignore[assignment]
+Table: Any = object  # type: ignore[assignment]
+TableStyle: Any = object  # type: ignore[assignment]
+
+
+def ensure_reportlab() -> bool:
+    global REPORTLAB_OK, _REPORTLAB_ATTEMPTED, _REPORTLAB_ERROR
+    global qr, Drawing, colors, A4, ParagraphStyle, getSampleStyleSheet, cm
+    global pdfmetrics, TTFont, HRFlowable, ListFlowable, ListItem, Paragraph
+    global SimpleDocTemplate, Spacer, Table, TableStyle
+
+    if REPORTLAB_OK:
+        return True
+    if _REPORTLAB_ATTEMPTED:
+        return False
+
+    _REPORTLAB_ATTEMPTED = True
+
+    try:  # pragma: no cover - optional dependency
+        from reportlab.graphics.barcode import qr as qr_module
+        from reportlab.graphics.shapes import Drawing as drawing_cls
+        from reportlab.lib import colors as colors_module
+        from reportlab.lib.pagesizes import A4 as a4_size
+        from reportlab.lib.styles import ParagraphStyle as paragraph_style
+        from reportlab.lib.styles import getSampleStyleSheet as get_stylesheet
+        from reportlab.lib.units import cm as cm_value
+        from reportlab.pdfbase import pdfmetrics as pdfmetrics_module
+        from reportlab.pdfbase.ttfonts import TTFont as ttfont_cls
+        from reportlab.platypus import (
+            HRFlowable as hr_flowable,
+            ListFlowable as list_flowable,
+            ListItem as list_item,
+            Paragraph as paragraph_cls,
+            SimpleDocTemplate as simple_doc_template,
+            Spacer as spacer_cls,
+            Table as table_cls,
+            TableStyle as table_style,
+        )
+    except Exception as exc:  # pragma: no cover - optional dependency missing
+        _REPORTLAB_ERROR = str(exc)
+        log.warning("reportlab unavailable: %s", exc)
+        REPORTLAB_OK = False
+        return False
+
+    qr = qr_module
+    Drawing = drawing_cls
+    colors = colors_module
+    A4 = a4_size
+    ParagraphStyle = paragraph_style
+    getSampleStyleSheet = get_stylesheet
+    cm = float(cm_value)
+    pdfmetrics = pdfmetrics_module
+    TTFont = ttfont_cls
+    HRFlowable = hr_flowable
+    ListFlowable = list_flowable
+    ListItem = list_item
+    Paragraph = paragraph_cls
+    SimpleDocTemplate = simple_doc_template
+    Spacer = spacer_cls
+    Table = table_cls
+    TableStyle = table_style
+
     REPORTLAB_OK = True
-except Exception:  # pragma: no cover - optional dependency missing
-    REPORTLAB_OK = False
-    qr = None  # type: ignore[assignment]
-    Drawing = Any  # type: ignore[assignment]
-    colors = SimpleNamespace(HexColor=lambda *_a, **_k: "#000000")
-    A4 = (0, 0)
-    ParagraphStyle = Any  # type: ignore[assignment]
-    getSampleStyleSheet = lambda: {}  # type: ignore[assignment]
-    cm = 1.0
-    pdfmetrics = SimpleNamespace(
-        registerFont=lambda *_a, **_k: None,
-        getRegisteredFontNames=lambda: (),
-    )
-    TTFont = object  # type: ignore[assignment]
-    HRFlowable = ListFlowable = ListItem = Paragraph = SimpleDocTemplate = Spacer = Table = TableStyle = object  # type: ignore[assignment]
+    return True
+
+
+def reportlab_error() -> str | None:
+    return _REPORTLAB_ERROR
+
 
 from app.config import settings
 from app.utils.cards import prepare_cards, render_product_text
-
-log = logging.getLogger(__name__)
 
 FONTS_DIR = Path(__file__).parent / "fonts"
 FONT_CANDIDATES = [
@@ -83,7 +138,9 @@ def _on_page(canvas, doc):
     canvas.drawRightString(A4[0] - 2 * cm, 1.2 * cm, f"Стр. {doc.page}")
 
 
-def _qr_drawing(url: str, size: float = 2.6 * cm) -> Drawing:
+def _qr_drawing(url: str, size: float = 2.6 * cm) -> Any:
+    if qr is None:
+        raise RuntimeError("reportlab is not available")
     code = qr.QrCodeWidget(url)
     b = code.getBounds()
     w, h = b[2] - b[0], b[3] - b[1]
@@ -92,7 +149,6 @@ def _qr_drawing(url: str, size: float = 2.6 * cm) -> Drawing:
     return d
 
 
-# ===== ДЕФОЛТНЫЕ СХЕМЫ ПРИЁМА (если в плане intake пуст) =====
 INTAKE_DEFAULTS = {
     "T8 EXTRA": {"morning": True, "day": False, "evening": True, "note": "1–2 мл в воде; не поздно вечером"},
     "T8 BLEND": {"morning": True, "day": True, "evening": False, "note": "30 мл в воде/кефире"},
@@ -107,16 +163,10 @@ INTAKE_DEFAULTS = {
 
 
 def _build_intake_rows(products_block: list[str], custom_rows: list[dict] | None) -> list[dict]:
-    """
-    Если custom_rows передали — используем их.
-    Иначе парсим названия из блока products (строки вида '— T8 EXTRA: ...')
-    и подставляем дефолтные расписания.
-    """
     if custom_rows:
         return custom_rows
     rows = []
     for s in products_block:
-        # название — до двоеточия, без '— '
         name = s.split(":", 1)[0].replace("—", "").strip()
         base = INTAKE_DEFAULTS.get(name)
         if base:
@@ -126,7 +176,7 @@ def _build_intake_rows(products_block: list[str], custom_rows: list[dict] | None
     return rows
 
 
-def _intake_table(data_rows: list[dict], body_style: ParagraphStyle) -> Table:
+def _intake_table(data_rows: list[dict], body_style: ParagraphStyle) -> Any:
     header = ["Продукт", "Утро", "День", "Вечер", "Комментарий"]
     table_data = [header]
 
@@ -199,8 +249,8 @@ def build_pdf(
     recommended_products: list[str] | None = None,
     context: str | None = None,
 ) -> bytes | None:
-    if not REPORTLAB_OK:
-        log.warning("PDF disabled (reportlab missing)")
+    if not ensure_reportlab():
+        log.warning("PDF disabled (reportlab missing): %s", reportlab_error())
         return None
 
     reg_font, bold_font = _pick_fonts()
@@ -232,7 +282,6 @@ def build_pdf(
     bullet_s = ParagraphStyle("bullet_s", parent=p_s, leftIndent=0.2 * cm, bulletFontName=reg_font, bulletFontSize=10)
 
     story = []
-    # Заголовок
     story.append(Paragraph(title, title_s))
     if subtitle:
         story.append(Spacer(1, 0.25 * cm))
@@ -241,7 +290,6 @@ def build_pdf(
     story.append(_hline())
     story.append(Spacer(1, 0.6 * cm))
 
-    # Шаги
     if actions:
         story.append(Paragraph("Ключевые шаги на 7 дней", h_s))
         story.append(Spacer(1, 0.2 * cm))
@@ -277,7 +325,6 @@ def build_pdf(
         story.append(ListFlowable(pr_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
         story.append(Spacer(1, 0.5 * cm))
 
-    # Таблица приёмов
     rows = _build_intake_rows(products_block_for_intake, intake_rows)
     if rows:
         story.append(_hline())
@@ -287,7 +334,6 @@ def build_pdf(
         story.append(_intake_table(rows, p_s))
         story.append(Spacer(1, 0.5 * cm))
 
-    # Заметки
     if notes:
         story.append(_hline())
         story.append(Spacer(1, 0.4 * cm))
@@ -296,7 +342,6 @@ def build_pdf(
         story.append(Paragraph(notes, p_s))
         story.append(Spacer(1, 0.5 * cm))
 
-    # QR + подпись канала
     q_url = order_url or settings.velavie_url
     if q_url:
         story.append(_hline())
@@ -311,7 +356,6 @@ def build_pdf(
     story.append(Paragraph(channel_note, p_s))
     story.append(Spacer(1, 0.4 * cm))
 
-    # Футер
     if footer:
         story.append(_hline())
         story.append(Spacer(1, 0.3 * cm))
