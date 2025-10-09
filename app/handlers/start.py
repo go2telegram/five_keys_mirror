@@ -216,7 +216,7 @@ async def menu_tests(c: CallbackQuery) -> None:
     if c.message:
         await safe_edit_text(
             c.message,
-            "Выбирай тест, чтобы получить персональный план:",
+            "Выбирай тест или калькулятор:",
             kb_quiz_menu(),
         )
 

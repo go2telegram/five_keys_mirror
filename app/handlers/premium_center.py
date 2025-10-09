@@ -230,6 +230,15 @@ async def premium_center_command(message: Message) -> None:
     await message.answer(MAIN_MENU_TEXT, reply_markup=_main_menu_kb())
 
 
+@router.callback_query(F.data == "/premium_center")
+async def premium_center_entry(c: CallbackQuery) -> None:
+    if await _deny_if_not_premium(c):
+        return
+    if c.message:
+        await safe_edit_text(c.message, MAIN_MENU_TEXT, _main_menu_kb())
+    await c.answer()
+
+
 @router.callback_query(F.data == "prem:center:back")
 async def premium_center_back(c: CallbackQuery) -> None:
     if await _deny_if_not_premium(c):

@@ -50,6 +50,7 @@ def kb_premium_info_actions() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="💎 Оформить подписку", callback_data="sub:menu")
     kb.button(text="📘 Что входит в Премиум", callback_data="premium:info")
+    kb.button(text="🏛 Premium-центр", callback_data="/premium_center")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.adjust(1)
     return kb.as_markup()
@@ -60,16 +61,19 @@ def kb_premium_info_actions() -> InlineKeyboardMarkup:
 
 def kb_quiz_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="⚡ Энергия", callback_data="quiz:energy")
-    kb.button(text="🛡 Иммунитет", callback_data="quiz:immunity")
-    kb.button(text="🌿 ЖКТ", callback_data="quiz:gut")
-    kb.button(text="😴 Сон", callback_data="quiz:sleep")
-    kb.button(text="🧠 Стресс", callback_data="quiz:stress")
-    kb.button(text="🩸 Дефициты", callback_data="quiz:deficits")
-    kb.button(text="🧘 Стресс 2.0", callback_data="quiz:stress2")
-    kb.button(text="✨ Кожа и суставы", callback_data="quiz:skin_joint")
+    tests = [
+        ("⚡ Энергия", "tests:energy"),
+        ("😴 Сон", "tests:sleep"),
+        ("😰 Стресс", "tests:stress"),
+        ("🛡 Иммунитет", "tests:immunity"),
+        ("🦠 ЖКТ", "tests:gut"),
+    ]
+    for title, callback in tests:
+        kb.button(text=title, callback_data=callback)
+    kb.button(text="🧮 Калькуляторы", callback_data="/calculators")
     kb.button(text="⬅️ Назад", callback_data="home:main")
-    kb.adjust(2, 2, 2, 2, 1)
+    kb.button(text="🏠 Домой", callback_data="home:main")
+    kb.adjust(1)
     return kb.as_markup()
 
 
@@ -112,7 +116,7 @@ def kb_calc_menu() -> InlineKeyboardMarkup:
     kb.button(text="Водный баланс", callback_data="calc:water")
     kb.button(text="Калории (BMR/TDEE)", callback_data="calc:kcal")
     kb.button(text="БЖУ", callback_data="calc:macros")
-    kb.button(text="⬅️ Назад", callback_data="home:main")
+    kb.button(text="⬅️ Назад", callback_data="menu:tests")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(2, 2, 1, 2)
     return kb.as_markup()
