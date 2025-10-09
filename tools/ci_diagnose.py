@@ -8,13 +8,45 @@ some checks fail.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
 from typing import Any, Dict, List
+
+
+SAFE_ENV_KEYS = {"GITHUB_SHA", "GITHUB_REF", "GITHUB_RUN_NUMBER", "RUNNER_OS"}
+MASK_PAT = re.compile(r"(TOKEN|SECRET|KEY|PASSWORD|PASS|DB_URL|DATABASE_URL|BOT_TOKEN)", re.IGNORECASE)
+
+
+def _python_version() -> str:
+    try:
+        completed = subprocess.run(
+            [sys.executable, "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        return f"error: {exc}"
+
+    version = (completed.stdout or completed.stderr or "").strip()
+    return version or "unknown"
+
+
+def redacted_env() -> Dict[str, str]:
+    out: Dict[str, str] = {"PYTHON_VERSION": _python_version()}
+    for key, value in os.environ.items():
+        if key in SAFE_ENV_KEYS:
+            out[key] = value
+        elif MASK_PAT.search(key):
+            out[key] = "***"
+    return out
 
 
 def run(cmd: str) -> Dict[str, Any]:
@@ -43,7 +75,14 @@ def run(cmd: str) -> Dict[str, Any]:
 
 
 def main(argv: List[str] | None = None) -> int:
-    del argv  # unused
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--redacted",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include only redacted environment details in diagnostics output.",
+    )
+    args = parser.parse_args(argv)
 
     reports_dir = pathlib.Path("build/reports")
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -56,7 +95,11 @@ def main(argv: List[str] | None = None) -> int:
 
     results: List[Dict[str, Any]] = [run(cmd) for cmd in checks]
 
-    payload = {"env": dict(os.environ), "results": results}
+    payload = {"results": results}
+    if args.redacted:
+        payload["env"] = redacted_env()
+    else:
+        payload["env"] = dict(os.environ)
     (reports_dir / "ci_diagnostics.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
