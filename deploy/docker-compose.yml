@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  bot:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      DEV_DRY_RUN: "1"
+      LOG_LEVEL: "INFO"
+    ports:
+      - "8080:8080"
+    volumes:
+      - bot-data:/app/var
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    profiles: ["redis"]
+
+volumes:
+  bot-data:
