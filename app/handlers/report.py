@@ -8,7 +8,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
-from app.pdf_report import REPORTLAB_OK, build_pdf
+from app.pdf_report import build_pdf, ensure_reportlab
 from app.repo import events as events_repo
 from app.storage import commit_safely, get_last_plan
 
@@ -43,7 +43,7 @@ def _compose_pdf(plan: dict) -> bytes | None:
         "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание."
     )
 
-    if not REPORTLAB_OK:
+    if not ensure_reportlab():
         log.warning("PDF disabled (reportlab missing)")
         return None
 

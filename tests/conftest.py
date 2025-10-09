@@ -14,6 +14,20 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addini(
+        "asyncio_default_fixture_loop_scope",
+        "Default asyncio fixture loop scope",
+        default="function",
+    )
+    parser.addini(
+        "plugins",
+        "Additional pytest plugins",
+        type="linelist",
+        default=[],
+    )
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register the asyncio marker for the lightweight runner below."""
 

@@ -1,18 +1,15 @@
 import asyncio
-from importlib.util import find_spec
 
 import pytest
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 pytest.importorskip("aiosqlite")
-pytestmark = pytest.mark.skipif(find_spec("reportlab") is None, reason="reportlab not installed")
-
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.handlers import notify, picker, premium, referral, subscription
 from app.keyboards import kb_actions, kb_back_home
 from app.main import home_main
-from app.pdf_report import build_pdf
+from app.pdf_report import build_pdf, ensure_reportlab
 
 
 class _DummyMessage:
@@ -95,6 +92,8 @@ def test_picker_helper_appends_navigation_buttons():
 
 
 def test_build_pdf_returns_non_empty_bytes():
+    if not ensure_reportlab():
+        pytest.skip("reportlab not installed")
     pdf_bytes = build_pdf(
         title="Тестовый план",
         subtitle="Калькулятор MSD",

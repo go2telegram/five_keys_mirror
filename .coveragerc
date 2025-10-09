@@ -1,0 +1,9 @@
+[run]
+branch = true
+source = app,tools
+omit =
+    tests/*
+
+[report]
+show_missing = true
+skip_covered = true
