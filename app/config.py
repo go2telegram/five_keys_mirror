@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     BOT_TOKEN: str = ""
+    DEV_DRY_RUN: bool = False
     ADMIN_ID: int = 0
     ADMIN_USER_IDS: list[int] | str = Field(default_factory=list)
     LEADS_CHAT_ID: int | None = None
