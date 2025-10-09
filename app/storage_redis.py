@@ -7,6 +7,7 @@ import redis.asyncio as redis
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 _redis: Optional[redis.Redis] = None
+FEATURE_FLAGS_KEY = "feature_flags:v1"
 
 
 async def _conn() -> redis.Redis:
@@ -91,3 +92,23 @@ async def cart_pop(user_id: int) -> Optional[dict[str, Any]]:
     pipe.delete(key)
     raw, _ = await pipe.execute()
     return json.loads(raw) if raw else None
+
+
+async def feature_flags_all() -> dict[str, bool]:
+    client = await _conn()
+    raw = await client.hgetall(FEATURE_FLAGS_KEY)
+    result: dict[str, bool] = {}
+    for key, value in raw.items():
+        normalized = str(value).strip().lower()
+        result[str(key)] = normalized in {"1", "true", "yes", "on"}
+    return result
+
+
+async def feature_flags_set(flag: str, enabled: bool) -> None:
+    client = await _conn()
+    await client.hset(FEATURE_FLAGS_KEY, flag, "1" if enabled else "0")
+
+
+async def feature_flags_delete(flag: str) -> None:
+    client = await _conn()
+    await client.hdel(FEATURE_FLAGS_KEY, flag)

@@ -18,6 +18,7 @@ from app.db.session import (
     session_scope,
     upgrade_to_head,
 )
+from app.feature_flags import feature_flags
 from app.repo import (
     events as events_repo,
     leads as leads_repo,
@@ -57,6 +58,26 @@ def admin_only(handler: Callable[P, Awaitable[R]]):
         return await handler(*args, **kwargs)
 
     return wrapper
+
+
+def _format_flag_snapshot() -> str:
+    snapshot = feature_flags.snapshot()
+    defaults = feature_flags.defaults()
+    canary_flags = set(feature_flags.canary_flags())
+    lines: list[str] = []
+    percent = feature_flags.canary_percent()
+    for name in feature_flags.available():
+        enabled = snapshot.get(name, False)
+        default = defaults.get(name, False)
+        status = "ON" if enabled else "OFF"
+        hints: list[str] = []
+        if enabled != default:
+            hints.append("override")
+        if name in canary_flags and percent:
+            hints.append(f"canary {percent}%")
+        suffix = f" ({', '.join(hints)})" if hints else ""
+        lines.append(f"• {name}: {status}{suffix}")
+    return "\n".join(lines) if lines else "• нет флагов"
 
 
 @router.message(Command("stats"))
@@ -211,6 +232,65 @@ async def routers_dump(message: Message) -> None:
 
     await message.answer("\n".join(lines))
     await message.answer_document(FSInputFile(path), caption="Router map JSON")
+
+
+@router.message(Command("toggle"))
+@admin_only
+async def toggle_flag(message: Message, command: CommandObject) -> None:
+    args = (command.args or "").split() if command else []
+    if len(args) != 2:
+        await message.answer("Использование: /toggle <FLAG> on|off")
+        return
+
+    flag = args[0].strip().upper()
+    desired = args[1].strip().lower()
+
+    if flag not in feature_flags.available():
+        available = ", ".join(feature_flags.available()) or "(нет доступных флагов)"
+        await message.answer(f"Неизвестный флаг {flag}. Доступно: {available}")
+        return
+
+    if desired not in {"on", "off"}:
+        await message.answer("Значение должно быть on или off.")
+        return
+
+    enabled = desired == "on"
+
+    try:
+        await feature_flags.set_flag(flag, enabled)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        await message.answer(f"Не удалось обновить флаг: {exc}")
+        return
+
+    snapshot = feature_flags.snapshot()
+    defaults = feature_flags.defaults()
+    state = "ON" if snapshot.get(flag, False) else "OFF"
+    note = " (по умолчанию)" if snapshot.get(flag, False) == defaults.get(flag, False) else " (override)"
+
+    overview = _format_flag_snapshot()
+    await message.answer(
+        "✅ Флаг {flag} переключён в состояние {state}{note}.\n\n{overview}".format(
+            flag=flag,
+            state=state,
+            note=note,
+            overview=overview,
+        )
+    )
+
+
+@router.message(Command("ab_status"))
+@admin_only
+async def ab_status(message: Message) -> None:
+    percent = feature_flags.canary_percent()
+    canary_flags = ", ".join(feature_flags.canary_flags()) or "—"
+    lines = [
+        "🧪 Feature flags rollout",
+        f"Environment: {feature_flags.environment()}",
+        f"Canary rollout: {percent}% (flags: {canary_flags})",
+        "",
+        _format_flag_snapshot(),
+    ]
+    await message.answer("\n".join(lines))
 
 
 @router.message(Command("ci_report"))

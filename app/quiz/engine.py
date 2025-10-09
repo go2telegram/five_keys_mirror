@@ -22,7 +22,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.content.overrides import load_quiz_override
 from app.content.overrides.quiz_merge import apply_quiz_override
+from app.feature_flags import feature_flags
 from app.reco.ai_reasoner import ai_tip_for_quiz
+from app.storage import touch_throttle
 
 if TYPE_CHECKING:  # pragma: no cover - import only for typing
     from app.utils_media import fetch_image_as_file
@@ -34,6 +36,7 @@ IMAGE_ROOT = PROJECT_ROOT / "app" / "static" / "images" / "quiz"
 QUIZ_CALLBACK_PREFIX = "quiz"
 QUIZ_NAV_ACTIONS: set[str] = {"next", "prev", "finish", "home"}
 QUIZ_TIMEOUT_SECONDS = 15 * 60
+QUIZ_GUARD_COOLDOWN = 8.0
 OPTION_KEY_PATTERN = re.compile(r"^[a-z0-9_-]+$")
 CALLBACK_RE = re.compile(
     r"^quiz:(?P<name>[a-z0-9_-]+):"
@@ -241,6 +244,17 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
     message = _entry_message(entry)
     if message is None:
         return
+
+    user_id = getattr(getattr(entry, "from_user", None), "id", None)
+    if feature_flags.is_enabled("FF_QUIZ_GUARD", user_id=user_id) and user_id:
+        remaining = touch_throttle(int(user_id), f"quiz:start:{name}", QUIZ_GUARD_COOLDOWN)
+        if remaining > 0:
+            warning = "Тест уже запущен. Давай завершим текущий и попробуем ещё раз чуть позже."
+            if isinstance(entry, CallbackQuery):
+                with suppress(Exception):
+                    await entry.answer("Тест уже выполняется", show_alert=False)
+            await message.answer(warning)
+            return
 
     if hasattr(entry, "message") and hasattr(entry, "answer"):
         with suppress(Exception):
@@ -695,7 +709,7 @@ async def _handle_nav_home(
             from app.keyboards import kb_main
 
             text = "🏠 Возвращаемся в главное меню."
-            markup = kb_main()
+            markup = kb_main(user_id=getattr(call.from_user, "id", None))
         except Exception:
             logger.warning("Failed to build main keyboard on quiz exit", exc_info=True)
             text = "🏠 Возвращаемся домой. Нажми /start, чтобы продолжить."
@@ -768,17 +782,24 @@ async def _send_photo(
                     reply_markup=reply_markup,
                 )
 
-            from app.utils_media import fetch_image_as_file  # local import to avoid cycles
+            if source == "remote":
+                if feature_flags.is_enabled("FF_MEDIA_PROXY"):
+                    from app.utils_media import fetch_image_as_file  # local import to avoid cycles
 
-            proxy = await fetch_image_as_file(str(candidate))
-            if not proxy:
-                continue
+                    proxy = await fetch_image_as_file(str(candidate))
+                    if proxy:
+                        return await message.answer_photo(
+                            photo=proxy,
+                            caption=caption,
+                            reply_markup=reply_markup,
+                        )
+                    logger.warning("Quiz remote proxy unavailable, using direct URL: %s", candidate)
 
-            return await message.answer_photo(
-                photo=proxy,
-                caption=caption,
-                reply_markup=reply_markup,
-            )
+                return await message.answer_photo(
+                    photo=str(candidate),
+                    caption=caption,
+                    reply_markup=reply_markup,
+                )
         except TelegramBadRequest as exc:
             logger.warning(
                 "Failed to send quiz image %s via %s: %s",

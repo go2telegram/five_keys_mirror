@@ -4,12 +4,13 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
+from app.feature_flags import feature_flags
 from app.products import BUY_URLS, PRODUCTS
 
 # ---------- Главное меню ----------
 
 
-def kb_main() -> InlineKeyboardMarkup:
+def kb_main(*, user_id: int | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")
@@ -17,32 +18,53 @@ def kb_main() -> InlineKeyboardMarkup:
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
     kb.button(text="💎 Премиум-доступ", callback_data="menu:premium")
     kb.button(text="👤 Профиль", callback_data="profile:open")
+
+    nav_footer = feature_flags.is_enabled("FF_NAV_FOOTER", user_id=user_id)
+    if nav_footer:
+        kb.button(text="🧭 Навигатор", callback_data="nav:root")
     kb.button(text="ℹ️ Помощь", callback_data="menu:help")
 
-    kb.adjust(3, 3)
+    if nav_footer:
+        kb.adjust(3, 2, 2)
+    else:
+        kb.adjust(3, 3)
     return kb.as_markup()
 
 
 # ---------- Онбординг ----------
 
 
-def kb_onboarding_entry() -> InlineKeyboardMarkup:
+def kb_onboarding_entry(*, user_id: int | None = None) -> InlineKeyboardMarkup:
     """Первый экран /start с основными сценариями."""
 
     kb = InlineKeyboardBuilder()
     kb.button(text="⚡ Пройти тест энергии", callback_data="onboard:energy")
     kb.button(text="🎯 Подобрать продукты", callback_data="onboard:recommend")
     kb.button(text="🎁 Получить бонус-рекомендации", callback_data="onboard:recommend_full")
-    kb.adjust(1)
+
+    nav_footer = feature_flags.is_enabled("FF_NAV_FOOTER", user_id=user_id)
+    if nav_footer:
+        kb.button(text="🧭 Навигатор", callback_data="nav:root")
+        kb.button(text="ℹ️ Помощь", callback_data="menu:help")
+        kb.adjust(1, 1, 1, 2)
+    else:
+        kb.adjust(1)
     return kb.as_markup()
 
 
-def kb_recommendation_prompt() -> InlineKeyboardMarkup:
+def kb_recommendation_prompt(*, user_id: int | None = None) -> InlineKeyboardMarkup:
     """Короткая кнопка для быстрого перехода к рекомендациям."""
 
     kb = InlineKeyboardBuilder()
     kb.button(text="💊 Получить рекомендации", callback_data="pick:menu")
-    kb.adjust(1)
+
+    nav_footer = feature_flags.is_enabled("FF_NAV_FOOTER", user_id=user_id)
+    if nav_footer:
+        kb.button(text="🧭 Навигатор", callback_data="nav:root")
+        kb.button(text="ℹ️ Помощь", callback_data="menu:help")
+        kb.adjust(1, 2)
+    else:
+        kb.adjust(1)
     return kb.as_markup()
 
 
