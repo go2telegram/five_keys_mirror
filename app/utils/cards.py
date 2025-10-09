@@ -13,6 +13,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.utils.image_resolver import resolve_media_reference
+from app.utils_media import fetch_image_as_file, precache_remote_images
 
 if TYPE_CHECKING:  # pragma: no cover - import for type hints only
     from app.utils_media import fetch_image_as_file
@@ -174,13 +175,13 @@ async def send_product_cards(
         return
 
     media = MediaGroupBuilder(caption=None)
+    remote_refs: list[str] = []
     for img in _collect_media(cards):
-        from app.utils_media import fetch_image_as_file
-
         resolved = resolve_media_reference(img)
         if not resolved:
             continue
         if isinstance(resolved, str):
+            remote_refs.append(resolved)
             fetched = await fetch_image_as_file(resolved)
             if not fetched:
                 LOG.warning("send_product_cards: failed to fetch remote media %s", resolved)
@@ -188,6 +189,9 @@ async def send_product_cards(
             media.add_photo(media=fetched)
             continue
         media.add_photo(media=resolved)
+
+    if remote_refs:
+        precache_remote_images(remote_refs)
     try:
         built = media.build()
     except Exception:  # pragma: no cover - defensive guard for aiogram internals

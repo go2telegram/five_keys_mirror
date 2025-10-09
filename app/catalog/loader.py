@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from functools import lru_cache
@@ -12,6 +13,22 @@ CATALOG_DIR = os.path.dirname(__file__)
 CATALOG_PATH = os.path.join(CATALOG_DIR, "products.json")
 CATALOG_FILE = Path(CATALOG_PATH)
 ALIASES_PATH = os.path.join(CATALOG_DIR, "aliases.json")
+
+
+def _compute_catalog_sha() -> str:
+    digest = hashlib.sha1()
+    try:
+        with open(CATALOG_PATH, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                if not chunk:
+                    break
+                digest.update(chunk)
+    except FileNotFoundError:
+        return "missing"
+    return digest.hexdigest()
+
+
+CATALOG_SHA = os.getenv("CATALOG_SHA") or _compute_catalog_sha()
 
 
 class CatalogError(RuntimeError):

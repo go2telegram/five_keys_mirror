@@ -1,46 +1,109 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import List
 
 import aiohttp
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
 from aiohttp import ClientError
 
+from app.background import background_queue
 from app.catalog.loader import product_by_alias, product_by_id
 from app.utils.image_resolver import resolve_media_reference
 
 LOG = logging.getLogger(__name__)
+_IMAGE_CACHE: dict[str, tuple[float, bytes]] = {}
+_IMAGE_CACHE_TTL = 600.0
+_CACHE_LOCK = asyncio.Lock()
+_MAX_FETCH_RETRIES = 3
+
+
+async def _get_cached_bytes(url: str) -> bytes | None:
+    async with _CACHE_LOCK:
+        record = _IMAGE_CACHE.get(url)
+        if not record:
+            return None
+        expires, data = record
+        if expires <= time.monotonic():
+            _IMAGE_CACHE.pop(url, None)
+            return None
+        return data
+
+
+async def _store_cached_bytes(url: str, data: bytes) -> None:
+    async with _CACHE_LOCK:
+        _IMAGE_CACHE[url] = (time.monotonic() + _IMAGE_CACHE_TTL, data)
+
+
+async def _download_image(url: str) -> bytes | None:
+    timeout = aiohttp.ClientTimeout(total=8, connect=4, sock_read=8)
+    backoff = 0.5
+    for attempt in range(1, _MAX_FETCH_RETRIES + 1):
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url, allow_redirects=True) as response:
+                    content_type = response.headers.get("Content-Type", "")
+                    if response.status >= 500 and attempt < _MAX_FETCH_RETRIES:
+                        LOG.warning(
+                            "fetch_media retry %s/%s for %s: status %s",
+                            attempt,
+                            _MAX_FETCH_RETRIES,
+                            url,
+                            response.status,
+                        )
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 2, 2.0)
+                        continue
+                    if response.status != 200:
+                        LOG.warning(
+                            "Failed to fetch media %s: status %s",
+                            url,
+                            response.status,
+                        )
+                        return None
+                    if "image" not in content_type:
+                        LOG.warning(
+                            "Unexpected content type for %s: %s",
+                            url,
+                            content_type,
+                        )
+                        return None
+                    data = await response.read()
+                    if not data:
+                        LOG.warning("Empty payload received for media %s", url)
+                        return None
+                    return data
+        except (ClientError, asyncio.TimeoutError) as exc:
+            LOG.warning(
+                "Network error fetching media %s (attempt %s/%s): %s",
+                url,
+                attempt,
+                _MAX_FETCH_RETRIES,
+                exc,
+            )
+        except Exception:  # pragma: no cover - defensive guard
+            LOG.exception("Unexpected error fetching media %s", url)
+            return None
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, 2.0)
+    return None
 
 
 async def fetch_image_as_file(url: str) -> BufferedInputFile | None:
-    timeout = aiohttp.ClientTimeout(total=8)
-    try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, allow_redirects=True) as response:
-                content_type = response.headers.get("Content-Type", "")
-                if response.status != 200:
-                    LOG.warning(
-                        "Failed to fetch media %s: status %s", url, response.status
-                    )
-                    return None
-                if not content_type.startswith("image/"):
-                    LOG.warning(
-                        "Unexpected content type for %s: %s", url, content_type
-                    )
-                    return None
-                data = await response.read()
-    except ClientError as exc:
-        LOG.warning("Network error fetching media %s: %s", url, exc)
-        return None
-    except Exception:  # pragma: no cover - defensive guard
-        LOG.exception("Unexpected error fetching media %s", url)
+    cached = await _get_cached_bytes(url)
+    if cached is not None:
+        return BufferedInputFile(cached, filename=_extract_filename(url))
+
+    data = await _download_image(url)
+    if data is None:
         return None
 
-    name = Path(url).name.split("?")[0] or "image.jpg"
-    return BufferedInputFile(data, filename=name)
+    await _store_cached_bytes(url, data)
+    return BufferedInputFile(data, filename=_extract_filename(url))
 
 
 def _resolve_product(code: str) -> dict | None:
@@ -66,7 +129,7 @@ def _collect_image_refs(product: dict) -> list[str]:
     return refs
 
 
-async def _build_media_group(refs: List[str]) -> list[InputMediaPhoto]:
+async def _build_media_group(refs: Sequence[str]) -> list[InputMediaPhoto]:
     media: list[InputMediaPhoto] = []
     for ref in refs:
         source = await _resolve_media_source(ref)
@@ -89,6 +152,32 @@ async def _resolve_media_source(ref: str) -> FSInputFile | BufferedInputFile | N
     return None
 
 
+async def _prefetch_url(url: str) -> None:
+    if await _get_cached_bytes(url) is not None:
+        return
+    data = await _download_image(url)
+    if data is not None:
+        await _store_cached_bytes(url, data)
+
+
+def precache_remote_images(urls: Iterable[str]) -> None:
+    """Schedule remote image URLs for background prefetching."""
+
+    seen: set[str] = set()
+    for url in urls:
+        if not isinstance(url, str):
+            continue
+        normalized = url.strip()
+        if not normalized or not normalized.startswith("http"):
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        if not background_queue.submit(lambda url=normalized: _prefetch_url(url)):
+            LOG.debug("background queue inactive; skipping precache for %s", normalized)
+            break
+
+
 def _extract_filename(url: str) -> str:
     name = Path(url).name
     if not name:
@@ -98,7 +187,7 @@ def _extract_filename(url: str) -> str:
     return name
 
 
-async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
+async def send_product_album(bot: Bot, chat_id: int, codes: Sequence[str]) -> None:
     """Send a media album with catalog images for the given product codes."""
 
     collected: list[str] = []
@@ -122,6 +211,8 @@ async def send_product_album(bot: Bot, chat_id: int, codes: List[str]) -> None:
     if not collected:
         LOG.info("send_product_album: nothing to send for %s", codes)
         return
+
+    precache_remote_images(collected)
 
     media_group = await _build_media_group(collected)
     if not media_group:

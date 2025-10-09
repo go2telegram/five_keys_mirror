@@ -73,10 +73,18 @@ async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.Log
     async def fake_setup_webhook() -> None:
         return None
 
+    async def fake_start_background_queue(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    async def fake_stop_background_queue() -> None:
+        return None
+
     monkeypatch.setattr(main_module, "setup_logging", fake_setup_logging)
     monkeypatch.setattr(main_module, "init_db", fake_init_db)
     monkeypatch.setattr(main_module, "start_scheduler", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(main_module, "_setup_tribute_webhook", fake_setup_webhook)
+    monkeypatch.setattr(main_module, "start_background_queue", fake_start_background_queue)
+    monkeypatch.setattr(main_module, "stop_background_queue", fake_stop_background_queue)
     monkeypatch.setattr(main_module, "Bot", _DummyBot)
     monkeypatch.setattr(main_module, "Dispatcher", _DummyDispatcher)
 
