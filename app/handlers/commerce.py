@@ -41,6 +41,15 @@ async def cart_command(message: Message) -> None:
     await _reply_cart(message, message.from_user.id)
 
 
+@router.callback_query(F.data == "cart:open")
+async def cart_open_callback(callback: CallbackQuery) -> None:
+    if not callback.from_user or not callback.message:
+        await callback.answer("Недоступно", show_alert=True)
+        return
+    await callback.answer()
+    await _reply_cart(callback.message, callback.from_user.id)
+
+
 @router.message(Command("cart_add"))
 async def cart_add_command(message: Message) -> None:
     if not message.from_user:

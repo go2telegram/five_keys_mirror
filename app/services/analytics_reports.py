@@ -54,6 +54,16 @@ class CTRRow:
         return self.clicks / self.shows if self.shows else 0.0
 
 
+@dataclass(slots=True)
+class OnboardingABRow:
+    variant: str
+    shows: int
+    actions: int
+
+    def conversion(self) -> float:
+        return self.actions / self.shows if self.shows else 0.0
+
+
 def _ensure_export_dir(directory: Path) -> bool:
     try:
         directory.mkdir(parents=True, exist_ok=True)
@@ -192,6 +202,22 @@ def aggregate_ctr(events: Iterable[Event]) -> list[CTRRow]:
     return rows
 
 
+def aggregate_onboarding_ab(events: Iterable[Event]) -> list[OnboardingABRow]:
+    shows: defaultdict[str, int] = defaultdict(int)
+    actions: defaultdict[str, int] = defaultdict(int)
+
+    for event in events:
+        meta = event.meta if isinstance(event.meta, dict) else {}
+        variant = str(meta.get("variant") or "unknown")
+        if event.name == "onboarding_show":
+            shows[variant] += 1
+        elif event.name == "onboarding_action":
+            actions[variant] += 1
+
+    variants = sorted(set(list(shows) + list(actions)))
+    return [OnboardingABRow(variant=variant, shows=shows.get(variant, 0), actions=actions.get(variant, 0)) for variant in variants]
+
+
 def format_ctr(rows: Sequence[CTRRow], *, days: int = 30) -> str:
     if not rows:
         return "🎯 CTR отчёт: событий не найдено"
@@ -200,6 +226,27 @@ def format_ctr(rows: Sequence[CTRRow], *, days: int = 30) -> str:
     for row in rows:
         lines.append(f"{row.source}: {row.clicks}/{row.shows} (CTR {row.rate():.1%})")
     return "\n".join(lines)
+
+
+def format_onboarding_ab(rows: Sequence[OnboardingABRow], *, days: int = 30) -> str:
+    if not rows:
+        return "🅰️ A/B отчёт: событий не найдено"
+
+    lines = [f"🅰️ A/B онбординг за {days} дн."]
+    for row in rows:
+        lines.append(
+            f"{row.variant}: {row.actions}/{row.shows} (CR {row.conversion():.1%})"
+        )
+    return "\n".join(lines)
+
+
+async def gather_onboarding_ab(session: AsyncSession, *, days: int = 30) -> list[OnboardingABRow]:
+    since = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)
+    stmt = select(Event).where(Event.name.in_(["onboarding_show", "onboarding_action"]))
+    stmt = stmt.where(Event.ts >= since)
+    result = await session.execute(stmt)
+    events = list(result.scalars())
+    return aggregate_onboarding_ab(events)
 
 
 def export_funnel_csv(stats: FunnelStats) -> Path | None:
@@ -247,16 +294,20 @@ __all__ = [
     "FunnelStats",
     "CohortRow",
     "CTRRow",
+    "OnboardingABRow",
     "aggregate_cohorts",
     "aggregate_ctr",
+    "aggregate_onboarding_ab",
     "export_csv",
     "export_cohort_csv",
     "export_ctr_csv",
     "export_funnel_csv",
     "format_cohorts",
     "format_ctr",
+    "format_onboarding_ab",
     "format_funnel",
     "gather_cohorts",
     "gather_ctr",
+    "gather_onboarding_ab",
     "gather_funnel",
 ]

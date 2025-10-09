@@ -66,4 +66,14 @@ async def ctr_report(message: Message) -> None:
     await message.answer(text + _format_export_notice(export_path))
 
 
+@router.message(Command("ab_report"))
+async def ab_report(message: Message) -> None:
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+    async with compat_session(session_scope) as session:
+        rows = await analytics_reports.gather_onboarding_ab(session)
+    text = analytics_reports.format_onboarding_ab(rows)
+    await message.answer(text)
+
+
 __all__ = ["router"]

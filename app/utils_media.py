@@ -11,7 +11,6 @@ from aiogram import Bot
 from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
 from aiohttp import ClientError
 
-from app.background import background_queue
 from app.catalog.loader import product_by_alias, product_by_id
 from app.utils.image_resolver import resolve_media_reference
 
@@ -24,7 +23,7 @@ _DEFAULT_RETRIES = 2
 _FALLBACK_CONTENT_TYPES = {"application/octet-stream", "binary/octet-stream"}
 
 
-async def _get_cached_bytes(url: str) -> bytes | None:
+async def get_cached_image_bytes(url: str) -> bytes | None:
     async with _CACHE_LOCK:
         data = _IMAGE_CACHE.get(url)
         if data is None:
@@ -33,7 +32,7 @@ async def _get_cached_bytes(url: str) -> bytes | None:
         return data
 
 
-async def _store_cached_bytes(url: str, data: bytes) -> None:
+async def store_cached_image_bytes(url: str, data: bytes) -> None:
     async with _CACHE_LOCK:
         _IMAGE_CACHE[url] = data
         _IMAGE_CACHE.move_to_end(url)
@@ -50,7 +49,7 @@ def _is_supported_content_type(content_type: str | None) -> bool:
     return normalized in _FALLBACK_CONTENT_TYPES
 
 
-async def _download_image(
+async def download_image_bytes(
     url: str,
     *,
     timeout: float = _DEFAULT_TIMEOUT,
@@ -107,15 +106,15 @@ async def _download_image(
 async def fetch_image_as_file(
     url: str, *, timeout: float = _DEFAULT_TIMEOUT, retries: int = _DEFAULT_RETRIES
 ) -> BufferedInputFile | None:
-    cached = await _get_cached_bytes(url)
+    cached = await get_cached_image_bytes(url)
     if cached is not None:
         return BufferedInputFile(cached, filename=_extract_filename(url))
 
-    data = await _download_image(url, timeout=timeout, retries=retries)
+    data = await download_image_bytes(url, timeout=timeout, retries=retries)
     if data is None:
         return None
 
-    await _store_cached_bytes(url, data)
+    await store_cached_image_bytes(url, data)
     return BufferedInputFile(data, filename=_extract_filename(url))
 
 
@@ -166,15 +165,17 @@ async def _resolve_media_source(ref: str) -> FSInputFile | BufferedInputFile | N
 
 
 async def _prefetch_url(url: str) -> None:
-    if await _get_cached_bytes(url) is not None:
+    if await get_cached_image_bytes(url) is not None:
         return
-    data = await _download_image(url)
+    data = await download_image_bytes(url)
     if data is not None:
-        await _store_cached_bytes(url, data)
+        await store_cached_image_bytes(url, data)
 
 
 def precache_remote_images(urls: Iterable[str]) -> None:
     """Schedule remote image URLs for background prefetching."""
+
+    from app.background import background_queue
 
     seen: set[str] = set()
     for url in urls:
@@ -189,6 +190,10 @@ def precache_remote_images(urls: Iterable[str]) -> None:
         if not background_queue.submit(lambda url=normalized: _prefetch_url(url)):
             LOG.debug("background queue inactive; skipping precache for %s", normalized)
             break
+
+
+def build_buffered_file(url: str, data: bytes) -> BufferedInputFile:
+    return BufferedInputFile(data, filename=_extract_filename(url))
 
 
 def _extract_filename(url: str) -> str:

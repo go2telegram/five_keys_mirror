@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
-from app.keyboards import kb_back_home
+from app.keyboards import kb_back_home, kb_pdf_follow_up
 from app.pdf_report import build_pdf, ensure_reportlab
 from app.repo import events as events_repo
 from app.storage import commit_safely, get_last_plan
@@ -89,7 +89,12 @@ async def pdf_last_cb(c: CallbackQuery):
         )
         return
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-    await c.message.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
+    await c.message.answer_document(
+        BufferedInputFile(pdf_bytes, filename=filename),
+        caption="Готово! 📄 Ваш PDF-план.",
+        reply_to_message_id=c.message.message_id,
+    )
+    await c.message.answer("Выбери, что дальше:", reply_markup=kb_pdf_follow_up())
 
 
 @router.message(Command("pdf"))
@@ -112,4 +117,9 @@ async def pdf_cmd(m: Message):
         await m.answer("Генератор PDF недоступен на этой сборке.")
         return
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-    await m.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
+    await m.answer_document(
+        BufferedInputFile(pdf_bytes, filename=filename),
+        caption="Готово! 📄 Ваш PDF-план.",
+        reply_to_message_id=m.message_id,
+    )
+    await m.answer("Выбери, что дальше:", reply_markup=kb_pdf_follow_up())

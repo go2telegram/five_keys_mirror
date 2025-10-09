@@ -7,14 +7,15 @@ from typing import Iterable, Sequence
 
 from typing import TYPE_CHECKING
 
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
+from app.background import background_queue
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.services.upsell import soft_upsell_prompt
 from app.utils.image_resolver import resolve_media_reference
-from app.utils_media import fetch_image_as_file, precache_remote_images
+from app.utils_media import build_buffered_file, fetch_image_as_file, precache_remote_images
 
 if TYPE_CHECKING:  # pragma: no cover - import for type hints only
     from app.utils_media import fetch_image_as_file
@@ -159,6 +160,7 @@ async def send_product_cards(
     bullets: Sequence[str] | None = None,
     back_cb: str | None = None,
     with_actions: bool = True,
+    follow_up: tuple[str, InlineKeyboardMarkup] | None = None,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
@@ -177,19 +179,41 @@ async def send_product_cards(
 
     media = MediaGroupBuilder(caption=None)
     remote_refs: list[str] = []
+    resolved_media: list[tuple[str | None, object]] = []
     for img in _collect_media(cards):
         resolved = resolve_media_reference(img)
         if not resolved:
             continue
         if isinstance(resolved, str):
             remote_refs.append(resolved)
-            fetched = await fetch_image_as_file(resolved)
+            resolved_media.append((resolved, resolved))
+        else:
+            resolved_media.append((None, resolved))
+
+    prefetched: dict[str, bytes] = {}
+    if remote_refs:
+        try:
+            prefetched = await background_queue.prefetch(remote_refs)
+        except Exception:  # pragma: no cover - resilience against queue failures
+            LOG.exception("background prefetch failed")
+            prefetched = {}
+
+    for remote_url, source in resolved_media:
+        if remote_url:
+            data = prefetched.get(remote_url)
+            if data is not None:
+                media.add_photo(media=build_buffered_file(remote_url, data))
+                continue
+            if not background_queue.started:
+                LOG.debug("send_product_cards: skip remote fetch (queue stopped) for %s", remote_url)
+                continue
+            fetched = await fetch_image_as_file(remote_url)
             if not fetched:
-                LOG.warning("send_product_cards: failed to fetch remote media %s", resolved)
+                LOG.warning("send_product_cards: failed to fetch remote media %s", remote_url)
                 continue
             media.add_photo(media=fetched)
-            continue
-        media.add_photo(media=resolved)
+        else:
+            media.add_photo(media=source)
 
     if remote_refs:
         precache_remote_images(remote_refs)
@@ -253,6 +277,9 @@ async def send_product_cards(
 
     await message.answer(text, reply_markup=markup)
     await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+    if follow_up:
+        follow_text, follow_markup = follow_up
+        await message.answer(follow_text, reply_markup=follow_markup)
 
 
 def catalog_summary(goal: str | None = None) -> list[str]:

@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 
 from app.catalog.loader import load_catalog
 from app.config import settings
+from app.keyboards import kb_catalog_follow_up
 from app.storage import touch_throttle
 from app.utils import catalog_summary, safe_edit_text, send_product_cards
 
@@ -118,6 +119,7 @@ async def catalog_view_callback(callback: CallbackQuery) -> None:
         products=[product_id],
         ctx=None,
         back_cb="catalog:menu",
+        follow_up=("Что дальше?", kb_catalog_follow_up()),
     )
 
 

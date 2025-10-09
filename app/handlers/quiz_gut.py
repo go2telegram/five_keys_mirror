@@ -5,6 +5,7 @@ from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.keyboards import kb_recommend_follow_up
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -135,6 +136,7 @@ async def quiz_gut_step(c: CallbackQuery):
             bullets=actions,
             headline=notes,
             back_cb="quiz:menu",
+            follow_up=("Что дальше?", kb_recommend_follow_up()),
         )
         await send_premium_cta(
             c,

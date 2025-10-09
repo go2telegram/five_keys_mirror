@@ -10,6 +10,7 @@ from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
+from app.keyboards import kb_recommend_follow_up
 from app.quiz.engine import (
     QuizDefinition,
     QuizHooks,
@@ -100,6 +101,7 @@ async def _on_finish_energy(
             bullets=actions,
             headline=notes,
             back_cb="quiz:menu",
+            follow_up=("Что дальше?", kb_recommend_follow_up()),
         )
         await send_premium_cta(
             origin,

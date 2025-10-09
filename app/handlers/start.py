@@ -11,7 +11,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
-from app.experiments.ab import select_copy
+from app.experiments.ab import assign_variant, select_copy
 from app.i18n import gettext, resolve_locale
 from app.keyboards import (
     kb_back_home,
@@ -43,14 +43,11 @@ log_start = logging.getLogger("start")
 
 router = Router(name="start")
 
-GREETING = (
-    "👋 Привет!\n"
-    "Я — твой личный гид по энергии, здоровью и продуктам Vilavi.\n"
-    "💡 Хочешь узнать, какой у тебя энергетический потенциал и как его увеличить?\n"
-    "🚀 Пройди мини-тест — всего 60 секунд."
+DEFAULT_ONBOARDING_COPY = (
+    "👋 Привет! Я — твой гид по энергии и здоровью."
+    " Хочешь узнать свой энергетический потенциал? 60 сек — и покажу, как улучшить 💪"
 )
 
-ONBOARDING_CONFIRMATION = "Класс! Сейчас покажу, что может реально улучшить твои результаты 💪"
 MENU_HELP_TEXT = (
     "ℹ️ <b>Помощь</b>\n"
     "Есть вопросы по тестам, продуктам или подписке? Напиши их прямо в чат — команда ответит в течение рабочего дня.\n"
@@ -62,6 +59,12 @@ RETURNING_PROMPT = "Готов показать обновлённые реко�
 START_THROTTLE_SECONDS = 3.0
 ADMIN_PANEL_THROTTLE = 5.0
 ADMIN_ROLE = "admin"
+
+MICRO_WOW = {
+    "energy": "🤖 AI-совет: мини-тест за минуту подсветит твой энергетический потенциал и ключевые точки роста.",
+    "recommend": "🤖 AI-совет: подберу продукты под твою цель и привычки — пару ответов, и получишь готовый план.",
+    "recommend_full": "🤖 AI-совет: бонус-подборка с PDF покажет, как усилить результат и закрепить новые привычки.",
+}
 
 
 def _is_admin(user_id: int | None) -> bool:
@@ -100,12 +103,15 @@ async def start_safe(message: Message) -> None:
         getattr(message.from_user, "username", None),
     )
 
-    await message.answer(GREETING, reply_markup=kb_onboarding_entry())
+    locale = resolve_locale(getattr(message.from_user, "language_code", None))
+    variant_name, greeting_text = _pick_onboarding_copy(user_id, locale)
 
-    asyncio.create_task(_start_full(message, payload))
+    await message.answer(greeting_text, reply_markup=kb_onboarding_entry())
+
+    asyncio.create_task(_start_full(message, payload, variant_name))
 
 
-async def _start_full(message: Message, payload: str) -> None:
+async def _start_full(message: Message, payload: str, variant_name: str) -> None:
     """Execute the database-heavy part of the /start flow in the background."""
 
     try:
@@ -118,6 +124,7 @@ async def _start_full(message: Message, payload: str) -> None:
             existing_user = await users_repo.get_user(session, tg_id)
             await users_repo.get_or_create_user(session, tg_id, username)
             await events_repo.log(session, tg_id, "start", {"payload": payload})
+            await events_repo.log(session, tg_id, "onboarding_show", {"variant": variant_name})
 
             if payload.startswith("ref_"):
                 try:
@@ -175,24 +182,29 @@ async def _prompt_recommendations(message: Message) -> None:
 @router.callback_query(F.data == "onboard:energy")
 async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
     await c.answer()
+    await _log_onboarding_action_event(getattr(c.from_user, "id", None), "energy", _resolve_variant_name(c.from_user))
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(MICRO_WOW["energy"])
     await start_quiz(c, state, "energy")
 
 
 @router.callback_query(F.data == "onboard:recommend")
 async def onboarding_recommend(c: CallbackQuery) -> None:
     await c.answer()
+    await _log_onboarding_action_event(getattr(c.from_user, "id", None), "recommend", _resolve_variant_name(c.from_user))
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(MICRO_WOW["recommend"])
         await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
 
 
 @router.callback_query(F.data == "onboard:recommend_full")
 async def onboarding_recommend_full(c: CallbackQuery) -> None:
     await c.answer()
+    await _log_onboarding_action_event(
+        getattr(c.from_user, "id", None), "recommend_full", _resolve_variant_name(c.from_user)
+    )
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(MICRO_WOW["recommend_full"])
         locale = resolve_locale(getattr(c.from_user, "language_code", None))
         user_id = getattr(c.from_user, "id", "anon")
         ab_copy = select_copy(
@@ -294,3 +306,35 @@ async def panel_command(message: Message) -> None:
         "• /reg — открыть регистрацию",
     ]
     await message.answer("\n".join(lines))
+def _pick_onboarding_copy(user_id: int | None, locale: str) -> tuple[str, str]:
+    text = DEFAULT_ONBOARDING_COPY
+    variant_name = "default"
+    if user_id is None:
+        return variant_name, text
+    variant = assign_variant(None, "onboarding_copy", str(user_id), context={"locale": locale})
+    if variant:
+        variant_text = variant.payload.get("text") or variant.payload.get("value")
+        if isinstance(variant_text, str) and variant_text.strip():
+            text = variant_text
+        variant_name = variant.name
+    return variant_name, text
+
+
+async def _log_onboarding_action_event(user_id: int | None, action: str, variant: str) -> None:
+    if user_id is None:
+        return
+    async with compat_session(session_scope) as session:
+        await events_repo.log(
+            session,
+            user_id,
+            "onboarding_action",
+            {"action": action, "variant": variant},
+        )
+        await commit_safely(session)
+
+
+def _resolve_variant_name(user) -> str:
+    user_id = getattr(user, "id", None)
+    locale = resolve_locale(getattr(user, "language_code", None))
+    variant_name, _ = _pick_onboarding_copy(user_id, locale)
+    return variant_name

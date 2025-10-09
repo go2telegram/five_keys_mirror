@@ -32,7 +32,8 @@ def kb_onboarding_entry() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="⚡ Пройти тест энергии", callback_data="onboard:energy")
     kb.button(text="🎯 Подобрать продукты", callback_data="onboard:recommend")
-    kb.button(text="🎁 Получить бонус-рекомендации", callback_data="onboard:recommend_full")
+    kb.button(text="🧠 Получить бонус-рекомендации", callback_data="onboard:recommend_full")
+    kb.button(text="🏠 Главное меню", callback_data="home:main")
     kb.adjust(1)
     return kb.as_markup()
 
@@ -43,6 +44,34 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="💊 Получить рекомендации", callback_data="pick:menu")
     kb.adjust(1)
+    return kb.as_markup()
+
+
+def kb_catalog_follow_up() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🎯 Персональные рекомендации", callback_data="pick:menu")
+    kb.button(text="🧠 AI-план", callback_data="/premium_center")
+    kb.button(text="🧪 Пройти тесты", callback_data="menu:tests")
+    kb.button(text="🏠 Главная", callback_data="home:main")
+    kb.adjust(2, 2)
+    return kb.as_markup()
+
+
+def kb_recommend_follow_up() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🛒 В корзину", callback_data="cart:open")
+    kb.button(text="🔁 Похожие", callback_data="pick:menu")
+    kb.button(text="🏠 Главная", callback_data="home:main")
+    kb.adjust(2, 1)
+    return kb.as_markup()
+
+
+def kb_pdf_follow_up() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📄 Открыть PDF ещё раз", callback_data="report:last")
+    kb.button(text="🎯 Рекомендации", callback_data="pick:menu")
+    kb.button(text="🏠 Главная", callback_data="home:main")
+    kb.adjust(1, 2)
     return kb.as_markup()
 
 

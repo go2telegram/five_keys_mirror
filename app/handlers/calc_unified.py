@@ -18,6 +18,7 @@ from app.calculators.engine import (
 )
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
+from app.keyboards import kb_recommend_follow_up
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
 from app.utils import safe_edit_text
@@ -141,6 +142,7 @@ async def _finish(
         back_cb=result.back_cb,
         with_actions=result.with_actions,
         ctx=result.cards_ctx,
+        follow_up=("Что дальше?", kb_recommend_follow_up()),
     )
     slug = getattr(definition, "slug", "unknown")
     await send_premium_cta(target, "💎 Получить полный план (AI)", source=f"calc:{slug}")

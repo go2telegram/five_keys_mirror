@@ -7,7 +7,7 @@ from app.catalog.api import product_meta
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
-from app.keyboards import kb_back_home, kb_calc_menu
+from app.keyboards import kb_back_home, kb_calc_menu, kb_recommend_follow_up
 from app.reco import CTX, product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
@@ -135,6 +135,7 @@ async def _process_msd(message: Message) -> None:
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
+        follow_up=("Что дальше?", kb_recommend_follow_up()),
     )
     await send_premium_cta(message, "💎 Получить полный план (AI)", source="calc:msd")
     SESSIONS.pop(message.from_user.id, None)
