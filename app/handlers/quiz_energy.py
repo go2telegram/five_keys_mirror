@@ -20,6 +20,7 @@ from app.quiz.engine import (
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import commit_safely, set_last_plan
+from app.utils.premium_cta import send_premium_cta
 
 router = Router()
 
@@ -99,6 +100,11 @@ async def _on_finish_energy(
             bullets=actions,
             headline=notes,
             back_cb="quiz:menu",
+        )
+        await send_premium_cta(
+            origin,
+            "🔓 Еженедельные обновления доступны в Премиум",
+            source="quiz:energy",
         )
 
     return True

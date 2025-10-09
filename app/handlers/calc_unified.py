@@ -21,6 +21,7 @@ from app.handlers.quiz_common import send_product_cards
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
 from app.utils import safe_edit_text
+from app.utils.premium_cta import send_premium_cta
 
 router = Router(name="calc_unified")
 
@@ -141,6 +142,8 @@ async def _finish(
         with_actions=result.with_actions,
         ctx=result.cards_ctx,
     )
+    slug = getattr(definition, "slug", "unknown")
+    await send_premium_cta(target, "💎 Получить полный план (AI)", source=f"calc:{slug}")
     SESSIONS.pop(user.id, None)
 
 

@@ -12,6 +12,7 @@ from app.reco import CTX, product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils import safe_edit_text
+from app.utils.premium_cta import send_premium_cta
 
 router = Router()
 
@@ -130,6 +131,7 @@ async def _process_msd(message: Message) -> None:
         bullets=bullets,
         back_cb="calc:menu",
     )
+    await send_premium_cta(message, "💎 Получить полный план (AI)", source="calc:msd")
     SESSIONS.pop(message.from_user.id, None)
 
 
