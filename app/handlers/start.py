@@ -25,6 +25,7 @@ from app.keyboards import (
 )
 from app.repo import (
     events as events_repo,
+    profiles as profiles_repo,
     referrals as referrals_repo,
     subscriptions as subscriptions_repo,
     users as users_repo,
@@ -37,6 +38,8 @@ from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
 from app.utils import safe_edit_text
 
 from app.quiz.engine import start_quiz
+
+from app.growth import attribution as growth_attribution
 
 from app.handlers import reg as reg_handlers
 
@@ -155,6 +158,10 @@ async def _start_full(message: Message, payload: str) -> None:
             existing_user = await users_repo.get_user(session, tg_id)
             await users_repo.get_or_create_user(session, tg_id, username)
             await events_repo.log(session, tg_id, "start", {"payload": payload})
+
+            utm_data = growth_attribution.parse_utm_payload(payload)
+            if utm_data:
+                await profiles_repo.save_utm(session, tg_id, utm_data)
 
             if payload.startswith("ref_"):
                 try:

@@ -206,6 +206,7 @@ class UserProfile(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     plan_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
+    utm: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="profile")
 

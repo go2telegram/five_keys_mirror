@@ -22,9 +22,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.content.overrides import load_quiz_override
 from app.content.overrides.quiz_merge import apply_quiz_override
+from app.db.session import compat_session, session_scope
 from app.feature_flags import feature_flags
 from app.reco.ai_reasoner import ai_tip_for_quiz
-from app.storage import touch_throttle
+from app.repo import events as events_repo
+from app.storage import commit_safely, touch_throttle
 
 if TYPE_CHECKING:  # pragma: no cover - import only for typing
     from app.utils_media import fetch_image_as_file
@@ -283,6 +285,14 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
         if message_to_delete is not None:
             with suppress(Exception):
                 await message_to_delete.delete()
+
+    if user_id:
+        try:
+            async with compat_session(session_scope) as session:
+                await events_repo.log(session, int(user_id), "quiz_start", {"quiz": name})
+                await commit_safely(session)
+        except Exception:  # pragma: no cover - logging best-effort
+            logger.warning("quiz_start event logging failed", exc_info=True)
 
 
 async def answer_callback(
