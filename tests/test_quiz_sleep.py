@@ -10,11 +10,20 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from app.quiz.engine import answer_callback, load_quiz, start_quiz
+from app.quiz.engine import (
+    answer_callback,
+    build_answer_callback_data,
+    load_quiz,
+    start_quiz,
+)
 
 
 class _DummyMessage:
+    _next_id = 0
+
     def __init__(self, chat_id: int = 1001):
+        type(self)._next_id += 1
+        self.message_id = type(self)._next_id
         self.chat = SimpleNamespace(id=chat_id)
         self.answers: list[dict[str, object]] = []
         self.photos: list[dict[str, object]] = []
@@ -62,7 +71,9 @@ async def test_quiz_sleep_yaml_flow():
 
     for idx, question in enumerate(definition.questions):
         call = _DummyCallback(current_message)
-        call.data = f"tests:answer:sleep:{idx}:{len(question.options) - 1}"
+        call.data = build_answer_callback_data(
+            "sleep", question.id, question.options[-1].key
+        )
         await answer_callback(call, state)
 
         if idx < len(definition.questions) - 1:

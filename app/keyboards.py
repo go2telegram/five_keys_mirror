@@ -61,14 +61,17 @@ def kb_premium_info_actions() -> InlineKeyboardMarkup:
 def kb_quiz_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     tests = [
-        ("⚡ Энергия", "tests:energy"),
-        ("😴 Сон", "tests:sleep"),
-        ("😰 Стресс", "tests:stress"),
-        ("🛡 Иммунитет", "tests:immunity"),
-        ("🦠 ЖКТ", "tests:gut"),
+        ("⚡ Энергия", "energy"),
+        ("😴 Сон", "sleep"),
+        ("😰 Стресс", "stress"),
+        ("🛡 Иммунитет", "immunity"),
+        ("🦠 ЖКТ", "gut"),
     ]
-    for title, callback in tests:
-        kb.button(text=title, callback_data=callback)
+    for title, slug in tests:
+        kb.button(
+            text=title,
+            callback_data=f"quiz:{slug}:nav:next",
+        )
     kb.button(text="🧮 Калькуляторы", callback_data="/calculators")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.button(text="🏠 Домой", callback_data="home:main")

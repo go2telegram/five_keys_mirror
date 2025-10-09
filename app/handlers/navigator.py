@@ -116,7 +116,10 @@ def kb_nav_tests():
         ("🦠 ЖКТ", "gut"),
     ]
     for title, slug in tests:
-        kb.button(text=title, callback_data=f"tests:{slug}")
+        kb.button(
+            text=title,
+            callback_data=f"quiz:{slug}:nav:next",
+        )
     kb.button(text="⬅️ Назад", callback_data="nav:root")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)

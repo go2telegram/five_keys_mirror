@@ -29,14 +29,26 @@ def _install_yaml_stub() -> None:
 _install_yaml_stub()
 
 from app.quiz import engine
-from app.quiz.engine import QuizHooks, register_quiz_hooks, start_quiz, answer_callback, back_callback
+from app.quiz.engine import (
+    QuizHooks,
+    answer_callback,
+    back_callback,
+    build_answer_callback_data,
+    build_nav_callback_data,
+    register_quiz_hooks,
+    start_quiz,
+)
 
 
 class DummyMessage:
+    _next_id = 0
+
     def __init__(self):
-        self.children = []
-        self.text = None
-        self.caption = None
+        type(self)._next_id += 1
+        self.message_id = type(self)._next_id
+        self.children: list[DummyMessage] = []
+        self.text: str | None = None
+        self.caption: str | None = None
         self.photo = None
         self.reply_markup = None
         self.deleted = False
@@ -141,17 +153,24 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
             entry_message = DummyMessage()
             await start_quiz(entry_message, state, "sample")
 
+            definition = engine.load_quiz("sample")
+
             state_data = await state.get_data()
             assert state_data["index"] == 0
+            assert state_data["question_id"] == definition.questions[0].id
+            assert state_data["message_id"] == entry_message.children[-1].message_id
             current_state = await state.get_state()
             assert current_state and current_state.endswith("QuizSession:Q1")
 
             current_message = entry_message.children[-1]
 
-            for idx in range(5):
-                callback = DummyCallback(f"tests:answer:sample:{idx}:0", current_message)
+            for idx, question in enumerate(definition.questions):
+                callback_data = build_answer_callback_data(
+                    "sample", question.id, question.options[0].key
+                )
+                callback = DummyCallback(callback_data, current_message)
                 await answer_callback(callback, state)
-                if idx < 4:
+                if idx < len(definition.questions) - 1:
                     current_message = current_message.children[-1]
 
             assert await state.get_state() is None
@@ -188,19 +207,31 @@ def test_quiz_back_navigation(monkeypatch, quiz_tmp):
 
             current_message = entry_message.children[-1]
 
-            first_callback = DummyCallback("tests:answer:sample:0:0", current_message)
+            definition = engine.load_quiz("sample")
+            first_question = definition.questions[0]
+
+            first_callback = DummyCallback(
+                build_answer_callback_data(
+                    "sample", first_question.id, first_question.options[0].key
+                ),
+                current_message,
+            )
             await answer_callback(first_callback, state)
             state_data = await state.get_data()
             assert state_data["index"] == 1
             assert state_data["score"] == 1
+            assert state_data["question_id"] == definition.questions[1].id
 
             current_message = current_message.children[-1]
-            back_call = DummyCallback("tests:back:sample:1", current_message)
+            back_call = DummyCallback(
+                build_nav_callback_data("sample", "prev"), current_message
+            )
             await back_callback(back_call, state)
 
             state_data = await state.get_data()
             assert state_data["index"] == 0
             assert state_data["score"] == 0
+            assert state_data["question_id"] == definition.questions[0].id
             current_state = await state.get_state()
             assert current_state and current_state.endswith("QuizSession:Q1")
         finally:

@@ -27,6 +27,7 @@ from app.handlers import (
     admin_crud as h_admin_crud,
     analytics as h_analytics,
     commerce as h_commerce,
+    callback_fallback as h_callback_fallback,
     assistant as h_assistant,
     calc as h_calc,
     calc_unified as h_calc_unified,
@@ -56,10 +57,16 @@ from app.handlers import (
 from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
 from app.background import start_background_queue, stop_background_queue
-from app.middlewares import AuditMiddleware, RateLimitMiddleware
+from app.middlewares import (
+    AuditMiddleware,
+    CallbackDebounceMiddleware,
+    CallbackTraceMiddleware,
+    RateLimitMiddleware,
+)
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
+from app.router_map import capture_router_map
 
 try:
     from app.handlers import health as h_health
@@ -402,6 +409,18 @@ def _register_rate_limit_middleware(dp: Dispatcher) -> RateLimitMiddleware:
     return rate_middleware
 
 
+def _register_callback_middlewares(dp: Dispatcher) -> None:
+    debounce = CallbackDebounceMiddleware()
+    trace = CallbackTraceMiddleware()
+    dp.callback_query.middleware(debounce)
+    dp.callback_query.middleware(trace)
+    startup_log.info(
+        "S4c: callback middlewares registered debounce=%s trace=%s",
+        type(debounce).__name__,
+        type(trace).__name__,
+    )
+
+
 def _log_startup_metadata() -> None:
     startup_log.info(
         "build: branch=%s commit=%s time=%s",
@@ -533,16 +552,13 @@ async def main() -> None:
 
     _register_audit_middleware(dp)
     _register_rate_limit_middleware(dp)
-    mark("S4: audit middleware registered")
+    _register_callback_middlewares(dp)
+    mark("S4: middlewares registered")
     _log_startup_metadata()
 
     allowed_updates = list(ALLOWED_UPDATES)
 
-    routers = [
-        h_start.router,
-        h_catalog.router,
-        h_calc.router,
-        h_calc_unified.router,
+    quiz_routers = [
         h_quiz_menu.router,
         quiz_engine_handlers.router,
         h_quiz_energy.router,
@@ -553,23 +569,44 @@ async def main() -> None:
         h_quiz_stress.router,
         h_quiz_stress2.router,
         h_quiz_skin_joint.router,
+    ]
+
+    calculator_routers = [h_calc.router, h_calc_unified.router]
+
+    recommend_routers = [
         h_picker.router,
         h_reg.router,
+        h_report.router,
+        h_assistant.router,
+        h_lead.router,
+        h_referral.router,
+    ]
+
+    premium_routers = [
         h_premium_center.router,
         h_premium.router,
         h_profile.router,
-        h_referral.router,
         h_subscription.router,
+    ]
+
+    misc_routers = [
         h_navigator.router,
-        h_report.router,
         h_analytics.router,
         h_notify.router,
+        h_commerce.router,
         h_admin.router,
         h_admin_audit.router,
         h_admin_crud.router,
-        h_commerce.router,
-        h_assistant.router,
-        h_lead.router,
+    ]
+
+    routers: list[Router] = [
+        h_start.router,
+        h_catalog.router,
+        *quiz_routers,
+        *calculator_routers,
+        *recommend_routers,
+        *premium_routers,
+        *misc_routers,
     ]
 
     if settings.DEBUG_COMMANDS and h_health is not None:
@@ -581,8 +618,12 @@ async def main() -> None:
         routers.append(h_echo.router)
         startup_log.info("S5b: echo_debug router attached")
 
+    routers.append(h_callback_fallback.router)
+
     startup_router = _create_startup_router(allowed_updates)
     routers.insert(0, startup_router)
+
+    capture_router_map(routers)
 
     for router in routers:
         dp.include_router(router)
