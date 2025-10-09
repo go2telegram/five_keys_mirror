@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+from app.catalog.overrides import apply_overrides, load_overrides
+
 CATALOG_DIR = os.path.dirname(__file__)
 CATALOG_PATH = os.path.join(CATALOG_DIR, "products.json")
 CATALOG_FILE = Path(CATALOG_PATH)
@@ -108,6 +110,8 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
     by_alias: Dict[str, str] = {}
     ordered_ids: List[str] = []
 
+    overrides = load_overrides()
+
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -121,9 +125,10 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
 
         canonical = product_id.strip()
         ordered_ids.append(canonical)
-        by_id[canonical] = item
+        item_with_overrides = apply_overrides(item, overrides.get(canonical, {}))
+        by_id[canonical] = item_with_overrides
 
-        aliases = item.get("aliases") or []
+        aliases = item_with_overrides.get("aliases") or []
         if isinstance(aliases, list):
             for alias in aliases:
                 if isinstance(alias, str) and alias:

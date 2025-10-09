@@ -11,6 +11,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
+from app.experiments.ab import select_copy
+from app.i18n import gettext, resolve_locale
 from app.keyboards import (
     kb_back_home,
     kb_goal_menu,
@@ -180,10 +182,16 @@ async def onboarding_recommend_full(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
         await c.message.answer(ONBOARDING_CONFIRMATION)
-        await c.message.answer(
-            "Хочешь бонус-подборку? Нажми кнопку ниже — соберу расширенный план.",
-            reply_markup=kb_recommendation_prompt(),
+        locale = resolve_locale(getattr(c.from_user, "language_code", None))
+        user_id = getattr(c.from_user, "id", "anon")
+        ab_copy = select_copy(
+            None,
+            "recommend_full_copy",
+            str(user_id),
+            context={"locale": locale},
         )
+        copy = ab_copy or gettext("recommend.full_prompt", locale)
+        await c.message.answer(copy, reply_markup=kb_recommendation_prompt())
 
 
 @router.callback_query(F.data == "onboard:register")
