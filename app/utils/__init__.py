@@ -7,13 +7,19 @@ from typing import Any
 
 __all__ = [
     "catalog_summary",
+    "nav_footer",
     "prepare_cards",
     "render_product_text",
     "safe_edit_text",
     "send_product_cards",
 ]
 
-_CARD_EXPORTS = {"catalog_summary", "prepare_cards", "render_product_text", "send_product_cards"}
+_CARD_EXPORTS = {
+    "catalog_summary",
+    "prepare_cards",
+    "render_product_text",
+    "send_product_cards",
+}
 
 
 def __getattr__(name: str) -> Any:  # pragma: no cover - simple delegation
@@ -21,6 +27,10 @@ def __getattr__(name: str) -> Any:  # pragma: no cover - simple delegation
         from .telegram import safe_edit_text  # local import to avoid circular dependency
 
         return safe_edit_text
+    if name == "nav_footer":
+        from .nav import nav_footer  # local import to avoid circular dependency
+
+        return nav_footer
     if name in _CARD_EXPORTS:
         module = import_module("app.utils.cards")
         return getattr(module, name)
