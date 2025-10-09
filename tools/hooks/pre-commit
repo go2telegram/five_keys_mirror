@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mapfile -t staged < <(git diff --cached --name-only)
+if ((${#staged[@]} == 0)); then
+    exit 0
+fi
+
+blocked=()
+for path in "${staged[@]}"; do
+    if [[ "$path" == "app/build_info.py" || "$path" == alembic/versions/* ]]; then
+        blocked+=("$path")
+    fi
+done
+
+if ((${#blocked[@]} > 0)); then
+    {
+        echo "ERROR: Commit blocked for protected files:"
+        for file in "${blocked[@]}"; do
+            echo "  - $file"
+        done
+        echo "Use 'git commit --no-verify' if you really need to bypass the hook."
+    } >&2
+    exit 1
+fi
