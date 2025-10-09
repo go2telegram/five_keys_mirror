@@ -1,0 +1,11 @@
+-r requirements.in
+bandit
+cyclonedx-bom
+gitleaks
+mypy
+pip-audit
+pytest
+pytest-asyncio
+pytest-cov
+ruff
+safety
