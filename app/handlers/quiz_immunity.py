@@ -2,13 +2,13 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
 from app.catalog.api import pick_for_context
-from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
+from app.link_manager import get_register_link
 
 router = Router()
 
@@ -93,6 +93,8 @@ async def quiz_immunity_step(c: CallbackQuery):
         ]
         notes = "В сезон простуд: тёплые напитки, влажность 40–60%, промывание носа."
 
+        discount_link = await get_register_link()
+
         plan_payload = {
             "title": "План: Иммунитет",
             "context": "immunity",
@@ -102,7 +104,7 @@ async def quiz_immunity_step(c: CallbackQuery):
             "lines": lines,
             "actions": actions,
             "notes": notes,
-            "order_url": settings.velavie_url,
+            "order_url": discount_link,
         }
 
         async with compat_session(session_scope) as session:
@@ -124,6 +126,7 @@ async def quiz_immunity_step(c: CallbackQuery):
             bullets=actions,
             headline=notes,
             back_cb="quiz:menu",
+            utm_category="quiz_immunity",
         )
         await send_premium_cta(
             c,

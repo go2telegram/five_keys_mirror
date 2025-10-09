@@ -8,9 +8,9 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from app.catalog.loader import load_catalog
-from app.config import settings
 from app.storage import touch_throttle
 from app.utils import catalog_summary, safe_edit_text, send_product_cards
+from app.link_manager import get_register_link
 
 router = Router(name="catalog")
 log = logging.getLogger("catalog")
@@ -22,7 +22,8 @@ CATALOG_CALLBACK_THROTTLE = 1.5
 async def _send_catalog_menu(message: Message) -> None:
     catalog = load_catalog()
     lines = ["🛍 Каталог продуктов"]
-    if settings.velavie_url:
+    discount_link = await get_register_link()
+    if discount_link:
         lines.append("Закажи со скидкой прямо в каталоге.")
     summary = catalog_summary()
     if summary:
@@ -31,11 +32,11 @@ async def _send_catalog_menu(message: Message) -> None:
     else:
         lines.append("Каталог загружается, попробуйте чуть позже.")
 
-    markup = _build_catalog_markup(catalog)
+    markup = _build_catalog_markup(catalog, discount_link)
     await message.answer("\n".join(lines), reply_markup=markup)
 
 
-def _build_catalog_markup(catalog) -> "InlineKeyboardMarkup":
+def _build_catalog_markup(catalog, discount_url: str | None) -> "InlineKeyboardMarkup":
     from aiogram.utils.keyboard import InlineKeyboardBuilder
 
     builder = InlineKeyboardBuilder()
@@ -48,8 +49,8 @@ def _build_catalog_markup(catalog) -> "InlineKeyboardMarkup":
         title = product.get("title") or product.get("name") or pid
         builder.button(text=f"🛒 {title}", callback_data=f"catalog:view:{pid}")
         rows.append(1)
-    if settings.velavie_url:
-        builder.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    if discount_url:
+        builder.button(text="🔗 Заказать со скидкой", url=discount_url)
         rows.append(1)
     builder.button(text="⬅️ Назад", callback_data="home:main")
     builder.button(text="🏠 Домой", callback_data="home:main")
@@ -85,10 +86,11 @@ async def catalog_menu_callback(callback: CallbackQuery) -> None:
     await callback.answer()
     if callback.message:
         catalog = load_catalog()
+        discount_link = await get_register_link()
         await safe_edit_text(
             callback.message,
             "🛍 Каталог продуктов\nВыбери продукт, чтобы узнать подробности:",
-            _build_catalog_markup(catalog),
+            _build_catalog_markup(catalog, discount_link),
         )
 
 

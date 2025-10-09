@@ -5,16 +5,17 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
 from app.products import GOAL_MAP, PRODUCTS
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from app.link_manager import get_register_link
+from app.utils import safe_edit_text
+from app.utils.cards import build_order_link
 from app.utils_media import send_product_album
 from app.utils.premium_cta import send_premium_cta
-from app.utils import safe_edit_text
 
 LOG = logging.getLogger(__name__)
 
@@ -312,7 +313,18 @@ async def pick_finalize(c: CallbackQuery):
         desc + "\n",
         "Поддержка:\n" + "\n".join(lines),
     ]
-    reply_markup = kb_buylist_pdf("pick:menu", rec_codes[:3])
+    discount_link = await get_register_link()
+    links: dict[str, str] = {}
+    for code in rec_codes[:3]:
+        url = await build_order_link(code, "recommend")
+        if url:
+            links[code] = url
+    reply_markup = kb_buylist_pdf(
+        "pick:menu",
+        rec_codes[:3],
+        links=links,
+        discount_url=discount_link,
+    )
     await c.message.answer("".join(msg), reply_markup=reply_markup)
     await send_premium_cta(
         c.message,
@@ -337,7 +349,7 @@ async def pick_finalize(c: CallbackQuery):
         "lines": lines,
         "actions": actions,
         "notes": notes,
-        "order_url": settings.velavie_url,
+        "order_url": discount_link,
     }
 
     async with compat_session(session_scope) as session:

@@ -6,12 +6,14 @@ import logging
 from typing import Iterable, Sequence
 
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
+from app.link_manager import get_product_link, get_register_link
 from app.services.upsell import soft_upsell_prompt
 from app.utils.image_resolver import resolve_media_reference
 from app.utils_media import fetch_image_as_file, precache_remote_images
@@ -149,6 +151,52 @@ def _collect_media(products: Sequence[dict]) -> list[str]:
     return media
 
 
+async def build_order_link(
+    product_id: str | None,
+    utm_category: str | None,
+    *,
+    base_url: str | None = None,
+) -> str | None:
+    """Return a product link with missing UTM parameters filled in."""
+
+    pid = (product_id or "").strip()
+    url = base_url
+    if url is None and pid:
+        url = await get_product_link(pid)
+    elif url is None:
+        return None
+
+    if not url:
+        return None
+
+    parsed = urlsplit(url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+
+    category = (utm_category or "catalog").strip().lower() or "catalog"
+    defaults = {
+        "utm_source": "tg_bot",
+        "utm_medium": category,
+        "utm_campaign": category,
+    }
+    if pid:
+        defaults.setdefault("utm_content", pid)
+
+    for key, value in defaults.items():
+        if key not in query and value:
+            query[key] = value
+
+    rebuilt = urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(query, doseq=True),
+            parsed.fragment,
+        )
+    )
+    return rebuilt
+
+
 async def send_product_cards(
     target: CallbackQuery | Message,
     title: str,
@@ -159,6 +207,7 @@ async def send_product_cards(
     bullets: Sequence[str] | None = None,
     back_cb: str | None = None,
     with_actions: bool = True,
+    utm_category: str | None = None,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
@@ -213,12 +262,23 @@ async def send_product_cards(
     lines.append("Поддержка:")
     lines.append("")
 
+    category = utm_category or ctx or "catalog"
+    register_link = await get_register_link()
+
     for card in cards:
         header, card_bullets = render_product_text(card, ctx)
         lines.append(header)
         for item in card_bullets:
             lines.append(f"  · {item}")
         lines.append("")
+
+    for card in cards:
+        code = str(card.get("code") or card.get("id") or "").strip()
+        link = await build_order_link(code or None, category)
+        if link:
+            card["order_url"] = link
+        else:
+            card.pop("order_url", None)
 
     text = "\n".join(lines).strip()
     bundle_action = None
@@ -233,7 +293,12 @@ async def send_product_cards(
             bundle_action = ("➕ Бандл в корзину", f"cart:add_bundle:{bundle_id}")
 
     markup = (
-        kb_actions(cards, back_cb=back_cb, bundle_action=bundle_action)
+        kb_actions(
+            cards,
+            back_cb=back_cb,
+            bundle_action=bundle_action,
+            discount_url=register_link,
+        )
         if with_actions
         else kb_back_home(back_cb)
     )
@@ -273,4 +338,10 @@ def catalog_summary(goal: str | None = None) -> list[str]:
     return result
 
 
-__all__ = ["catalog_summary", "prepare_cards", "render_product_text", "send_product_cards"]
+__all__ = [
+    "build_order_link",
+    "catalog_summary",
+    "prepare_cards",
+    "render_product_text",
+    "send_product_cards",
+]

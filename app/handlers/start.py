@@ -36,6 +36,7 @@ from app.feature_flags import feature_flags
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
 from app.utils import safe_edit_text
+from app.link_manager import get_register_link
 
 from app.quiz.engine import start_quiz
 
@@ -205,7 +206,7 @@ async def _start_full(message: Message, payload: str) -> None:
 
 
 async def _start_registration(message: Message) -> None:
-    url = settings.velavie_url
+    url = await get_register_link()
     if url:
         await message.answer(REG_TEXT, reply_markup=reg_handlers.build_reg_markup(url))
     else:

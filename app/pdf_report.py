@@ -342,7 +342,8 @@ def build_pdf(
         story.append(Paragraph(notes, p_s))
         story.append(Spacer(1, 0.5 * cm))
 
-    q_url = order_url or settings.velavie_url
+    fallback_register = settings.BASE_REGISTER_URL or settings.velavie_url
+    q_url = order_url or fallback_register
     if q_url:
         story.append(_hline())
         story.append(Spacer(1, 0.3 * cm))
