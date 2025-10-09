@@ -1,6 +1,7 @@
 """Repository helpers for user profile data."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,7 @@ async def get(session: AsyncSession, user_id: int) -> UserProfile | None:
 async def get_or_create(session: AsyncSession, user_id: int) -> UserProfile:
     profile = await get(session, user_id)
     if profile is None:
-        profile = UserProfile(user_id=user_id, plan_json=None)
+        profile = UserProfile(user_id=user_id, plan_json=None, utm=None)
         session.add(profile)
         await session.flush()
     return profile
@@ -33,3 +34,21 @@ async def get_plan(session: AsyncSession, user_id: int) -> dict[str, Any] | None
     if profile is None:
         return None
     return profile.plan_json
+
+
+async def save_utm(session: AsyncSession, user_id: int, utm: Mapping[str, str]) -> UserProfile:
+    """Persist UTM data for a user, filling in missing values only."""
+
+    profile = await get_or_create(session, user_id)
+    existing = dict(profile.utm or {})
+    updated = False
+    for key, value in utm.items():
+        if not value:
+            continue
+        if not existing.get(key):
+            existing[key] = value
+            updated = True
+    if updated:
+        profile.utm = existing
+        await session.flush()
+    return profile

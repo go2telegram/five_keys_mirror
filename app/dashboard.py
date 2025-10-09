@@ -20,6 +20,7 @@ from app.config import settings
 from app.db.models import Event, Lead
 from app.db.session import session_scope
 from app.repo import events as events_repo, leads as leads_repo
+from app.growth import attribution as growth_attribution
 
 app = FastAPI(title="Five Keys Admin Dashboard")
 
@@ -159,6 +160,36 @@ def _build_ctr_gauge(value: float) -> str:
     return to_html(fig, include_plotlyjs=False, full_html=False)
 
 
+def _build_utm_chart(items: List[Tuple[growth_attribution.UtmKey, growth_attribution.UtmFunnelMetrics]]) -> str:
+    if not items:
+        return "<div class='chart-empty'>Нет данных по UTM-источникам</div>"
+
+    labels = [growth_attribution.format_utm_label(key) for key, _ in items]
+    registrations = [metrics.registrations for _, metrics in items]
+    quizzes = [metrics.quiz_starts for _, metrics in items]
+    recommendations = [metrics.recommendations for _, metrics in items]
+    premiums = [metrics.premium_buys for _, metrics in items]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name="Регистрации", x=labels, y=registrations, marker_color="#22d3ee"))
+    fig.add_trace(go.Bar(name="Квизы", x=labels, y=quizzes, marker_color="#2563eb"))
+    fig.add_trace(go.Bar(name="Рекомендации", x=labels, y=recommendations, marker_color="#10b981"))
+    fig.add_trace(go.Bar(name="Подписки", x=labels, y=premiums, marker_color="#f97316"))
+
+    fig.update_layout(
+        barmode="group",
+        title="UTM-воронка",
+        height=420,
+        margin=dict(l=40, r=40, t=60, b=100),
+        paper_bgcolor="#0f172a",
+        plot_bgcolor="#0f172a",
+        font=dict(color="#e2e8f0"),
+        xaxis=dict(tickangle=-30, automargin=True),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
+    )
+    return to_html(fig, include_plotlyjs=False, full_html=False)
+
+
 def _format_dt(dt: datetime | None) -> str:
     if not isinstance(dt, datetime):
         return "—"
@@ -250,6 +281,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     calc_chart = context["calc_chart"]
     ctr_chart = context["ctr_chart"]
     load_chart = context["load_chart"]
+    utm_chart = context["utm_chart"]
     top_products_rows = _render_table(context["top_products"])
     goal_rows = _render_table(context["catalog_goals"])
     lead_rows_html = "".join(
@@ -396,9 +428,15 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
         <div class=\"metric\">{context['load_p95']}</div>
         <p class=\"muted\">Ошибки: {context['load_errors']} · {context['load_timestamp']}</p>
       </article>
+      <article class=\"card\">
+        <h2>UTM регистрации</h2>
+        <div class=\"metric\">{context['utm_total_reg']}</div>
+        <p class=\"muted\">CTR: {context['utm_ctr']:.1f}% · CR: {context['utm_cr']:.1f}%</p>
+      </article>
     </section>
 
     <section class=\"charts\">
+      <div class=\"card\">{utm_chart}</div>
       <div class=\"card\">{quiz_chart}</div>
       <div class=\"card\">{calc_chart}</div>
       <div class=\"card\">{ctr_chart}</div>
@@ -448,11 +486,13 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 
 
 async def _gather_dashboard_context() -> Dict[str, Any]:
+    utm_metrics: Dict[growth_attribution.UtmKey, growth_attribution.UtmFunnelMetrics] = {}
     async with session_scope() as session:
         quiz_counts, quiz_total = await _collect_event_stats(session, "quiz_finish", "quiz")
         calc_counts, calc_total = await _collect_event_stats(session, "calc_finish", "calc")
         plans_total, products_counter = await _collect_plan_stats(session)
         leads_total, leads_recent, recent_leads = await _collect_lead_details(session)
+        utm_metrics = await growth_attribution.collect_funnel_metrics(session)
 
     ctr = (plans_total / quiz_total * 100.0) if quiz_total else 0.0
 
@@ -495,11 +535,16 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
     top_products = [(code, str(count)) for code, count in products_counter.most_common(10)]
     catalog_goals = [(goal, str(count)) for goal, count in goal_counter.most_common(10)]
 
+    utm_sorted = growth_attribution.sort_metrics(utm_metrics, limit=6)
+    utm_chart = _build_utm_chart(utm_sorted)
+    utm_total = growth_attribution.summarize(utm_metrics)
+
     return {
         "quiz_chart": quiz_chart,
         "calc_chart": calc_chart,
         "ctr_chart": ctr_chart,
         "load_chart": load_chart,
+        "utm_chart": utm_chart,
         "leads_total": leads_total,
         "leads_recent": leads_recent,
         "quiz_total": quiz_total,
@@ -514,6 +559,9 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "load_p95": load_p95,
         "load_errors": load_errors,
         "load_timestamp": load_timestamp,
+        "utm_total_reg": utm_total.registrations,
+        "utm_ctr": utm_total.quiz_ctr,
+        "utm_cr": utm_total.premium_cr,
     }
 
 

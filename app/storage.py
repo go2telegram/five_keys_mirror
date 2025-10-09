@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import os
 import time
+import logging
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, MutableMapping
 from copy import deepcopy
@@ -206,11 +207,18 @@ ACCESS_ROLES: dict[int, set[str]] = defaultdict(set)
 
 
 async def set_last_plan(session: AsyncSession, user_id: int, plan: Dict[str, Any]) -> None:
-    await events.log(session, user_id, "plan_generated", plan)
+    try:
+        await events.log(session, user_id, "plan_generated", plan)
+    except Exception:  # pragma: no cover - best-effort persistence
+        logging.getLogger("storage").warning("failed to log plan_generated", exc_info=True)
 
 
 async def get_last_plan(session: AsyncSession, user_id: int) -> Dict[str, Any] | None:
-    event = await events.last_by(session, user_id, "plan_generated")
+    try:
+        event = await events.last_by(session, user_id, "plan_generated")
+    except Exception:  # pragma: no cover
+        logging.getLogger("storage").warning("failed to load last plan", exc_info=True)
+        return None
     if event:
         return event.meta
     return None
