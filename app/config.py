@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
     RETENTION_ENABLED: bool = False
+    SCHEDULER_ENABLE_NUDGES: bool = True
+    WEEKLY_PLAN_ENABLED: bool = True
+    ANALYTICS_EXPORT_ENABLED: bool = True
 
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None

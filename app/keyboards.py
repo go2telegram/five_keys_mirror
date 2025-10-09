@@ -13,7 +13,7 @@ def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")
-    kb.button(text="🎯 Персональные", callback_data="pick:menu")
+    kb.button(text="🎯 Персональные рекомендации", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
     kb.button(text="💎 Премиум-доступ", callback_data="menu:premium")
     kb.button(text="👤 Профиль", callback_data="profile:open")
@@ -49,8 +49,7 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
 def kb_premium_info_actions() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="💎 Оформить подписку", callback_data="sub:menu")
-    kb.button(text="📘 Что входит в Премиум", callback_data="premium:info")
-    kb.button(text="🏛 Premium-центр", callback_data="/premium_center")
+    kb.button(text="📘 Что входит", callback_data="/premium_center")
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.adjust(1)
     return kb.as_markup()
