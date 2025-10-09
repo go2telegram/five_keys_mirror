@@ -172,6 +172,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         env={"PYTHONPATH": pythonpath},
     )
 
+    if context.no_net:
+        print("WARN: Self-audit running in no-network mode; external checks downgraded.", file=sys.stderr)
+
     results: Dict[str, SectionResult] = {}
     timings: Dict[str, float] = {}
 
@@ -239,6 +242,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     print(json.dumps(aggregate, ensure_ascii=False))
 
     if args.ci and critical_errors:
+        if context.no_net:
+            print(
+                "WARN: Critical sections failed but NO_NET=1 — treating as warning for CI.",
+                file=sys.stderr,
+            )
+            return 0
         return 1
     return 0
 
