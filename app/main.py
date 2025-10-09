@@ -7,6 +7,7 @@ import contextlib
 import errno
 import importlib
 import logging
+import os
 import socket
 import time
 from pathlib import Path
@@ -434,9 +435,29 @@ async def main() -> None:
         mark("S2-done: init_db")
         logging.info("current alembic version: %s", revision or "unknown")
 
-    bot_token = getattr(settings, "BOT_TOKEN", "") or ""
-    if not bot_token or str(bot_token).startswith("dummy"):
-        startup_log.warning("BOT_TOKEN is dummy — skipping Telegram init")
+    bot_token = (getattr(settings, "BOT_TOKEN", "") or "").strip()
+    normalized_token = bot_token
+    prefixed_dummy = normalized_token.lower().startswith("dummy")
+    prefixed_test = normalized_token.upper().startswith("TEST:")
+    token_missing = normalized_token == ""
+
+    environment_value = getattr(settings, "ENVIRONMENT", "") or os.getenv("ENVIRONMENT", "")
+    environment = environment_value.strip().lower()
+    is_prod = environment in {"prod", "production"}
+
+    if token_missing or prefixed_dummy or prefixed_test:
+        if token_missing:
+            reason = "BOT_TOKEN is empty"
+        elif prefixed_dummy:
+            reason = "BOT_TOKEN has dummy prefix"
+        else:
+            reason = "BOT_TOKEN has TEST prefix"
+
+        if is_prod:
+            startup_log.warning("%s — aborting startup in production", reason)
+            raise SystemExit(2)
+
+        startup_log.warning("%s — skipping Telegram init", reason)
         return
 
     bot = Bot(

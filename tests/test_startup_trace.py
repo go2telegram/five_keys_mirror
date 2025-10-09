@@ -57,11 +57,9 @@ class _DummyBot:
         self.default = default
 
 
-@pytest.mark.anyio("asyncio")
-async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def _prepare_main(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SERVICE_HOST", "127.0.0.1")
     monkeypatch.setenv("HEALTH_PORT", "0")
-    monkeypatch.setattr(settings, "BOT_TOKEN", "TEST:FAKE", raising=False)
     monkeypatch.setattr(settings, "DEBUG_COMMANDS", False, raising=False)
     monkeypatch.setattr(settings, "SERVICE_HOST", "127.0.0.1", raising=False)
     monkeypatch.setattr(settings, "HEALTH_PORT", 0, raising=False)
@@ -90,6 +88,12 @@ async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.Log
     monkeypatch.setattr(main_module, "Bot", _DummyBot)
     monkeypatch.setattr(main_module, "Dispatcher", _DummyDispatcher)
 
+
+@pytest.mark.anyio("asyncio")
+async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    _prepare_main(monkeypatch)
+    monkeypatch.setattr(settings, "BOT_TOKEN", "123:FAKE", raising=False)
+
     with caplog.at_level(logging.INFO, logger="startup"):
         await main_module.main()
 
@@ -108,3 +112,27 @@ async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.Log
         "S9:",
     ]:
         assert marker in text
+
+
+@pytest.mark.anyio("asyncio")
+async def test_dummy_token_skipped_in_dev(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    _prepare_main(monkeypatch)
+    monkeypatch.setattr(settings, "BOT_TOKEN", "dummy:token", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="startup"):
+        await main_module.main()
+
+    messages = [record.message for record in caplog.records if record.name == "startup"]
+    assert any("dummy prefix" in message for message in messages)
+
+
+@pytest.mark.anyio("asyncio")
+async def test_dummy_token_crashes_in_prod(monkeypatch: pytest.MonkeyPatch) -> None:
+    _prepare_main(monkeypatch)
+    monkeypatch.setattr(settings, "BOT_TOKEN", "TEST:token", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+
+    with pytest.raises(SystemExit) as excinfo:
+        await main_module.main()
+
+    assert excinfo.value.code == 2
