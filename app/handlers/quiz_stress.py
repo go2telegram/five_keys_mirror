@@ -1,3 +1,5 @@
+import datetime as dt
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
@@ -6,7 +8,7 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.repo import events as events_repo, retention as retention_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
 
@@ -124,6 +126,12 @@ async def quiz_stress_step(c: CallbackQuery):
                 c.from_user.id,
                 "quiz_finish",
                 {"quiz": "stress", "score": total, "level": level_label},
+            )
+            await retention_repo.schedule_journey(
+                session,
+                c.from_user.id,
+                "stress_relief",
+                dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=48),
             )
             await commit_safely(session)
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from io import StringIO
 from pathlib import Path
@@ -21,6 +21,7 @@ from app.db.session import (
 from app.feature_flags import feature_flags
 from app.repo import (
     events as events_repo,
+    retention as retention_repo,
     leads as leads_repo,
     referrals as referrals_repo,
     subscriptions as subscriptions_repo,
@@ -106,6 +107,30 @@ async def stats(m: Message):
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
         "• /leads_csv 500 — CSV последних 500"
+    )
+
+
+@router.message(Command("retention_report"))
+async def retention_report(message: Message) -> None:
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=1)
+
+    async with compat_session(session_scope) as session:
+        tip_enabled = await retention_repo.count_tip_enabled(session)
+        sent = await events_repo.stats(session, name="daily_tip_sent", since=since)
+        clicks = await events_repo.stats(session, name="daily_tip_click", since=since)
+        click_users = await retention_repo.count_tip_click_users(session, since=since)
+
+    ctr = (clicks / sent * 100.0) if sent else 0.0
+    await message.answer(
+        "📈 Retention-отчёт\n"
+        f"Советы включены у: {tip_enabled}\n"
+        f"Отправлено за 24ч: {sent}\n"
+        f"Кликов за 24ч: {clicks} (уникальных: {click_users})\n"
+        f"CTR: {ctr:.1f}%",
     )
 
 
