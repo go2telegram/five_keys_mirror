@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 from typing import Iterable, Sequence
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
+from app.config import settings
 from app.keyboards import kb_actions, kb_back_home
 from app.utils.image_resolver import resolve_media_reference
 from app.utils_media import fetch_image_as_file
@@ -16,6 +18,37 @@ from app.utils_media import fetch_image_as_file
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
 MAX_MEDIA = 3
+DEFAULT_ORDER_BASE = "https://shop.vilavi.com/Item/{product_id}"
+
+
+def build_order_link(product_id: str, utm_category: str | None, *, campaign: str = "ai_plan") -> str:
+    """Compose a Velavie order link with consistent UTM parameters."""
+
+    base = settings.VILAVI_ORDER_NO_REG or ""
+    if base:
+        formatted = base.replace("{product_id}", str(product_id)).replace("{id}", str(product_id))
+    else:
+        formatted = ""
+
+    if not formatted:
+        landing = settings.velavie_url
+        if landing:
+            if "{product_id}" in landing or "{id}" in landing:
+                formatted = landing.replace("{product_id}", str(product_id)).replace("{id}", str(product_id))
+            else:
+                landing = landing.rstrip("/")
+                formatted = f"{landing}/Item/{product_id}"
+        else:
+            formatted = DEFAULT_ORDER_BASE.format(product_id=product_id)
+
+    parsed = urlparse(formatted)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.setdefault("utm_source", "bot")
+    query.setdefault("utm_medium", "telegram")
+    query["utm_campaign"] = campaign
+    query["utm_content"] = str(utm_category or campaign)
+    rebuilt = parsed._replace(query=urlencode(query))
+    return urlunparse(rebuilt)
 
 
 def _resolve_catalog_product(code: str) -> dict | None:
@@ -243,4 +276,10 @@ def catalog_summary(goal: str | None = None) -> list[str]:
     return result
 
 
-__all__ = ["catalog_summary", "prepare_cards", "render_product_text", "send_product_cards"]
+__all__ = [
+    "build_order_link",
+    "catalog_summary",
+    "prepare_cards",
+    "render_product_text",
+    "send_product_cards",
+]

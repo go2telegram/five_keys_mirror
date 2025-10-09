@@ -72,3 +72,12 @@ async def delete(session: AsyncSession, user_id: int) -> None:
         return
     await session.delete(subscription)
     await session.flush()
+
+
+async def active_user_ids(session: AsyncSession) -> list[int]:
+    """Return identifiers of users with an active subscription."""
+
+    now = datetime.now(timezone.utc)
+    stmt = select(Subscription.user_id).where(Subscription.until > now)
+    result = await session.execute(stmt)
+    return [int(row[0]) for row in result.all() if row[0] is not None]

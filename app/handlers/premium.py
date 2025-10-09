@@ -1,14 +1,42 @@
-from app.storage import commit_safely
+from functools import wraps
+from typing import Awaitable, Callable, TypeVar
+
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
-from app.utils import safe_edit_text
+from app.reco.ai_reasoner import build_ai_plan
+from app.storage import commit_safely
+from app.utils import safe_edit_text, split_md
 
 router = Router(name="premium")
+
+MessageHandler = TypeVar("MessageHandler", bound=Callable[..., Awaitable[None]])
+
+
+def premium_only(handler: MessageHandler) -> MessageHandler:
+    @wraps(handler)
+    async def wrapper(message: Message, *args, **kwargs):
+        user = getattr(message, "from_user", None)
+        user_id = getattr(user, "id", None)
+        if user_id is None:
+            await message.answer("🔒 Команда доступна только подписчикам MITO Premium.")
+            return
+
+        async with compat_session(session_scope) as session:
+            is_active, _ = await subscriptions_repo.is_active(session, user_id)
+
+        if not is_active:
+            await message.answer("🔒 Команда доступна только подписчикам MITO Premium.")
+            return
+
+        return await handler(message, *args, **kwargs)
+
+    return wrapper  # type: ignore[return-value]
 
 BASIC_LINKS = [
     ("МИТОlife (новости)", "https://t.me/c/1858905974/3331"),
@@ -75,3 +103,16 @@ async def premium_menu(c: CallbackQuery):
             "💎 MITO Pro — полный доступ:",
             _kb_links(PRO_LINKS),
         )
+
+
+@router.message(Command("ai_plan"))
+@premium_only
+async def ai_plan_cmd(m: Message):
+    await m.answer("⏳ Собираю твой план на неделю…")
+    text = await build_ai_plan(m.from_user.id, "7d")
+    for chunk in split_md(text, 3500):
+        await m.answer(chunk, parse_mode="Markdown")
+
+    async with compat_session(session_scope) as session:
+        await events_repo.log(session, m.from_user.id, "plan_generated", {"source": "command"})
+        await commit_safely(session)
