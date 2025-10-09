@@ -26,6 +26,7 @@ def test_card_actions_keyboard_contains_core_buttons():
     markup = kb_actions(cards, back_cb="calc:menu")
     flat = [btn for row in markup.inline_keyboard for btn in row]
     assert any(btn.url for btn in flat if "Купить" in btn.text)
+    assert any(getattr(btn, "callback_data", None) == "cart:add:T8_BLEND" for btn in flat)
     assert any(getattr(btn, "callback_data", None) == "report:last" for btn in flat)
     discount_buttons = [btn for btn in flat if "Заказать" in btn.text]
     assert discount_buttons
