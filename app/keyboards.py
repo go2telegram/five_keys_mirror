@@ -13,13 +13,13 @@ def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")
-    kb.button(text="🎯 Персональные рекомендации", callback_data="pick:menu")
+    kb.button(text="🎯 Персональные", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
     kb.button(text="💎 Премиум-доступ", callback_data="menu:premium")
     kb.button(text="👤 Профиль", callback_data="profile:open")
     kb.button(text="ℹ️ Помощь", callback_data="menu:help")
 
-    kb.adjust(2, 2, 2)
+    kb.adjust(3, 3)
     return kb.as_markup()
 
 

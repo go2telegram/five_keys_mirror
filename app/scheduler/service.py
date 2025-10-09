@@ -1,4 +1,3 @@
-# app/scheduler/service.py
 import asyncio
 import logging
 
