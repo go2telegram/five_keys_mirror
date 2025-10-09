@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import logging
 from typing import Optional, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Subscription
+from app.services import premium_metrics
 
 
 def _ensure_aware(value: datetime) -> datetime:
@@ -38,6 +40,8 @@ async def set_plan(
     else:
         until = _ensure_aware(until)
 
+    is_new = subscription is None
+
     if subscription is None:
         subscription = Subscription(user_id=user_id, plan=plan, since=now, until=until)
         session.add(subscription)
@@ -47,6 +51,11 @@ async def set_plan(
         subscription.until = until
 
     await session.flush()
+    if is_new:
+        try:
+            premium_metrics.record_new_subscription()
+        except Exception:
+            logging.getLogger("premium-metrics").warning("failed to update new_subs metric", exc_info=True)
     return subscription
 
 

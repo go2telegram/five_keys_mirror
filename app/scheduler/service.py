@@ -9,6 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
 from app.scheduler.jobs import send_nudges, send_retention_reminders
+from app.services.weekly_ai_plan import weekly_ai_plan_job
 
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -45,6 +46,21 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         max_instances=1,
     )
 
+    try:
+        weekly_trigger = _parse_weekly_spec(getattr(settings, "WEEKLY_PLAN_CRON", ""))
+    except ValueError:
+        logging.getLogger("scheduler").warning("invalid WEEKLY_PLAN_CRON, falling back to Monday 10:00")
+        weekly_trigger = CronTrigger(day_of_week="mon", hour=10, minute=0)
+    scheduler.add_job(
+        weekly_ai_plan_job,
+        trigger=weekly_trigger,
+        args=[bot, None],
+        name="weekly_ai_plan",
+        misfire_grace_time=900,
+        coalesce=True,
+        max_instances=1,
+    )
+
     if getattr(settings, "RETENTION_ENABLED", False):
         scheduler.add_job(
             send_retention_reminders,
@@ -65,3 +81,23 @@ async def _log_heartbeat() -> None:
     loop = asyncio.get_running_loop()
     pending = sum(1 for task in asyncio.all_tasks(loop) if not task.done())
     logging.getLogger("heartbeat").info("heartbeat alive tz=%s pending_tasks=%s", settings.TIMEZONE, pending)
+
+
+def _parse_weekly_spec(spec: str | None) -> CronTrigger:
+    if not spec:
+        return CronTrigger(day_of_week="mon", hour=10, minute=0)
+    day_part, _, time_part = spec.partition("@")
+    day = day_part.strip() or "mon"
+    hour = 10
+    minute = 0
+    time_part = time_part.strip() or "10"
+    if ":" in time_part:
+        hour_part, minute_part = time_part.split(":", 1)
+    else:
+        hour_part, minute_part = time_part, "0"
+    try:
+        hour = int(hour_part)
+        minute = int(minute_part)
+    except ValueError as exc:
+        raise ValueError("invalid weekly cron time") from exc
+    return CronTrigger(day_of_week=day, hour=hour, minute=minute)

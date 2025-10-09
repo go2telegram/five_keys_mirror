@@ -2,16 +2,22 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import logging
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.repo import events as events_repo
+from app.repo import profiles as profiles_repo
 from app.repo import subscriptions as subscriptions_repo
+from app.services import premium_metrics
+from app.services.plan_storage import archive_plan
 
 log = logging.getLogger("weekly-plan")
 
@@ -22,6 +28,7 @@ class PlanPayload:
 
     text: str
     recommendations: Sequence[str]
+    plan_json: dict[str, Any] | None = None
 
     def render(self) -> str:
         if not self.recommendations:
@@ -36,6 +43,7 @@ async def build_ai_plan(profile: dict | None = None) -> PlanPayload:
     profile = profile or {}
     focus = profile.get("focus", "энергии")
     tone = profile.get("tone", "спокойный")
+    goals = list(profile.get("goals", []))
     text = (
         "🧠 Премиум-план на неделю\n"
         f"Фокус: повышение {focus}. Тон: {tone}.\n"
@@ -49,7 +57,20 @@ async def build_ai_plan(profile: dict | None = None) -> PlanPayload:
     ]
     if profile.get("need_short"):
         recs = recs[:3]
-    return PlanPayload(text=text, recommendations=recs)
+    generated_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    plan_json = {
+        "title": "AI-план на неделю",
+        "summary": text,
+        "recommendations": list(recs),
+        "focus": focus,
+        "tone": tone,
+        "goals": goals,
+        "profile": deepcopy(profile),
+        "generated_at": generated_at,
+        "source": profile.get("source", "auto"),
+        "model": getattr(settings, "AI_PLAN_MODEL", "gpt-4o-mini"),
+    }
+    return PlanPayload(text=text, recommendations=recs, plan_json=plan_json)
 
 
 def _keyboard() -> InlineKeyboardMarkup:
@@ -80,13 +101,29 @@ async def weekly_ai_plan_job(
             plan = await plan_builder(profile)
             deliveries.append((subscription.user_id, plan))
 
+        premium_metrics.set_active_subs(len(deliveries))
+
         for user_id, plan in deliveries:
             text = plan.render()
+            plan_json = deepcopy(plan.plan_json or {})
+            plan_json.setdefault("recommendations", list(plan.recommendations))
+            plan_json.setdefault("summary", plan.text)
+            plan_json.setdefault("goals", [])
+            plan_json["source"] = plan_json.get("source") or "weekly"
             try:
                 await bot.send_message(user_id, text, reply_markup=_keyboard())
             except Exception:  # pragma: no cover - network errors mocked in tests
                 log.warning("weekly plan delivery failed", exc_info=True)
                 continue
+            try:
+                await profiles_repo.save_plan(session, user_id, plan_json)
+            except Exception:
+                log.warning("failed to persist plan in profile", exc_info=True)
+            try:
+                archive_plan(user_id, plan_json)
+            except Exception:
+                log.warning("failed to archive plan", exc_info=True)
+            premium_metrics.record_ai_plan(len(text))
             await events_repo.log(
                 session,
                 user_id,
