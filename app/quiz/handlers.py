@@ -9,11 +9,13 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .engine import (
-    ANSWER_PREFIX,
+    QuizCallbackPayload,
     answer_callback,
-    back_callback,
+    build_nav_callback_data,
     list_quizzes,
     load_quiz,
+    navigation_callback,
+    parse_callback_data,
     start_quiz,
 )
 
@@ -29,7 +31,10 @@ async def command_tests(message: Message) -> None:
 
     kb = InlineKeyboardBuilder()
     for quiz in quizzes:
-        kb.button(text=quiz.title, callback_data=f"tests:{quiz.name}")
+        kb.button(
+            text=quiz.title,
+            callback_data=build_nav_callback_data(quiz.name, "next"),
+        )
     kb.adjust(1)
 
     titles = "\n".join(f"• {quiz.title}" for quiz in quizzes)
@@ -56,34 +61,14 @@ async def command_test(message: Message, command: CommandObject, state: FSMConte
     await start_quiz(message, state, name)
 
 
-@router.callback_query(F.data.startswith("tests:"))
-async def quiz_callback(call: CallbackQuery, state: FSMContext) -> None:
-    data = call.data or ""
-    if data.startswith(f"{ANSWER_PREFIX}:"):
-        return
-    if data.startswith("tests:back:"):
-        return
-
-    _, _, name = data.partition(":")
-    name = name.strip().lower()
-    if not name:
-        await call.answer()
+@router.callback_query(F.data.startswith("quiz:"))
+async def quiz_callbacks(call: CallbackQuery, state: FSMContext) -> None:
+    payload: QuizCallbackPayload | None = parse_callback_data(call.data)
+    if not payload:
+        await call.answer("Кнопка не распознана", show_alert=True)
         return
 
-    try:
-        load_quiz(name)
-    except FileNotFoundError:
-        await call.answer("Тест недоступен", show_alert=True)
-        return
-
-    await start_quiz(call, state, name)
-
-
-@router.callback_query(F.data.startswith(f"{ANSWER_PREFIX}:"))
-async def quiz_answer(call: CallbackQuery, state: FSMContext) -> None:
-    await answer_callback(call, state)
-
-
-@router.callback_query(F.data.startswith("tests:back:"))
-async def quiz_back(call: CallbackQuery, state: FSMContext) -> None:
-    await back_callback(call, state)
+    if payload.kind == "answer":
+        await answer_callback(call, state, payload)
+    else:
+        await navigation_callback(call, state, payload)

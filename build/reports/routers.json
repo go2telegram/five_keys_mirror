@@ -1,0 +1,1237 @@
+[
+  {
+    "name": "startup",
+    "handlers_count": 0,
+    "patterns": []
+  },
+  {
+    "name": "start",
+    "handlers_count": 12,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.start.start_safe",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.version_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.panel_command",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.start.onboarding_energy",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.onboarding_recommend",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.onboarding_recommend_full",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.onboarding_register",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.menu_tests",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.menu_premium",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.menu_help",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.notify_yes",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.start.notify_no",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "catalog",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.catalog.handlers.catalog_command",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.catalog.handlers.catalog_menu_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.catalog.handlers.catalog_view_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb1e54d0",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_menu.quiz_menu",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb0162d0",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.quiz.handlers.command_tests",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.quiz.handlers.command_test",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.quiz.handlers.quiz_callbacks",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb12c650",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_energy.quiz_energy_start",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "quiz_deficits",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_deficits.quiz_deficits_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_deficits.quiz_deficits_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb1dd0d0",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_immunity.quiz_immunity_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_immunity.quiz_immunity_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb1d0710",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_gut.quiz_gut_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_gut.quiz_gut_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb1fafd0",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_sleep.quiz_sleep_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_sleep.quiz_sleep_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb207e90",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_stress.quiz_stress_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_stress.quiz_stress_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "quiz_stress2",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_stress2.quiz_stress2_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_stress2.quiz_stress2_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "quiz_skin_joint",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.quiz_skin_joint.quiz_skin_joint_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.quiz_skin_joint.quiz_skin_joint_step",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade6dc1a90",
+    "handlers_count": 4,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.calc.handle_calc_message",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.calc.calc_menu",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc.calc_menu_shortcut",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc.calc_msd",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "calc_unified",
+    "handlers_count": 7,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.calc_unified.<lambda>",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc_unified.<lambda>",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc_unified.<lambda>",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc_unified.<lambda>",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc_unified._dispatch_message",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.calc_unified._entry_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.calc_unified._dispatch_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade6516610",
+    "handlers_count": 8,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.picker.pick_menu",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_goal",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_age",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_life",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_level",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_allergies",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_season",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.picker.pick_finalize",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddafcebd0",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.reg.reg_open",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb426c50",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.report.pdf_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.report.pdf_last_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade65d6090",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.assistant.assistant_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade64ed210",
+    "handlers_count": 6,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.lead.lead_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.lead.lead_name",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.lead.lead_phone",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.lead.lead_done",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.lead.lead_start",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.lead.lead_cancel_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7faddb21e510",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.referral.ref_menu_msg",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.referral.ref_menu_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.referral.ref_copy",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "premium_center",
+    "handlers_count": 16,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.premium_center.premium_center_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.track_water",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.track_sleep",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.track_stress",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.progress_chart",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_report",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_report_img",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.premium_center.premium_center_entry",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_back",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_plan",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_refresh",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_progress",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_edit_goals",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_goal_toggle",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_goal_cancel",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium_center.premium_center_goal_save",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "premium",
+    "handlers_count": 8,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.premium.premium_info_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.premium_info_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.buy_premium_command",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.premium.premium_info_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.premium_info_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.premium_buy_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.premium_cta_open",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.premium.premium_menu",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "profile",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.profile.profile_open",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "subscription",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.subscription.sub_menu",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.subscription.sub_check",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.subscription.sub_renew",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade64fb010",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.navigator.nav_root",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.navigator.nav_category",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.navigator.nav_tests",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "analytics",
+    "handlers_count": 3,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.analytics.funnel_report",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.analytics.cohort_report",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.analytics.ctr_report",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "notify",
+    "handlers_count": 6,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.notify.notify_on_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.notify.notify_off_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.notify.notify_status_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.notify.notify_status_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.notify.notify_on_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.notify.notify_off_cb",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "commerce",
+    "handlers_count": 9,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.commerce.cart_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.cart_add_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.cart_clear_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.coupon_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.checkout_command",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.orders_report",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.mrr_report",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.commerce.cart_add_callback",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.commerce.cart_add_bundle",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "0x7fade6de8910",
+    "handlers_count": 8,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.admin.stats",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.leads_list",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.leads_csv",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.debug_callbacks",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.routers_dump",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.ci_report_cmd",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.doctor_db",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin.catalog_report",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "admin_audit",
+    "handlers_count": 2,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.admin_audit.handle_self_audit",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.admin_audit.handle_self_audit_full",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "admin_crud",
+    "handlers_count": 9,
+    "patterns": [
+      {
+        "event": "message",
+        "handlers": [
+          {
+            "callback": "app.handlers.admin_crud.admin_help",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.list_users",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.user_card",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.sub_get",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.sub_set",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.sub_del",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.refs_list",
+            "filters": [
+              "FilterObject"
+            ]
+          },
+          {
+            "callback": "app.handlers.admin_crud.ref_convert",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      },
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.admin_crud.handle_callbacks",
+            "filters": [
+              "FilterObject"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "callback_fallback",
+    "handlers_count": 1,
+    "patterns": [
+      {
+        "event": "callback_query",
+        "handlers": [
+          {
+            "callback": "app.handlers.callback_fallback.callback_catch_all",
+            "filters": []
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -53,7 +53,7 @@ questions:
     text: "Есть ли расслабляющий ритуал перед сном (ванна, чтение, дыхание)?"
     image: "sleep/q4.png"
     options:
-      - key: yes
+      - key: "yes"
         text: "Да, регулярно"
         score: 0
         tags: ["sleep_support"]

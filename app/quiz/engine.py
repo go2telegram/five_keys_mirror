@@ -9,7 +9,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence
+import re
+import time
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 import yaml
 from aiogram.exceptions import TelegramBadRequest
@@ -21,13 +23,23 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.content.overrides import load_quiz_override
 from app.content.overrides.quiz_merge import apply_quiz_override
 from app.reco.ai_reasoner import ai_tip_for_quiz
-from app.utils_media import fetch_image_as_file
+
+if TYPE_CHECKING:  # pragma: no cover - import only for typing
+    from app.utils_media import fetch_image_as_file
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(__file__).resolve().parent / "data"
 IMAGE_ROOT = PROJECT_ROOT / "app" / "static" / "images" / "quiz"
 
-ANSWER_PREFIX = "tests:answer"
+QUIZ_CALLBACK_PREFIX = "quiz"
+QUIZ_NAV_ACTIONS: set[str] = {"next", "prev", "finish", "home"}
+QUIZ_TIMEOUT_SECONDS = 15 * 60
+OPTION_KEY_PATTERN = re.compile(r"^[a-z0-9_-]+$")
+CALLBACK_RE = re.compile(
+    r"^quiz:(?P<name>[a-z0-9_-]+):"
+    r"(?:(?:q:(?P<qid>[a-zA-Z0-9_-]+):ans:(?P<akey>[a-z0-9_-]+))|"
+    r"nav:(?P<action>next|prev|finish|home))$"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +121,15 @@ class QuizHooks:
     ) = None
 
 
+@dataclass(frozen=True)
+class QuizCallbackPayload:
+    name: str
+    kind: Literal["answer", "nav"]
+    question_id: str | None = None
+    answer_key: str | None = None
+    action: str | None = None
+
+
 QUIZ_HOOKS: dict[str, QuizHooks] = {}
 
 
@@ -116,6 +137,43 @@ def register_quiz_hooks(name: str, hooks: QuizHooks) -> None:
     """Register custom hooks for a quiz definition."""
 
     QUIZ_HOOKS[name] = hooks
+
+
+def parse_callback_data(data: str | None) -> QuizCallbackPayload | None:
+    if not data:
+        return None
+
+    match = CALLBACK_RE.fullmatch(data)
+    if not match:
+        return None
+
+    name = match.group("name")
+    action = match.group("action")
+    if action:
+        return QuizCallbackPayload(name=name, kind="nav", action=action)
+
+    question_id = match.group("qid")
+    answer_key = match.group("akey")
+    if not question_id or not answer_key:
+        return None
+    return QuizCallbackPayload(
+        name=name,
+        kind="answer",
+        question_id=question_id,
+        answer_key=answer_key,
+    )
+
+
+def build_answer_callback_data(name: str, question_id: str, option_key: str) -> str:
+    if not OPTION_KEY_PATTERN.fullmatch(option_key):
+        raise ValueError(f"Invalid option key {option_key!r}")
+    return f"{QUIZ_CALLBACK_PREFIX}:{name}:q:{question_id}:ans:{option_key}"
+
+
+def build_nav_callback_data(name: str, action: str) -> str:
+    if action not in QUIZ_NAV_ACTIONS:
+        raise ValueError(f"Unsupported navigation action: {action}")
+    return f"{QUIZ_CALLBACK_PREFIX}:{name}:nav:{action}"
 
 
 @lru_cache(maxsize=32)
@@ -171,6 +229,10 @@ def list_quizzes() -> list[QuizDefinition]:
     return definitions
 
 
+def _now() -> float:
+    return time.time()
+
+
 async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: str) -> None:
     """Initialize quiz state and send the first question."""
 
@@ -180,92 +242,116 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
     if message is None:
         return
 
-    if isinstance(entry, CallbackQuery):
-        await entry.answer()
+    if hasattr(entry, "message") and hasattr(entry, "answer"):
+        with suppress(Exception):
+            await entry.answer()
 
     await state.clear()
+    await state.update_data(quiz=name)
+
     await state.set_state(_question_state(0))
-    await state.update_data(
-        quiz=name,
+
+    await _send_cover(message, definition)
+    question_message = await _send_question(message, definition, 0)
+
+    await _record_question_state(
+        state,
+        definition=definition,
         index=0,
+        message=question_message,
         score=0,
         tags=[],
         answers={},
     )
 
-    await _send_cover(message, definition)
-    await _send_question(message, definition, 0)
+    if hasattr(entry, "message"):
+        message_to_delete = getattr(entry, "message", None)
+        if message_to_delete is not None:
+            with suppress(Exception):
+                await message_to_delete.delete()
 
-    if isinstance(entry, CallbackQuery):
-        with suppress(Exception):
-            await entry.message.delete()
 
-
-async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
+async def answer_callback(
+    call: CallbackQuery,
+    state: FSMContext,
+    payload: QuizCallbackPayload | None = None,
+) -> None:
     """Handle answer button presses for quiz questions."""
 
-    if not call.data:
+    payload = payload or parse_callback_data(call.data)
+    if not payload or payload.kind != "answer":
         return
 
-    parts = call.data.split(":")
-    if len(parts) != 5 or parts[0] != "tests" or parts[1] != "answer":
-        return
-
-    _, _, quiz_name, question_idx_raw, option_idx_raw = parts
-
-    try:
-        question_idx = int(question_idx_raw)
-        option_idx = int(option_idx_raw)
-    except ValueError:
+    message = call.message
+    if message is None:
         await call.answer()
         return
 
     data = await state.get_data()
-    active_quiz = data.get("quiz")
-    if active_quiz != quiz_name:
+    quiz_name = payload.name
+    if data.get("quiz") != quiz_name:
         await call.answer()
         return
 
     try:
         definition = load_quiz(quiz_name)
     except FileNotFoundError:
-        await call.answer("Тест недоступен")
+        await call.answer("Тест недоступен", show_alert=True)
         return
 
     questions = definition.questions
-    if not (0 <= question_idx < len(questions)):
-        await call.answer()
-        return
-
-    question = questions[question_idx]
-    if not (0 <= option_idx < len(question.options)):
-        await call.answer()
-        return
-
     current_index = int(data.get("index", 0))
-    if question_idx != current_index:
+    if not (0 <= current_index < len(questions)):
         await call.answer()
         return
 
-    option = question.options[option_idx]
+    expected_state = f"{QuizSession.__name__}:Q{current_index + 1}"
+    current_state = await state.get_state()
+    if not current_state or not current_state.endswith(expected_state):
+        await call.answer()
+        return
+
+    current_question = questions[current_index]
+    if payload.question_id and current_question.id != payload.question_id:
+        await call.answer()
+        return
+
+    stored_message_id = data.get("message_id")
+    if stored_message_id and stored_message_id != getattr(message, "message_id", None):
+        await call.answer()
+        return
+
+    asked_at_raw = data.get("asked_at")
+    if asked_at_raw and _now() - float(asked_at_raw) > QUIZ_TIMEOUT_SECONDS:
+        await _handle_step_timeout(call, state, definition)
+        return
+
+    option = next(
+        (candidate for candidate in current_question.options if candidate.key == payload.answer_key),
+        None,
+    )
+    if option is None:
+        await call.answer()
+        return
 
     total_score = int(data.get("score", 0)) + option.score
     tags: list[str] = list(data.get("tags", []))
     tags.extend(option.tags)
-    answer_keys: dict[str, str] = dict(data.get("answers", {}))
-    answer_keys[question.id] = option.key
+    tags = _unique(tags)
+    answers: dict[str, str] = dict(data.get("answers", {}))
+    answers[current_question.id] = option.key
 
-    next_index = question_idx + 1
+    next_index = current_index + 1
 
     await call.answer()
 
     if next_index >= len(questions):
         threshold = definition.pick_threshold(total_score)
-        chosen_options = _materialize_answers(definition, answer_keys)
+        chosen_options = _materialize_answers(definition, answers)
         result_context = QuizResultContext(
             total_score=total_score,
             chosen_options=chosen_options,
-            collected_tags=_unique(tags),
+            collected_tags=tags,
             threshold=threshold,
             origin=call,
         )
@@ -276,7 +362,6 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
             user_id = call.from_user.id if call.from_user else 0
             handled = await hooks.on_finish(user_id, definition, result_context)
 
-        message = call.message
         tip: str | None = None
         if message:
             tip_tags = result_context.collected_tags or result_context.threshold.tags
@@ -298,69 +383,114 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
 
         await state.clear()
         with suppress(Exception):
-            if call.message:
-                await call.message.delete()
+            await message.delete()
         return
 
-    await state.update_data(
+    next_message: Message | None = None
+    if message:
+        next_message = await _send_question(message, definition, next_index)
+        with suppress(Exception):
+            await message.delete()
+
+    await _record_question_state(
+        state,
+        definition=definition,
+        index=next_index,
+        message=next_message,
         score=total_score,
         tags=tags,
-        answers=answer_keys,
-        index=next_index,
+        answers=answers,
     )
-    await state.set_state(_question_state(next_index))
-    if call.message:
-        await _send_question(call.message, definition, next_index)
-        with suppress(Exception):
-            await call.message.delete()
 
 
-async def back_callback(call: CallbackQuery, state: FSMContext) -> None:
+async def back_callback(
+    call: CallbackQuery,
+    state: FSMContext,
+    payload: QuizCallbackPayload | None = None,
+) -> None:
     """Handle "back" navigation within an active quiz."""
 
-    if not call.data or not call.data.startswith("tests:back:"):
+    payload = payload or parse_callback_data(call.data)
+    if not payload or payload.kind != "nav" or payload.action != "prev":
         return
 
-    parts = call.data.split(":")
-    if len(parts) != 4:
-        return
-
-    _, _, quiz_name, current_idx_raw = parts
-    try:
-        current_idx = int(current_idx_raw)
-    except ValueError:
+    message = call.message
+    if message is None:
         await call.answer()
         return
 
     data = await state.get_data()
+    quiz_name = payload.name
     if data.get("quiz") != quiz_name:
         await call.answer()
         return
 
-    if current_idx <= 0:
+    current_index = int(data.get("index", 0))
+    if current_index <= 0:
         await call.answer()
         return
 
     try:
         definition = load_quiz(quiz_name)
     except FileNotFoundError:
-        await call.answer("Тест недоступен")
+        await call.answer("Тест недоступен", show_alert=True)
         return
 
-    answers = dict(data.get("answers", {}))
-    prev_index = current_idx - 1
-    question = definition.questions[prev_index]
-    answers.pop(question.id, None)
+    stored_message_id = data.get("message_id")
+    if stored_message_id and stored_message_id != getattr(message, "message_id", None):
+        await call.answer()
+        return
+
+    asked_at_raw = data.get("asked_at")
+    if asked_at_raw and _now() - float(asked_at_raw) > QUIZ_TIMEOUT_SECONDS:
+        await _handle_step_timeout(call, state, definition)
+        return
+
+    answers: dict[str, str] = dict(data.get("answers", {}))
+    prev_index = current_index - 1
+    if not (0 <= prev_index < len(definition.questions)):
+        await call.answer()
+        return
+
+    previous_question = definition.questions[prev_index]
+    answers.pop(previous_question.id, None)
     score, tags = _recalculate_progress(definition, answers)
 
-    await state.update_data(index=prev_index, answers=answers, score=score, tags=tags)
-    await state.set_state(_question_state(prev_index))
+    prev_message = await _send_question(message, definition, prev_index)
+    with suppress(Exception):
+        await message.delete()
+
+    await _record_question_state(
+        state,
+        definition=definition,
+        index=prev_index,
+        message=prev_message,
+        score=score,
+        tags=tags,
+        answers=answers,
+    )
 
     await call.answer()
-    if call.message:
-        await _send_question(call.message, definition, prev_index)
-        with suppress(Exception):
-            await call.message.delete()
+
+
+async def navigation_callback(
+    call: CallbackQuery,
+    state: FSMContext,
+    payload: QuizCallbackPayload | None = None,
+) -> None:
+    payload = payload or parse_callback_data(call.data)
+    if not payload or payload.kind != "nav" or not payload.action:
+        return
+
+    action = payload.action
+    if action == "prev":
+        await back_callback(call, state, payload)
+    elif action == "next":
+        await _handle_nav_next(call, state, payload.name)
+    elif action == "home":
+        await _handle_nav_home(call, state, payload.name)
+    elif action == "finish":
+        await _handle_nav_finish(call, state, payload.name)
 
 
 def _parse_question(raw: dict[str, Any]) -> QuizQuestion:
@@ -373,6 +503,18 @@ def _parse_question(raw: dict[str, Any]) -> QuizQuestion:
     options = [_parse_option(opt) for opt in raw.get("options", [])]
     if not options:
         raise ValueError(f"Question {qid} must define answer options")
+
+    seen_keys: set[str] = set()
+    for option in options:
+        if not OPTION_KEY_PATTERN.fullmatch(option.key):
+            raise ValueError(
+                f"Question {qid} option key must match [a-z0-9_-]: {option.key!r}"
+            )
+        if option.key in seen_keys:
+            raise ValueError(
+                f"Question {qid} has duplicate option key: {option.key}"
+            )
+        seen_keys.add(option.key)
 
     return QuizQuestion(id=qid, text=text, options=options, image=image)
 
@@ -417,6 +559,10 @@ def _validate_thresholds(name: str, thresholds: list[QuizThreshold]) -> None:
 def _entry_message(entry: CallbackQuery | Message) -> Message | None:
     if isinstance(entry, CallbackQuery):
         return entry.message
+    if hasattr(entry, "message"):
+        candidate = getattr(entry, "message")
+        if candidate is not None:
+            return candidate
     return entry
 
 
@@ -425,12 +571,15 @@ async def _send_cover(message: Message, definition: QuizDefinition) -> None:
         return
 
     caption = f"{definition.title}\n\nОтветь на вопросы, чтобы получить результат.".strip()
-    if await _send_photo(message, definition.cover, caption):
+    photo_message = await _send_photo(message, definition.cover, caption)
+    if photo_message:
         return
     await message.answer(caption)
 
 
-async def _send_question(message: Message, definition: QuizDefinition, index: int) -> None:
+async def _send_question(
+    message: Message, definition: QuizDefinition, index: int
+) -> Message | None:
     total = len(definition.questions)
     question = definition.questions[index]
 
@@ -439,27 +588,136 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
     text = f"{header}\n\n{prefix}{question.text}" if header else f"{prefix}{question.text}"
 
     kb = InlineKeyboardBuilder()
-    for opt_idx, option in enumerate(question.options):
+    for option in question.options:
         kb.button(
             text=option.text,
-            callback_data=f"{ANSWER_PREFIX}:{definition.name}:{index}:{opt_idx}",
+            callback_data=build_answer_callback_data(
+                definition.name, question.id, option.key
+            ),
         )
     if index > 0:
         kb.button(
             text="⬅️ Назад",
-            callback_data=f"tests:back:{definition.name}:{index}",
+            callback_data=build_nav_callback_data(definition.name, "prev"),
         )
-    kb.button(text="🏠 Домой", callback_data="home:main")
+    kb.button(
+        text="🏠 Домой",
+        callback_data=build_nav_callback_data(definition.name, "home"),
+    )
     kb.adjust(1)
 
-    if await _send_photo(
+    markup = kb.as_markup()
+
+    photo_message = await _send_photo(
         message,
         question.image,
         text,
-        reply_markup=kb.as_markup(),
-    ):
-        return
-    await message.answer(text, reply_markup=kb.as_markup())
+        reply_markup=markup,
+    )
+    if photo_message:
+        return photo_message
+    return await message.answer(text, reply_markup=markup)
+
+
+async def _record_question_state(
+    state: FSMContext,
+    *,
+    definition: QuizDefinition,
+    index: int,
+    message: Message | None,
+    score: int,
+    tags: Sequence[str],
+    answers: dict[str, str],
+) -> None:
+    question = definition.questions[index]
+    await state.update_data(
+        index=index,
+        score=score,
+        tags=list(tags),
+        answers=answers,
+        question_id=question.id,
+        message_id=getattr(message, "message_id", None),
+        asked_at=_now(),
+    )
+    await state.set_state(_question_state(index))
+
+
+async def _handle_step_timeout(
+    call: CallbackQuery, state: FSMContext, definition: QuizDefinition
+) -> None:
+    await state.clear()
+
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="🔁 Начать заново",
+        callback_data=build_nav_callback_data(definition.name, "next"),
+    )
+    builder.button(
+        text="🏠 Домой",
+        callback_data=build_nav_callback_data(definition.name, "home"),
+    )
+    builder.adjust(1)
+
+    message = call.message
+    if message:
+        try:
+            await message.answer(
+                "⏳ Пауза была слишком долгой. Начнём тест заново?",
+                reply_markup=builder.as_markup(),
+            )
+        except Exception:
+            logger.warning("Failed to send quiz timeout prompt", exc_info=True)
+        with suppress(Exception):
+            await message.delete()
+
+    with suppress(Exception):
+        await call.answer("Сессия теста устарела", show_alert=True)
+
+
+async def _handle_nav_next(
+    call: CallbackQuery, state: FSMContext, quiz_name: str
+) -> None:
+    try:
+        await start_quiz(call, state, quiz_name)
+    except FileNotFoundError:
+        with suppress(Exception):
+            await call.answer("Тест недоступен", show_alert=True)
+
+
+async def _handle_nav_home(
+    call: CallbackQuery, state: FSMContext, quiz_name: str
+) -> None:
+    await state.clear()
+
+    message = call.message
+    if message:
+        try:
+            from app.keyboards import kb_main
+
+            text = "🏠 Возвращаемся в главное меню."
+            markup = kb_main()
+        except Exception:
+            logger.warning("Failed to build main keyboard on quiz exit", exc_info=True)
+            text = "🏠 Возвращаемся домой. Нажми /start, чтобы продолжить."
+            markup = None
+
+        try:
+            await message.answer(text, reply_markup=markup)
+        except Exception:
+            logger.warning("Failed to send quiz home message", exc_info=True)
+        with suppress(Exception):
+            await message.delete()
+
+    with suppress(Exception):
+        await call.answer()
+
+
+async def _handle_nav_finish(
+    call: CallbackQuery, state: FSMContext, quiz_name: str
+) -> None:
+    await state.clear()
+    with suppress(Exception):
+        await call.answer("Тест завершён", show_alert=False)
 
 
 async def _send_default_result(
@@ -497,30 +755,30 @@ async def _send_photo(
     caption: str,
     *,
     reply_markup=None,
-) -> bool:
+) -> Message | None:
     if not path_str:
-        return False
+        return None
 
     for source, candidate in _iter_photo_candidates(path_str):
         try:
             if source == "local":
-                await message.answer_photo(
+                return await message.answer_photo(
                     photo=FSInputFile(str(candidate)),
                     caption=caption,
                     reply_markup=reply_markup,
                 )
-                return True
+
+            from app.utils_media import fetch_image_as_file  # local import to avoid cycles
 
             proxy = await fetch_image_as_file(str(candidate))
             if not proxy:
                 continue
 
-            await message.answer_photo(
+            return await message.answer_photo(
                 photo=proxy,
                 caption=caption,
                 reply_markup=reply_markup,
             )
-            return True
         except TelegramBadRequest as exc:
             logger.warning(
                 "Failed to send quiz image %s via %s: %s",
@@ -537,7 +795,7 @@ async def _send_photo(
             )
 
     logger.warning("Quiz image unavailable, using text fallback: %s", path_str)
-    return False
+    return None
 
 
 def build_quiz_image_url(path: str) -> str:
@@ -697,8 +955,7 @@ def _recalculate_progress(
 
 
 __all__ = [
-    "ANSWER_PREFIX",
-    "back_callback",
+    "QuizCallbackPayload",
     "QuizDefinition",
     "QuizHooks",
     "QuizOption",
@@ -706,10 +963,15 @@ __all__ = [
     "QuizResultContext",
     "QuizSession",
     "QuizThreshold",
-    "build_quiz_image_url",
     "answer_callback",
+    "back_callback",
+    "build_answer_callback_data",
+    "build_nav_callback_data",
+    "build_quiz_image_url",
     "list_quizzes",
     "load_quiz",
+    "navigation_callback",
+    "parse_callback_data",
     "register_quiz_hooks",
     "start_quiz",
 ]

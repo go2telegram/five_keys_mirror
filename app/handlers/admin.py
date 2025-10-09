@@ -6,7 +6,7 @@ from typing import Awaitable, Callable, ParamSpec, TypeVar
 from zoneinfo import ZoneInfo
 
 from aiogram import Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.types import BufferedInputFile, FSInputFile, Message
 
 from app.catalog.report import CatalogReportError, get_catalog_report
@@ -25,6 +25,11 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.middlewares import (
+    is_callback_trace_enabled,
+    set_callback_trace_enabled,
+)
+from app.router_map import get_router_map, write_router_map
 
 router = Router()
 
@@ -156,6 +161,56 @@ async def leads_csv(m: Message):
         BufferedInputFile(csv_bytes, filename=fname),
         caption=f"Экспорт лидов ({len(items)})",
     )
+
+
+@router.message(Command("debug_callbacks"))
+async def debug_callbacks(message: Message, command: CommandObject) -> None:
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+
+    arg = (command.args or "").strip().lower() if command else ""
+    current = is_callback_trace_enabled()
+
+    if arg in {"on", "off"}:
+        enabled = arg == "on"
+        set_callback_trace_enabled(enabled)
+        status = "включен" if enabled else "выключен"
+        await message.answer(f"🪪 Callback trace {status}.")
+        return
+
+    status = "включен" if current else "выключен"
+    await message.answer(
+        "ℹ️ Callback trace сейчас {status}. Используй /debug_callbacks on|off.".format(
+            status=status
+        )
+    )
+
+
+@router.message(Command("routers"))
+async def routers_dump(message: Message) -> None:
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+
+    snapshot = get_router_map()
+    if not snapshot:
+        await message.answer("Карта роутеров ещё не собрана.")
+        return
+
+    lines = ["🛣 <b>Router map</b>"]
+    for idx, entry in enumerate(snapshot, start=1):
+        event_counts = ", ".join(
+            f"{event.event}:{len(event.handlers)}" for event in entry.patterns
+        )
+        lines.append(
+            f"{idx}. {entry.name} — {entry.handlers_count} handlers" + (
+                f" ({event_counts})" if event_counts else ""
+            )
+        )
+
+    path = write_router_map(Path("build/reports/routers.json"))
+
+    await message.answer("\n".join(lines))
+    await message.answer_document(FSInputFile(path), caption="Router map JSON")
 
 
 @router.message(Command("ci_report"))
