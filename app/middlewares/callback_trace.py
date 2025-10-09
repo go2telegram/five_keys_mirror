@@ -37,23 +37,31 @@ class CallbackTraceMiddleware(BaseMiddleware):
         router = data.get("event_router")
         router_name = getattr(router, "name", None) or getattr(router, "__class__", None)
         handler_name = getattr(handler, "__qualname__", repr(handler))
-        state_value = None
+
         state: FSMContext | None = data.get("state")
+        state_before = None
         if isinstance(state, FSMContext):
             with contextlib.suppress(Exception):
-                state_value = await state.get_state()
+                state_before = await state.get_state()
 
-        logger.info(
-            "callback trace uid=%s msg=%s data=%r router=%s handler=%s state=%s",
-            getattr(event.from_user, "id", None),
-            getattr(event.message, "message_id", None),
-            event.data,
-            router_name,
-            handler_name,
-            state_value,
-        )
+        try:
+            return await handler(event, data)
+        finally:
+            state_after = state_before
+            if isinstance(state, FSMContext):
+                with contextlib.suppress(Exception):
+                    state_after = await state.get_state()
 
-        return await handler(event, data)
+            logger.info(
+                "callback handled uid=%s msg=%s data=%r router=%s handler=%s state_before=%s state_after=%s",
+                getattr(event.from_user, "id", None),
+                getattr(event.message, "message_id", None),
+                event.data,
+                router_name,
+                handler_name,
+                state_before,
+                state_after,
+            )
 
 
 __all__ = [
