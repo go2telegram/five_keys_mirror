@@ -63,6 +63,8 @@ async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.Log
     monkeypatch.setattr(settings, "DEBUG_COMMANDS", False, raising=False)
     monkeypatch.setattr(settings, "SERVICE_HOST", "127.0.0.1", raising=False)
     monkeypatch.setattr(settings, "HEALTH_PORT", 0, raising=False)
+    monkeypatch.setenv("SERVICE_HOST", "127.0.0.1")
+    monkeypatch.setenv("HEALTH_PORT", "0")
 
     def fake_setup_logging(*_args: Any, **_kwargs: Any) -> None:
         logging.getLogger("startup").info("setup_logging stub invoked")

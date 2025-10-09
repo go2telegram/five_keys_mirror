@@ -1,27 +1,49 @@
+import logging
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
-from reportlab.graphics.barcode import qr
-from reportlab.graphics.shapes import Drawing
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (
-    HRFlowable,
-    ListFlowable,
-    ListItem,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+try:
+    from reportlab.graphics.barcode import qr
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import (
+        HRFlowable,
+        ListFlowable,
+        ListItem,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    REPORTLAB_OK = True
+except Exception:  # pragma: no cover - optional dependency missing
+    REPORTLAB_OK = False
+    qr = None  # type: ignore[assignment]
+    Drawing = Any  # type: ignore[assignment]
+    colors = SimpleNamespace(HexColor=lambda *_a, **_k: "#000000")
+    A4 = (0, 0)
+    ParagraphStyle = Any  # type: ignore[assignment]
+    getSampleStyleSheet = lambda: {}  # type: ignore[assignment]
+    cm = 1.0
+    pdfmetrics = SimpleNamespace(
+        registerFont=lambda *_a, **_k: None,
+        getRegisteredFontNames=lambda: (),
+    )
+    TTFont = object  # type: ignore[assignment]
+    HRFlowable = ListFlowable = ListItem = Paragraph = SimpleDocTemplate = Spacer = Table = TableStyle = object  # type: ignore[assignment]
 
 from app.config import settings
 from app.utils.cards import prepare_cards, render_product_text
+
+log = logging.getLogger(__name__)
 
 FONTS_DIR = Path(__file__).parent / "fonts"
 FONT_CANDIDATES = [
@@ -177,6 +199,10 @@ def build_pdf(
     recommended_products: list[str] | None = None,
     context: str | None = None,
 ) -> bytes:
+    if not REPORTLAB_OK:
+        log.warning("PDF disabled (reportlab missing)")
+        return b""
+
     reg_font, bold_font = _pick_fonts()
 
     buf = BytesIO()

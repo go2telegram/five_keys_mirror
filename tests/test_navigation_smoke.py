@@ -1,8 +1,10 @@
 import asyncio
+from importlib.util import find_spec
 
 import pytest
 
 pytest.importorskip("aiosqlite")
+pytestmark = pytest.mark.skipif(find_spec("reportlab") is None, reason="reportlab not installed")
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
