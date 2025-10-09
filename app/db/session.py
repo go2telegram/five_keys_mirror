@@ -5,16 +5,25 @@ import inspect
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Sequence
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import (
+    MetaData,
+    Table,
+    create_engine,
+    inspect as sa_inspect,
+    text,
+)
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.schema import DropTable
 
 from app.config import settings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _ENGINE_IMPORT_ERROR: Exception | None = None
 _SYNC_DRIVER_REPLACEMENTS = ("+aiosqlite", "+asyncpg")
+_ALEMBIC_TMP_PREFIX = "_alembic_tmp_"
 
 log = logging.getLogger("db")
 
@@ -39,6 +48,54 @@ def _ensure_sqlite_dir(db_url: str) -> None:
         log.info("DB: ensured sqlite dir %s", directory)
     except Exception:
         log.exception("DB: ensure sqlite dir failed")
+
+
+def _list_alembic_tmp_tables_sync(db_url: str) -> list[str]:
+    engine = create_engine(_strip_driver(db_url), future=True)
+    try:
+        with engine.connect() as connection:
+            inspector = sa_inspect(connection)
+            tables = inspector.get_table_names()
+            return [table for table in tables if table.startswith(_ALEMBIC_TMP_PREFIX)]
+    finally:
+        engine.dispose()
+
+
+def _drop_tables_sync(db_url: str, tables: Sequence[str]) -> list[str]:
+    engine = create_engine(_strip_driver(db_url), future=True)
+    metadata = MetaData()
+    dropped: list[str] = []
+    try:
+        with engine.begin() as connection:
+            for table_name in tables:
+                table = Table(table_name, metadata)
+                connection.execute(DropTable(table, if_exists=True))
+                dropped.append(table_name)
+    except SQLAlchemyError:
+        log.exception("DB: dropping stale tables failed")
+    finally:
+        engine.dispose()
+    return dropped
+
+
+async def list_stale_alembic_tables(db_url: str | None = None) -> list[str]:
+    url = db_url or settings.DB_URL
+    try:
+        return await asyncio.to_thread(_list_alembic_tmp_tables_sync, url)
+    except Exception:
+        log.exception("DB: listing stale tables failed")
+        return []
+
+
+async def repair_stale_alembic_tables(db_url: str | None = None) -> list[str]:
+    url = db_url or settings.DB_URL
+    tables = await list_stale_alembic_tables(url)
+    if not tables:
+        return []
+    dropped = await asyncio.to_thread(_drop_tables_sync, url, tables)
+    if dropped:
+        log.warning("DB: removed stale alembic tables: %s", dropped)
+    return dropped
 
 
 def _fetch_revision_sync(db_url: str) -> str | None:
@@ -190,6 +247,9 @@ async def head_revision(db_url: str | None = None) -> str | None:
 async def upgrade_to_head(db_url: str | None = None, *, timeout: float | None = 15.0) -> bool:
     url = db_url or settings.DB_URL
     log.info("DB: alembic upgrade head — start")
+    repaired = await repair_stale_alembic_tables(url)
+    if repaired:
+        log.info("DB: repaired stale tables before migration count=%s", len(repaired))
     task = asyncio.to_thread(_alembic_upgrade_head_sync, url)
     try:
         if timeout is None:

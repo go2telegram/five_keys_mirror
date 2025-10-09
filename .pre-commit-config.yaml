@@ -16,3 +16,10 @@ repos:
       - id: mixed-line-ending
       - id: check-yaml
       - id: check-json
+  - repo: local
+    hooks:
+      - id: prevent-generated-artifacts
+        name: Prevent committing generated artifacts
+        entry: tools/precommit_guard.py
+        language: system
+        pass_filenames: true

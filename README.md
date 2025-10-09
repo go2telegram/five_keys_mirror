@@ -131,6 +131,16 @@ cp .env.example .env
 поэтому убедитесь, что установлен драйвер `aiosqlite` (например, через `pip install -r requirements-dev.txt`).
 Включение Tribute webhook-а опционально: задайте `RUN_TRIBUTE_WEBHOOK=true`, если нужен приём уведомлений от Tribute.
 
+### Dry-run mode для локальных проверок
+
+Когда нужно проверить HTTP-сервисы без подключения к Telegram, запустите бота в «сухом» режиме:
+
+```bash
+DEV_DRY_RUN=1 BOT_TOKEN=dummy python run.py
+```
+
+Сервер поднимет `/ping`, `/metrics` и `/doctor`; запрос `POST /doctor` или `GET /doctor?repair=1` удалит `_alembic_tmp_*` таблицы и позволит повторно прогнать миграции. В продовой среде (`ENVIRONMENT=prod`) отсутствие токена приводит к немедленному завершению старта.
+
 ## Офлайн установка (Windows, Python 3.11)
 
 1) В GitHub Actions запустите workflow **Build offline wheels (win_amd64, py311)** (*Actions → Build offline wheels → Run workflow*), скачайте артефакт `wheels-win_amd64-cp311.zip` и распакуйте его в каталог `./wheels` или любую другую папку (её можно передать через `-WheelsDir` или переменную окружения `WHEELS_DIR`).
@@ -172,6 +182,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update_local.ps1 -Branch main
 - `-NoRunBot` — выполнить обновление без старта `python -m app.main` (удобно для smoke-прогонов).
 
 Скрипт создаёт/активирует `.venv`, подтягивает выбранную ветку (не трогая `wheels/`, `var/`, `logs/`, `dist/`), выполняет офлайн-установку, прогоняет миграции, проверяет БД, снимает вебхук и (если не передан `-NoRunBot`) запускает бота. В конце печатается путь к логу `Log: .\scripts\logs\update_YYYYMMDD_HHMMSS.log`.
+
+Для Linux/macOS добавлен helper `tools/git_clean.sh`, который автоматически делает `git stash`, `git fetch --all --prune`, `git pull --rebase` и возвращает изменения обратно. Это избавляет от ручного `stash/pop` и помогает случайно не закоммитить `app/build_info.py` или временные миграции.
 
 ## Логи и аудит
 
@@ -420,6 +432,12 @@ pytest
    ```
 
 Docker-compose поднимет Postgres, выполнит миграции и запустит бота от non-root пользователя.
+
+## Релизная документация
+
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — пошаговый план выпуска и отката.
+- [docs/ENVIRONMENT_MATRIX.md](docs/ENVIRONMENT_MATRIX.md) — сводка обязательных переменных в разных окружениях.
+- [.github/release-template.md](.github/release-template.md) — шаблон описания GitHub Release с чек-листом self-audit.
 
 ## Структура
 

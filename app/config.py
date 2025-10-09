@@ -3,6 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    ENVIRONMENT: str = "dev"
+    DEV_DRY_RUN: bool = False
     BOT_TOKEN: str = ""
     ADMIN_ID: int = 0
     ADMIN_USER_IDS: list[int] | str = Field(default_factory=list)

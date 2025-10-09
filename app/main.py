@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import errno
 import importlib
+import json
 import logging
 import socket
 import time
@@ -18,7 +19,14 @@ from aiohttp import web
 
 from app import build_info
 from app.config import settings
-from app.db.session import init_db, session_scope
+from app.db.session import (
+    current_revision,
+    head_revision,
+    init_db,
+    list_stale_alembic_tables,
+    repair_stale_alembic_tables,
+    session_scope,
+)
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
@@ -185,10 +193,71 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
+def _should_repair(payload: dict[str, object] | None, request: web.Request) -> bool:
+    candidates = []
+    if payload:
+        candidates.extend(
+            [
+                payload.get("action"),
+                payload.get("repair"),
+            ]
+        )
+    candidates.extend([request.query.get("action"), request.query.get("repair")])
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        if isinstance(candidate, bool):
+            if candidate:
+                return True
+            continue
+        value = str(candidate).strip().lower()
+        if value in {"1", "true", "yes", "repair"}:
+            return True
+    return False
+
+
+async def _handle_doctor(request: web.Request) -> web.Response:
+    payload: dict[str, object] | None = None
+    if request.can_read_body:
+        try:
+            payload = await request.json()
+        except json.JSONDecodeError:
+            payload = None
+        except Exception:
+            logging.getLogger("doctor").exception("doctor: failed to parse payload")
+            payload = None
+
+    wants_repair = _should_repair(payload, request)
+    doctor_log = logging.getLogger("doctor")
+
+    current = await current_revision()
+    head = await head_revision()
+    tmp_tables = await list_stale_alembic_tables()
+    repaired: list[str] = []
+
+    if wants_repair:
+        repaired = await repair_stale_alembic_tables()
+        tmp_tables = await list_stale_alembic_tables()
+        doctor_log.info("doctor repair invoked tables=%s", repaired)
+
+    response_payload = {
+        "status": "ok",
+        "current_revision": current,
+        "head_revision": head,
+        "tmp_tables": tmp_tables,
+        "repaired": repaired,
+        "repair_performed": wants_repair,
+    }
+
+    return web.json_response(response_payload)
+
+
 async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web = web.Application()
     app_web.router.add_get("/ping", _handle_ping)
     app_web.router.add_get("/metrics", _handle_metrics)
+    app_web.router.add_get("/doctor", _handle_doctor)
+    app_web.router.add_post("/doctor", _handle_doctor)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
 
@@ -316,6 +385,28 @@ async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]
     return server, task
 
 
+async def _wait_forever() -> None:
+    stop_event = asyncio.Event()
+    await stop_event.wait()
+
+
+async def _cleanup_service(
+    runner: web.AppRunner | None,
+    site: web.BaseSite | None,
+    dashboard_server: object | None,
+    dashboard_task: asyncio.Task | None,
+) -> None:
+    if site is not None:
+        await site.stop()
+    if runner is not None:
+        await runner.cleanup()
+    if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
+        dashboard_server.should_exit = True
+    if dashboard_task is not None:
+        with contextlib.suppress(asyncio.CancelledError):
+            await dashboard_task
+
+
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     """Register the audit middleware on every dispatcher layer."""
 
@@ -434,9 +525,37 @@ async def main() -> None:
         mark("S2-done: init_db")
         logging.info("current alembic version: %s", revision or "unknown")
 
+    is_prod = str(getattr(settings, "ENVIRONMENT", "")).lower() in {"prod", "production", "live"}
     bot_token = getattr(settings, "BOT_TOKEN", "") or ""
+    dry_run = bool(settings.DEV_DRY_RUN)
+    if dry_run:
+        startup_log.warning("DEV dry-run enabled — Telegram init will be skipped")
     if not bot_token or str(bot_token).startswith("dummy"):
+        if is_prod:
+            startup_log.error("BOT_TOKEN is required in production environment")
+            raise RuntimeError("BOT_TOKEN is required in production environment")
+        dry_run = True
         startup_log.warning("BOT_TOKEN is dummy — skipping Telegram init")
+
+    if dry_run:
+        _log_startup_metadata()
+        runner: web.AppRunner | None = None
+        site: web.BaseSite | None = None
+        dashboard_server: object | None = None
+        dashboard_task: asyncio.Task | None = None
+        try:
+            runner, site = await _setup_service_app()
+            try:
+                dashboard_server, dashboard_task = await _start_dashboard_server()
+            except Exception:
+                startup_log.exception("dashboard startup failed")
+            startup_log.info("DEV dry-run mode active: service endpoints running without Telegram")
+            await _wait_forever()
+        except asyncio.CancelledError:
+            startup_log.info("dry-run shutdown requested")
+            raise
+        finally:
+            await _cleanup_service(runner, site, dashboard_server, dashboard_task)
         return
 
     bot = Bot(
@@ -549,18 +668,10 @@ async def main() -> None:
     finally:
         mark("S9: shutdown sequence")
         logging.info(">>> Polling stopped")
-        if site is not None:
-            await site.stop()
-        if runner is not None:
-            await runner.cleanup()
+        await _cleanup_service(runner, site, dashboard_server, dashboard_task)
         if background_started:
             with contextlib.suppress(Exception):
                 await stop_background_queue()
-        if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
-            dashboard_server.should_exit = True
-        if dashboard_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await dashboard_task
 
 
 if __name__ == "__main__":
