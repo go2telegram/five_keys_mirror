@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -174,10 +175,81 @@ def _render_table(rows: List[Tuple[str, str]]) -> str:
     return body or "<tr><td colspan='3' class='muted'>Нет данных</td></tr>"
 
 
+def _parse_iso_timestamp(value: str | None) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _load_load_history() -> List[Dict[str, Any]]:
+    report_path = Path(__file__).resolve().parent.parent / "build" / "reports" / "load.json"
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        return []
+
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict) and isinstance(payload.get("runs"), list):
+        return payload["runs"]
+    return []
+
+
+def _build_load_chart(history: List[Dict[str, Any]]) -> str:
+    points: List[tuple[datetime, float]] = []
+    for entry in history:
+        if not isinstance(entry, dict):
+            continue
+        timestamp = _parse_iso_timestamp(entry.get("timestamp"))
+        latency_container = entry.get("latency")
+        latency = None
+        if isinstance(latency_container, dict):
+            latency = latency_container.get("p95")
+        if timestamp is None or not isinstance(latency, (int, float)):
+            continue
+        points.append((timestamp, float(latency)))
+
+    if not points:
+        return "<div class='chart-empty'>Нет данных нагрузочного теста</div>"
+
+    points.sort(key=lambda item: item[0])
+    x_values = [point[0].strftime("%Y-%m-%d %H:%M") for point in points]
+    y_values = [point[1] for point in points]
+
+    fig = go.Figure(
+        go.Scatter(
+            x=x_values,
+            y=y_values,
+            mode="lines+markers",
+            line=dict(color="#f97316", width=2),
+            marker=dict(size=6),
+        )
+    )
+    fig.update_layout(
+        title="P95 отклик сервисов",
+        height=360,
+        margin=dict(l=40, r=40, t=60, b=40),
+        paper_bgcolor="#0f172a",
+        plot_bgcolor="#0f172a",
+        font=dict(color="#e2e8f0"),
+        yaxis=dict(title="мс"),
+        xaxis=dict(title="Запуск", tickangle=-35),
+    )
+    return to_html(fig, include_plotlyjs=False, full_html=False)
+
+
 def _render_dashboard_html(context: Dict[str, Any]) -> str:
     quiz_chart = context["quiz_chart"]
     calc_chart = context["calc_chart"]
     ctr_chart = context["ctr_chart"]
+    load_chart = context["load_chart"]
     top_products_rows = _render_table(context["top_products"])
     goal_rows = _render_table(context["catalog_goals"])
     lead_rows_html = "".join(
@@ -319,12 +391,18 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
         <div class=\"metric\">{context['catalog_total']} SKU</div>
         <p class=\"muted\">Обновлено: {context['catalog_updated']}</p>
       </article>
+      <article class=\"card\">
+        <h2>Нагрузочный тест P95</h2>
+        <div class=\"metric\">{context['load_p95']}</div>
+        <p class=\"muted\">Ошибки: {context['load_errors']} · {context['load_timestamp']}</p>
+      </article>
     </section>
 
     <section class=\"charts\">
       <div class=\"card\">{quiz_chart}</div>
       <div class=\"card\">{calc_chart}</div>
       <div class=\"card\">{ctr_chart}</div>
+      <div class=\"card\">{load_chart}</div>
     </section>
 
     <section class=\"cards\">
@@ -398,6 +476,22 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
     calc_chart = _build_bar_chart("Использование калькуляторов", calc_counts, "#ec4899")
     ctr_chart = _build_ctr_gauge(ctr)
 
+    load_history = _load_load_history()
+    load_chart = _build_load_chart(load_history)
+    if load_history:
+        latest_run = load_history[-1]
+        latest_latency = latest_run.get("latency") if isinstance(latest_run, dict) else None
+        p95_value = latest_latency.get("p95") if isinstance(latest_latency, dict) else None
+        errors_value = latest_run.get("errors") if isinstance(latest_run, dict) else None
+        timestamp_value = latest_run.get("timestamp") if isinstance(latest_run, dict) else None
+        load_p95 = f"{p95_value:.0f} ms" if isinstance(p95_value, (int, float)) else "—"
+        load_errors = str(errors_value) if isinstance(errors_value, int) else "—"
+        load_timestamp = _format_dt(_parse_iso_timestamp(timestamp_value))
+    else:
+        load_p95 = "—"
+        load_errors = "—"
+        load_timestamp = "—"
+
     top_products = [(code, str(count)) for code, count in products_counter.most_common(10)]
     catalog_goals = [(goal, str(count)) for goal, count in goal_counter.most_common(10)]
 
@@ -405,6 +499,7 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "quiz_chart": quiz_chart,
         "calc_chart": calc_chart,
         "ctr_chart": ctr_chart,
+        "load_chart": load_chart,
         "leads_total": leads_total,
         "leads_recent": leads_recent,
         "quiz_total": quiz_total,
@@ -416,6 +511,9 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "top_products": top_products,
         "catalog_goals": catalog_goals,
         "recent_leads": recent_leads,
+        "load_p95": load_p95,
+        "load_errors": load_errors,
+        "load_timestamp": load_timestamp,
     }
 
 
