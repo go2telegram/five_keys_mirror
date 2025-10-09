@@ -1,0 +1,31 @@
+name: self-audit
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+jobs:
+  audit:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '/self_audit')
+    runs-on: ubuntu-latest
+    env:
+      BOT_TOKEN: dummy:000
+      SERVICE_HOST: 127.0.0.1
+      HEALTH_PORT: 0
+      NO_NET: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run self-audit
+        run: python tools/self_audit.py --ci --out build/reports/self_audit.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: self-audit-report
+          path: build/reports/*
