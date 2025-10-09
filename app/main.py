@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import html
 import importlib
 import logging
 import socket
@@ -18,7 +19,13 @@ from aiohttp import web
 
 from app import build_info
 from app.config import settings
-from app.db.session import init_db, session_scope
+from app.db.session import (
+    current_revision,
+    head_revision,
+    init_db,
+    session_scope,
+    upgrade_to_head,
+)
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
@@ -70,6 +77,7 @@ ALLOWED_UPDATES = ["message", "callback_query"]
 
 
 log_home = logging.getLogger("home")
+log_doctor = logging.getLogger("doctor")
 startup_log = logging.getLogger("startup")
 
 SERVICE_START_TS = time.time()
@@ -185,10 +193,164 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
+def _render_doctor_page(
+    *,
+    current: str | None,
+    head: str | None,
+    message: str | None,
+    level: str,
+) -> str:
+    current_display = html.escape(current or "unknown")
+    head_display = html.escape(head or "unknown")
+    notice = (
+        f'<div class="notice {level}">{html.escape(message)}</div>'
+        if message
+        else ""
+    )
+    return f"""
+<!DOCTYPE html>
+<html lang=\"ru\">
+  <head>
+    <meta charset=\"utf-8\">
+    <title>five_keys_bot doctor</title>
+    <style>
+      body {{
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        margin: 0;
+        padding: 2.5rem 1.5rem;
+        display: flex;
+        justify-content: center;
+      }}
+      .card {{
+        background: #111827;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -15px rgba(15, 23, 42, 0.8);
+        padding: 2rem;
+        width: min(420px, 100%);
+      }}
+      h1 {{
+        margin-top: 0;
+        font-size: 1.5rem;
+      }}
+      dl {{
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.5rem 1.5rem;
+        margin: 1.5rem 0;
+      }}
+      dt {{
+        font-weight: 600;
+        color: #93c5fd;
+      }}
+      dd {{
+        margin: 0;
+        font-family: "Fira Mono", "SFMono-Regular", ui-monospace, monospace;
+        letter-spacing: 0.02em;
+      }}
+      form {{
+        margin: 0;
+      }}
+      button {{
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #f8fafc;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+      }}
+      button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px -12px rgba(37, 99, 235, 0.9);
+      }}
+      button:active {{
+        transform: translateY(0);
+        box-shadow: none;
+      }}
+      .notice {{
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.25rem;
+        font-weight: 500;
+      }}
+      .notice.success {{
+        background: rgba(34, 197, 94, 0.12);
+        color: #86efac;
+      }}
+      .notice.warn {{
+        background: rgba(245, 158, 11, 0.12);
+        color: #fcd34d;
+      }}
+      .notice.error {{
+        background: rgba(248, 113, 113, 0.12);
+        color: #fca5a5;
+      }}
+    </style>
+  </head>
+  <body>
+    <div class=\"card\">
+      <h1>five_keys_bot doctor</h1>
+      {notice}
+      <dl>
+        <dt>Текущая версия:</dt>
+        <dd>{current_display}</dd>
+        <dt>Последняя миграция:</dt>
+        <dd>{head_display}</dd>
+      </dl>
+      <form method=\"post\">
+        <button type=\"submit\">Применить миграции</button>
+      </form>
+    </div>
+  </body>
+</html>
+"""
+
+
+async def _handle_doctor(request: web.Request) -> web.Response:
+    message: str | None = None
+    level = "success"
+    if request.method == "POST":
+        try:
+            applied = await upgrade_to_head(timeout=None)
+        except Exception:
+            log_doctor.exception("doctor: upgrade failed")
+            applied = False
+        if applied:
+            message = "Миграции успешно применены."
+            level = "success"
+        else:
+            message = "Не удалось применить миграции — проверьте логи."
+            level = "error"
+
+    current = await current_revision()
+    head = await head_revision()
+
+    if message is None:
+        if current is None or head is None:
+            message = "Не удалось определить версию Alembic."
+            level = "error"
+        elif current != head:
+            message = "Текущая версия отличается от head — примените миграции."
+            level = "warn"
+
+    page = _render_doctor_page(
+        current=current,
+        head=head,
+        message=message,
+        level=level if message else "success",
+    )
+    return web.Response(text=page, content_type="text/html")
+
+
 async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web = web.Application()
     app_web.router.add_get("/ping", _handle_ping)
     app_web.router.add_get("/metrics", _handle_metrics)
+    app_web.router.add_get("/doctor", _handle_doctor)
+    app_web.router.add_post("/doctor", _handle_doctor)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
 

@@ -17,6 +17,8 @@ depends_on = None
 
 def upgrade() -> None:
     if _is_sqlite():
+        op.execute("DROP TABLE IF EXISTS _alembic_tmp_referrals")
+        op.execute("DROP INDEX IF EXISTS ix_referrals_user_id")
         op.drop_index("ix_ref_referrer", table_name="referrals")
         op.execute("ALTER TABLE referrals RENAME COLUMN referrer_id TO user_id")
         op.create_index("ix_ref_user", "referrals", ["user_id"], unique=False)
