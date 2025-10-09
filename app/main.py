@@ -22,6 +22,7 @@ from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
     admin_crud as h_admin_crud,
+    analytics as h_analytics,
     commerce as h_commerce,
     assistant as h_assistant,
     calc as h_calc,
@@ -436,6 +437,7 @@ async def main() -> None:
         h_subscription.router,
         h_navigator.router,
         h_report.router,
+        h_analytics.router,
         h_notify.router,
         h_admin.router,
         h_admin_crud.router,

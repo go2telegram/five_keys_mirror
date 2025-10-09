@@ -29,6 +29,7 @@ except ModuleNotFoundError:  # pragma: no cover - tests run without matplotlib
 
 from app.config import settings
 from app.db.session import compat_session, session_scope
+from app.keyboards import kb_premium_cta
 from app.reco.ai_reasoner import edit_ai_plan
 from app.repo import events as events_repo
 from app.repo import habits as habits_repo
@@ -96,11 +97,16 @@ async def _deny_if_not_premium(message: Message | CallbackQuery) -> bool:
         return True
     if await _ensure_premium(user_id):
         return False
-    text = "🔒 Premium-центр доступен только подписчикам MITO Premium."
+    text = (
+        "🔒 Premium-центр доступен только подписчикам MITO Premium.\n"
+        "💎 Узнай подробнее и оформи доступ командой /premium."
+    )
     if isinstance(message, CallbackQuery):
         await message.answer(text, show_alert=True)
+        if message.message:
+            await message.message.answer(text, reply_markup=kb_premium_cta())
     else:
-        await message.answer(text)
+        await message.answer(text, reply_markup=kb_premium_cta())
     return True
 
 
