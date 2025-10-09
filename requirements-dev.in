@@ -1,4 +1,4 @@
-# Development dependencies (compiled from requirements-dev.in)
+# Development and security tooling
 aiosqlite>=0.19
 python-slugify>=8.0
 PyYAML>=6.0
