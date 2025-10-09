@@ -21,6 +21,7 @@ _CACHE_LOCK = asyncio.Lock()
 _MAX_CACHE_ITEMS = 180
 _DEFAULT_TIMEOUT = 8.0
 _DEFAULT_RETRIES = 2
+_FALLBACK_CONTENT_TYPES = {"application/octet-stream", "binary/octet-stream"}
 
 
 async def _get_cached_bytes(url: str) -> bytes | None:
@@ -40,6 +41,15 @@ async def _store_cached_bytes(url: str, data: bytes) -> None:
             _IMAGE_CACHE.popitem(last=False)
 
 
+def _is_supported_content_type(content_type: str | None) -> bool:
+    if not content_type:
+        return False
+    normalized = content_type.split(";", 1)[0].strip().lower()
+    if normalized.startswith("image/"):
+        return True
+    return normalized in _FALLBACK_CONTENT_TYPES
+
+
 async def _download_image(
     url: str,
     *,
@@ -52,7 +62,7 @@ async def _download_image(
         for attempt in range(retries + 1):
             try:
                 async with session.get(url, allow_redirects=True) as response:
-                    content_type = response.headers.get("Content-Type", "")
+                    content_type = response.headers.get("Content-Type")
                     status = response.status
                     if status != 200:
                         LOG.warning(
@@ -65,7 +75,7 @@ async def _download_image(
                             delay = min(delay * 2, 1.0)
                             continue
                         return None
-                    if not content_type.lower().startswith("image/"):
+                    if not _is_supported_content_type(content_type):
                         LOG.warning(
                             "Unexpected content type for %s: %s",
                             url,
@@ -184,9 +194,13 @@ def precache_remote_images(urls: Iterable[str]) -> None:
 def _extract_filename(url: str) -> str:
     name = Path(url).name
     if not name:
-        return "image"
+        return "image.jpg"
     if "?" in name:
-        return name.split("?")[0] or "image"
+        name = name.split("?", 1)[0]
+    if not name:
+        return "image.jpg"
+    if "." not in name:
+        return f"{name}.jpg"
     return name
 
 
