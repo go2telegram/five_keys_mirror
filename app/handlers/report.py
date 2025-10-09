@@ -1,4 +1,5 @@
 # app/handlers/report.py
+import logging
 from datetime import datetime
 
 from aiogram import F, Router
@@ -7,11 +8,13 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
-from app.pdf_report import build_pdf
+from app.pdf_report import REPORTLAB_OK, build_pdf
 from app.repo import events as events_repo
 from app.storage import commit_safely, get_last_plan
 
 router = Router()
+
+log = logging.getLogger(__name__)
 
 
 def _clean_lines(lines: list[str]) -> list[str]:
@@ -22,7 +25,7 @@ def _clean_lines(lines: list[str]) -> list[str]:
     return out
 
 
-def _compose_pdf(plan: dict) -> bytes:
+def _compose_pdf(plan: dict) -> bytes | None:
     title = plan.get("title", "Персональный план")
     context_name = plan.get("context_name", "")
     level = plan.get("level")
@@ -39,6 +42,10 @@ def _compose_pdf(plan: dict) -> bytes:
         "Отчёт носит образовательный характер и не заменяет консультацию врача. "
         "База: сон 7–9 ч, утренний свет, регулярное движение, сбалансированное питание."
     )
+
+    if not REPORTLAB_OK:
+        log.warning("PDF disabled (reportlab missing)")
+        return None
 
     return build_pdf(
         title=title,
@@ -75,6 +82,12 @@ async def pdf_last_cb(c: CallbackQuery):
         return
     await c.answer()
     pdf_bytes = _compose_pdf(plan)
+    if not pdf_bytes:
+        await c.message.answer(
+            "Генератор PDF недоступен на этой сборке.",
+            reply_markup=kb_back_home(),
+        )
+        return
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     await c.message.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
 
@@ -95,5 +108,8 @@ async def pdf_cmd(m: Message):
         await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
         return
     pdf_bytes = _compose_pdf(plan)
+    if not pdf_bytes:
+        await m.answer("Генератор PDF недоступен на этой сборке.")
+        return
     filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     await m.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")

@@ -216,7 +216,7 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
         await _start(site)
     except OSError as exc:
         if getattr(exc, "errno", None) in (errno.EADDRINUSE, 10048) and port != 0:
-            log.warning("port %s busy, retry with ephemeral 0", port)
+            log.warning("port %s busy, bind to ephemeral 0", port)
             site = web.TCPSite(runner, host=host, port=0)
             await _start(site)
         else:
