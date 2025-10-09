@@ -19,6 +19,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.db.types import EncryptedString
+
 
 class Base(DeclarativeBase):
     pass
@@ -45,6 +47,9 @@ class User(Base):
     )
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
+    )
+    profile: Mapped["Profile"] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
 
@@ -118,3 +123,49 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+    __table_args__ = (Index("ix_profiles_updated", "updated"),)
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    phone: Mapped[Optional[str]] = mapped_column(EncryptedString(512), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(EncryptedString(512), nullable=True)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="profile")
+
+
+class QuizResult(Base):
+    __tablename__ = "quiz_results"
+    __table_args__ = (
+        Index("ix_quiz_results_created", "created"),
+        Index("ix_quiz_results_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    quiz_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    result: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class CalculatorResult(Base):
+    __tablename__ = "calculator_results"
+    __table_args__ = (
+        Index("ix_calculator_results_created", "created"),
+        Index("ix_calculator_results_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    calculator: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

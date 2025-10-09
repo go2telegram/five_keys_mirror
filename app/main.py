@@ -30,6 +30,7 @@ from app.handlers import (
     notify as h_notify,
     picker as h_picker,
     premium as h_premium,
+    privacy as h_privacy,
     profile as h_profile,
     quiz_deficits as h_quiz_deficits,
     quiz_energy as h_quiz_energy,
@@ -49,7 +50,7 @@ from app.handlers import (
 )
 from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
-from app.middlewares import AuditMiddleware
+from app.middlewares import AuditMiddleware, RateLimitMiddleware
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
@@ -212,7 +213,10 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
         site = web.TCPSite(runner, host=host, port=port)
         await _start(site)
     except OSError as exc:
-        if getattr(exc, "errno", None) in (errno.EADDRINUSE, 10048) and port != 0:
+        busy_codes = {errno.EADDRINUSE, getattr(errno, "WSAEADDRINUSE", None), 10048}
+        errno_match = getattr(exc, "errno", None)
+        winerror_match = getattr(exc, "winerror", None)
+        if port != 0 and (errno_match in busy_codes or winerror_match in busy_codes):
             log.warning("port %s busy, retry with ephemeral 0", port)
             site = web.TCPSite(runner, host=host, port=0)
             await _start(site)
@@ -285,6 +289,18 @@ def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     dp.callback_query.middleware(audit_middleware)
     startup_log.info("S4: audit middleware registered")
     return audit_middleware
+
+
+def _register_rate_limit_middleware(dp: Dispatcher, whitelist: Iterable[int]) -> RateLimitMiddleware:
+    rate_limit = RateLimitMiddleware(
+        default_limit=10,
+        interval_seconds=30.0,
+        command_limits={"recommend": (3, 30.0), "tests": (3, 30.0)},
+        whitelist=whitelist,
+    )
+    dp.update.outer_middleware(rate_limit)
+    startup_log.info("S4b: rate limit middleware registered whitelist=%s", sorted(whitelist))
+    return rate_limit
 
 
 def _log_startup_metadata() -> None:
@@ -387,6 +403,8 @@ async def main() -> None:
     mark("S3: bot/dispatcher created")
 
     _register_audit_middleware(dp)
+    whitelist = _gather_admin_ids()
+    _register_rate_limit_middleware(dp, whitelist)
     mark("S4: audit middleware registered")
     _log_startup_metadata()
 
@@ -411,6 +429,7 @@ async def main() -> None:
         h_reg.router,
         h_premium.router,
         h_profile.router,
+        h_privacy.router,
         h_referral.router,
         h_subscription.router,
         h_navigator.router,

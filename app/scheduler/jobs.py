@@ -1,11 +1,12 @@
 # app/scheduler/jobs.py
 import datetime as dt
+import logging
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 
 from app.db.session import session_scope
-from app.repo import events as events_repo
+from app.repo import events as events_repo, results as results_repo
 from app.utils_openai import ai_generate
 
 
@@ -35,3 +36,20 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
             await bot.send_message(uid, text)
         except Exception:
             continue
+
+
+async def cleanup_stale_results() -> None:
+    """Remove quiz and calculator results older than 180 days."""
+
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=180)
+    async with session_scope() as session:
+        quiz_deleted = await results_repo.delete_quiz_results_older_than(session, cutoff)
+        calc_deleted = await results_repo.delete_calculator_results_older_than(session, cutoff)
+        await session.commit()
+
+    logging.getLogger("scheduler").info(
+        "cleanup_stale_results cutoff=%s quiz_deleted=%s calc_deleted=%s",
+        cutoff.isoformat(),
+        quiz_deleted,
+        calc_deleted,
+    )

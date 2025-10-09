@@ -1,5 +1,6 @@
 """Profile section handlers."""
 
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -12,6 +13,7 @@ from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import (
     events as events_repo,
+    profiles as profiles_repo,
     referrals as referrals_repo,
     subscriptions as subscriptions_repo,
     users as users_repo,
@@ -19,6 +21,7 @@ from app.repo import (
 from app.utils import safe_edit_text
 
 router = Router(name="profile")
+log = logging.getLogger(__name__)
 
 
 def _format_date(value: datetime | None) -> str:
@@ -70,6 +73,11 @@ async def profile_open(c: CallbackQuery) -> None:
         invited, converted = await referrals_repo.stats_for_referrer(session, user.id)
         plans = await events_repo.recent_plans(session, user.id, limit=3)
         notify_enabled = await _notifications_enabled(session, user.id)
+        profile = None
+        try:
+            profile = await profiles_repo.get(session, user.id)
+        except RuntimeError:
+            log.warning("Failed to decrypt profile for user_id=%s", user.id)
 
     username = f"@{user.username}" if user.username else "—"
     sub_status = "Активна" if is_active and subscription else "Не найдена"
@@ -99,6 +107,15 @@ async def profile_open(c: CallbackQuery) -> None:
             "• Включены" if notify_enabled else "• Выключены",
         ]
     )
+    if profile is not None:
+        lines.extend(
+            [
+                "",
+                "📞 Контакты:",
+                f"• Телефон: {profile.phone or '—'}",
+                f"• Email: {profile.email or '—'}",
+            ]
+        )
 
     markup = _profile_keyboard(notify_enabled).as_markup()
     text = "\n".join(lines)
