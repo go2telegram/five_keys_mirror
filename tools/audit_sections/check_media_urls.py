@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 
@@ -56,12 +57,67 @@ def run(ctx: AuditContext) -> SectionResult:
                 warnings += 1
             lines.append(line)
 
+    status = "ok"
+    detail = None
     if exit_code != 0:
         status = "warn" if errors == 0 else "error"
         detail = f"head_check завершился с кодом {exit_code}."
+    elif errors:
+        status = "warn"
+
+    partner_summary = None
+    partner_details: list[str] = []
+    partner_status = "ok"
+    partner_data: dict[str, object] | None = None
+    try:
+        from app.services import partner_links
+    except Exception as exc:  # pragma: no cover - optional dependency at runtime
+        partner_status = "warn"
+        partner_summary = f"Партнёрские ссылки: не удалось проверить ({exc})."
     else:
-        status = "ok" if errors == 0 else "warn"
-        detail = None
+        try:
+            results = asyncio.run(partner_links.check_partner_links())
+        except Exception as exc:  # pragma: no cover - runtime issues
+            partner_status = "warn"
+            partner_summary = f"Партнёрские ссылки: проверка не удалась ({exc})."
+        else:
+            issues = partner_links.filter_partner_issues(results)
+            total = len(results)
+            if not total:
+                partner_summary = "Партнёрские ссылки: не найдены в каталоге."
+            elif issues:
+                partner_status = "warn"
+                partner_summary = (
+                    f"Партнёрские ссылки: обнаружены проблемы ({len(issues)} из {total})."
+                )
+                for issue in issues[:10]:
+                    parts: list[str] = []
+                    if issue.error:
+                        parts.append(issue.error)
+                    if issue.status < 200 or issue.status >= 400:
+                        parts.append(f"status={issue.status}")
+                    if issue.utm_issues:
+                        parts.extend(issue.utm_issues)
+                    detail_line = "; ".join(parts) or "неизвестная ошибка"
+                    partner_details.append(
+                        f"{issue.link.product_id}: {detail_line} → {issue.link.url}"
+                    )
+                if len(issues) > 10:
+                    partner_details.append(
+                        f"… и ещё {len(issues) - 10} ссылок с проблемами"
+                    )
+            else:
+                partner_summary = f"Партнёрские ссылки: ок ({total})."
+            partner_data = {
+                "checked": total,
+                "issues": len(issues) if total else 0,
+            }
+
+    def _merge_status(current: str, other: str) -> str:
+        priority = {"ok": 0, "skip": 0, "warn": 1, "error": 2}
+        return current if priority.get(current, 0) >= priority.get(other, 0) else other
+
+    status = _merge_status(status, partner_status)
 
     details: list[str] = []
     if detail:
@@ -70,15 +126,22 @@ def run(ctx: AuditContext) -> SectionResult:
         details.append(f"Ошибок: {errors}.")
     if warnings:
         details.append(f"Предупреждений: {warnings}.")
+    details.extend(partner_details)
 
-    summary = f"HEAD-проверка: ok (ошибок={errors}, предупреждений={warnings})."
-    if status == "warn" and errors:
-        summary = f"HEAD-проверка завершена с ошибками ({errors})."
+    summary_parts = [
+        f"HEAD-проверка: ok (ошибок={errors}, предупреждений={warnings})."
+        if errors == 0
+        else f"HEAD-проверка завершена с ошибками ({errors}).",
+    ]
+    if partner_summary:
+        summary_parts.append(partner_summary)
+    summary = " ".join(summary_parts)
 
     data = {
         "errors": errors,
         "warnings": warnings,
         "report": str(report_path) if report_path else None,
+        "partner": partner_data,
     }
 
     return SectionResult(

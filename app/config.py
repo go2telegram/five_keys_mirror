@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
     VELAVIE_URL: str = ""
+    PARTNER_POSTBACK_PATH: str | None = "/partner/postback"
+    PARTNER_LINK_CHECK_ENABLED: bool = True
+    PARTNER_LINK_CHECK_CRON: str | None = "0 3 * * *"
+    PARTNER_ALERT_CHAT_ID: int | None = None
 
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9

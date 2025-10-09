@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
-from app.db.models import Bundle
+from sqlalchemy import func, select
+
+from app.db.models import Bundle, Event
 from app.db.session import compat_session, session_scope
 from app.handlers.admin import _is_admin
 from app.services.cart import (
@@ -196,14 +200,18 @@ async def checkout_command(message: Message) -> None:
     await message.answer("\n".join(lines))
 
 
+@dataclass(slots=True)
+class _PartnerStats:
+    clicks: int = 0
+    conversions: int = 0
+    revenue: float = 0.0
+
+
 def _format_currency(amount: float) -> str:
     return f"{Decimal(str(amount)).quantize(Decimal('0.01'))}"
 
 
 async def _orders_report_lines(period: str, *, session) -> list[str]:
-    from sqlalchemy import func, select
-    from datetime import datetime, timedelta, timezone
-
     now = datetime.now(timezone.utc)
     if period == "day":
         since = now - timedelta(days=1)
@@ -220,6 +228,57 @@ async def _orders_report_lines(period: str, *, session) -> list[str]:
     return [
         f"Заказы за {period}: {total_orders}",
         f"Выручка: {_format_currency(total_amount)}",
+    ]
+
+
+def _extract_partner_amount(meta: object) -> float:
+    if not isinstance(meta, dict):
+        return 0.0
+    for key in ("amount", "revenue", "value", "payout", "commission"):
+        raw = meta.get(key)
+        if raw in (None, ""):
+            continue
+        text = str(raw).replace(" ", "").replace(",", ".")
+        try:
+            value = float(text)
+        except (TypeError, ValueError):
+            continue
+        if value < 0:
+            continue
+        return value
+    return 0.0
+
+
+async def _partner_stats(period: str, *, session) -> _PartnerStats:
+    now = datetime.now(timezone.utc)
+    since = now - (timedelta(days=1) if period == "day" else timedelta(days=7))
+
+    stmt = (
+        select(Event.name, Event.meta)
+        .where(
+            Event.ts >= since,
+            Event.name.in_(("partner_click", "partner_conversion")),
+        )
+    )
+    result = await session.execute(stmt)
+    stats = _PartnerStats()
+    for name, meta in result.all():
+        if name == "partner_click":
+            stats.clicks += 1
+        elif name == "partner_conversion":
+            stats.conversions += 1
+            stats.revenue += _extract_partner_amount(meta)
+    return stats
+
+
+async def _partner_report_lines(period: str, *, session) -> list[str]:
+    label = "24 часа" if period == "day" else "7 дней"
+    stats = await _partner_stats(period, session=session)
+    return [
+        (
+            f"{label}: переходы {stats.clicks}, конверсии {stats.conversions}, "
+            f"выручка {_format_currency(stats.revenue)}"
+        )
     ]
 
 
@@ -244,7 +303,13 @@ async def orders_report(message: Message) -> None:
     async with compat_session(session_scope) as session:
         day = await _orders_report_lines("day", session=session)
         week = await _orders_report_lines("week", session=session)
-    await message.answer("\n".join(["📊 Отчёт по заказам"] + day + week))
+        partner_day = await _partner_report_lines("day", session=session)
+        partner_week = await _partner_report_lines("week", session=session)
+
+    lines = ["📊 Отчёт по заказам", *day, *week]
+    if partner_day or partner_week:
+        lines.extend(["", "🤝 Партнёрские переходы", *partner_day, *partner_week])
+    await message.answer("\n".join(lines))
 
 
 @router.message(Command("mrr_report"))

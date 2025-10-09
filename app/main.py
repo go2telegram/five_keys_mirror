@@ -36,6 +36,7 @@ from app.handlers import (
     notify as h_notify,
     picker as h_picker,
     premium as h_premium,
+    partner_postback as h_partner,
     premium_center as h_premium_center,
     profile as h_profile,
     quiz_deficits as h_quiz_deficits,
@@ -243,6 +244,10 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web.router.add_get("/doctor", _handle_doctor)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+
+    partner_path = getattr(settings, "PARTNER_POSTBACK_PATH", None)
+    if partner_path:
+        app_web.router.add_route("*", partner_path, h_partner.partner_postback)
 
     runner = web.AppRunner(app_web)
     await runner.setup()

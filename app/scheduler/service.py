@@ -9,6 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.config import settings
 from app.scheduler.jobs import (
     export_analytics_snapshot,
+    partner_link_health,
     send_nudges,
     send_retention_reminders,
 )
@@ -99,6 +100,31 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
             export_analytics_snapshot,
             trigger=analytics_trigger,
             name="analytics_export",
+            misfire_grace_time=900,
+            coalesce=True,
+            max_instances=1,
+        )
+
+    if getattr(settings, "PARTNER_LINK_CHECK_ENABLED", True):
+        partner_cron = getattr(settings, "PARTNER_LINK_CHECK_CRON", None)
+        if partner_cron:
+            try:
+                partner_trigger = CronTrigger.from_crontab(
+                    partner_cron, timezone=settings.TIMEZONE
+                )
+            except ValueError:
+                logging.getLogger("scheduler").warning(
+                    "invalid PARTNER_LINK_CHECK_CRON, falling back to 03:00"
+                )
+                partner_trigger = CronTrigger(hour=3, minute=0, timezone=settings.TIMEZONE)
+        else:
+            partner_trigger = CronTrigger(hour=3, minute=0, timezone=settings.TIMEZONE)
+
+        scheduler.add_job(
+            partner_link_health,
+            trigger=partner_trigger,
+            args=[bot],
+            name="partner_link_health",
             misfire_grace_time=900,
             coalesce=True,
             max_instances=1,

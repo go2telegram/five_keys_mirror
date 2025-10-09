@@ -12,6 +12,7 @@ from app.config import settings
 from app.db.models import Event, Lead, Subscription
 from app.db.session import session_scope
 from app.repo import events as events_repo
+from app.services.partner_links import check_partner_links, filter_partner_issues
 from app.utils_openai import ai_generate
 
 _analytics_log = logging.getLogger("scheduler.analytics")
@@ -158,8 +159,48 @@ async def send_retention_reminders(bot: Bot) -> None:
         for uid in sent_start:
             await events_repo.log(session, uid, "retention_test_nudge", {})
         for uid in sent_premium:
-            await events_repo.log(session, uid, "retention_premium_nudge", {})
+        await events_repo.log(session, uid, "retention_premium_nudge", {})
         await session.commit()
+
+
+async def partner_link_health(bot: Bot) -> None:
+    chat_id = settings.PARTNER_ALERT_CHAT_ID or settings.ADMIN_ID
+    if not chat_id:
+        return
+
+    try:
+        results = await check_partner_links()
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logging.getLogger("scheduler.partner").exception(
+            "partner link check failed: %s", exc
+        )
+        return
+
+    issues = filter_partner_issues(results)
+    if not issues:
+        return
+
+    lines = ["⚠️ Партнёрские ссылки: обнаружены проблемы", ""]
+    for issue in issues[:10]:
+        fragments: list[str] = []
+        if issue.error:
+            fragments.append(issue.error)
+        if issue.status < 200 or issue.status >= 400:
+            fragments.append(f"status={issue.status}")
+        fragments.extend(issue.utm_issues)
+        detail = "; ".join(fragments) or "неизвестная ошибка"
+        lines.append(f"• {issue.link.title} ({issue.link.product_id}) — {detail}")
+        lines.append(f"  {issue.link.url}")
+        if issue.final_url and issue.final_url != issue.link.url:
+            lines.append(f"  → {issue.final_url}")
+    if len(issues) > 10:
+        lines.append(f"…ещё {len(issues) - 10} ссылок")
+
+    message = "\n".join(lines)
+    try:
+        await bot.send_message(chat_id, message)
+    except Exception:  # pragma: no cover - bot delivery issues
+        logging.getLogger("scheduler.partner").exception("failed to send partner alert")
 
 
 async def export_analytics_snapshot() -> Path | None:
