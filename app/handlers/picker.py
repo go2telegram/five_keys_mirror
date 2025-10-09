@@ -13,6 +13,7 @@ from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils_media import send_product_album
+from app.utils.premium_cta import send_premium_cta
 from app.utils import safe_edit_text
 
 LOG = logging.getLogger(__name__)
@@ -313,6 +314,11 @@ async def pick_finalize(c: CallbackQuery):
     ]
     reply_markup = kb_buylist_pdf("pick:menu", rec_codes[:3])
     await c.message.answer("".join(msg), reply_markup=reply_markup)
+    await send_premium_cta(
+        c.message,
+        "💎 Получить полный план (AI)",
+        source=f"pick:{goal_key}",
+    )
 
     # Сохраняем план для PDF
     actions = meta["actions"]
