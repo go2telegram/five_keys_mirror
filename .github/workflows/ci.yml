@@ -29,19 +29,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
-      - name: Build catalog (online)
+      - name: Build catalog
         run: |
           python tools/build_products.py build
           python tools/build_products.py validate
-      - name: Head check media (warning only)
+      - name: Head check media (warn-only)
         run: python tools/head_check.py || true
-      - name: Self audit (fast, non-blocking)
-        run: python tools/self_audit.py --fast --no-net --out build/reports/self_audit.md || true
+      - name: Self audit (fast)
+        if: github.event_name == 'pull_request'
+        run: python tools/self_audit.py --fast --no-net --out build/reports/self_audit_pr.md || true
       - name: Tests
         run: pytest -q
       - name: Diagnose (always)
         if: always()
         run: python tools/ci_diagnose.py --redacted || true
+      - name: Merge guard (full audit)
+        if: github.event_name == 'push'
+        run: |
+          echo "Running full self audit before merge..."
+          python tools/self_audit.py --ci-merge --no-net --out build/reports/self_audit_final.md
+          echo "::notice file=build/reports/self_audit_final.md::Full self-audit summary"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

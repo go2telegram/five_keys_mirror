@@ -19,7 +19,7 @@ import time
 from typing import Any, Dict, List
 
 
-SAFE_ENV_KEYS = {"GITHUB_SHA", "GITHUB_REF", "GITHUB_RUN_NUMBER", "RUNNER_OS"}
+SAFE_ENV_KEYS = {"GITHUB_SHA", "RUNNER_OS"}
 MASK_PAT = re.compile(r"(TOKEN|SECRET|KEY|PASSWORD|PASS|DB_URL|DATABASE_URL|BOT_TOKEN)", re.IGNORECASE)
 
 
@@ -39,13 +39,19 @@ def _python_version() -> str:
     return version or "unknown"
 
 
+def collect_meta() -> Dict[str, str]:
+    return {
+        "python": _python_version(),
+        "runner": os.environ.get("RUNNER_OS", "unknown"),
+    }
+
+
 def redacted_env() -> Dict[str, str]:
-    out: Dict[str, str] = {"PYTHON_VERSION": _python_version()}
-    for key, value in os.environ.items():
-        if key in SAFE_ENV_KEYS:
+    out: Dict[str, str] = {}
+    for key in SAFE_ENV_KEYS:
+        value = os.environ.get(key)
+        if value:
             out[key] = value
-        elif MASK_PAT.search(key):
-            out[key] = "***"
     return out
 
 
@@ -95,17 +101,26 @@ def main(argv: List[str] | None = None) -> int:
 
     results: List[Dict[str, Any]] = [run(cmd) for cmd in checks]
 
-    payload = {"results": results}
+    payload = {"meta": collect_meta(), "results": results}
     if args.redacted:
         payload["env"] = redacted_env()
     else:
-        payload["env"] = dict(os.environ)
+        payload["env"] = {
+            key: value
+            for key, value in os.environ.items()
+            if not MASK_PAT.search(key)
+        }
     (reports_dir / "ci_diagnostics.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    md_lines: List[str] = []
+    meta = payload["meta"]
+    md_lines: List[str] = [
+        f"Python: {meta.get('python', 'unknown')}",
+        f"Runner: {meta.get('runner', 'unknown')}",
+        "---",
+    ]
     for result in results:
         md_lines.append(f"### {result['cmd']}")
         code = result.get("code")
