@@ -1,6 +1,7 @@
 """Catalog helpers."""
 
 from .loader import (
+    CATALOG_SHA,
     CatalogError,
     load_catalog,
     product_by_alias,
@@ -9,6 +10,7 @@ from .loader import (
 )
 
 __all__ = [
+    "CATALOG_SHA",
     "CatalogError",
     "load_catalog",
     "product_by_alias",

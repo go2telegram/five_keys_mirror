@@ -51,7 +51,8 @@ from app.handlers import (
 )
 from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
-from app.middlewares import AuditMiddleware
+from app.background import start_background_queue, stop_background_queue
+from app.middlewares import AuditMiddleware, RateLimitMiddleware
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
@@ -289,6 +290,21 @@ def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     return audit_middleware
 
 
+def _register_rate_limit_middleware(dp: Dispatcher) -> RateLimitMiddleware:
+    """Register rate limiting middleware for incoming messages."""
+
+    rate_middleware = RateLimitMiddleware(
+        default_limit=(10, 30.0),
+        command_limits={
+            "recommend": (3, 30.0),
+            "tests": (3, 30.0),
+        },
+    )
+    dp.message.middleware(rate_middleware)
+    startup_log.info("S4b: rate limit middleware registered")
+    return rate_middleware
+
+
 def _log_startup_metadata() -> None:
     startup_log.info(
         "build: branch=%s commit=%s time=%s",
@@ -389,6 +405,7 @@ async def main() -> None:
     mark("S3: bot/dispatcher created")
 
     _register_audit_middleware(dp)
+    _register_rate_limit_middleware(dp)
     mark("S4: audit middleware registered")
     _log_startup_metadata()
 
@@ -450,6 +467,15 @@ async def main() -> None:
 
     start_scheduler(bot)
 
+    background_started = False
+    try:
+        await start_background_queue(workers=2)
+    except Exception:
+        startup_log.exception("background queue start failed")
+    else:
+        background_started = True
+        mark("S6a: background queue started")
+
     runner: web.AppRunner | None = None
     site: web.BaseSite | None = None
     runner, site = await _setup_service_app()
@@ -483,6 +509,9 @@ async def main() -> None:
             await site.stop()
         if runner is not None:
             await runner.cleanup()
+        if background_started:
+            with contextlib.suppress(Exception):
+                await stop_background_queue()
         if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
             dashboard_server.should_exit = True
         if dashboard_task is not None:
