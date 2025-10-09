@@ -16,6 +16,11 @@ jobs:
       NO_NET: 0
       PYTHONWARNINGS: ignore
       MPLBACKEND: Agg
+      MEDIA_OWNER: go2telegram
+      MEDIA_REPO: media
+      MEDIA_REF: 1312d74492d26a8de5b8a65af38293fe6bf8ccc5
+      MEDIA_PRODUCTS_PATH: media/products
+      MEDIA_DESCRIPTIONS_PATH: media/descriptions
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
