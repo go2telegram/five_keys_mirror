@@ -12,6 +12,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
+from app.services.upsell import soft_upsell_prompt
 from app.utils.image_resolver import resolve_media_reference
 
 if TYPE_CHECKING:  # pragma: no cover - import for type hints only
@@ -216,7 +217,22 @@ async def send_product_cards(
         lines.append("")
 
     text = "\n".join(lines).strip()
-    markup = kb_actions(cards, back_cb=back_cb) if with_actions else kb_back_home(back_cb)
+    bundle_action = None
+    try:
+        upsell_text, bundle_id = await soft_upsell_prompt([card.get("code", "") for card in cards])
+    except Exception:  # pragma: no cover - soft failure
+        LOG.exception("soft_upsell_prompt failed")
+        upsell_text, bundle_id = None, None
+    if upsell_text:
+        lines.extend(["", upsell_text])
+        if bundle_id is not None:
+            bundle_action = ("➕ Бандл в корзину", f"cart:add_bundle:{bundle_id}")
+
+    markup = (
+        kb_actions(cards, back_cb=back_cb, bundle_action=bundle_action)
+        if with_actions
+        else kb_back_home(back_cb)
+    )
 
     cta_markup = kb_premium_cta()
 

@@ -25,6 +25,7 @@ async def set_plan(
     plan: str,
     days: int | None = None,
     until: datetime | None = None,
+    txn_id: str | None = None,
 ) -> Subscription:
     now = datetime.now(timezone.utc)
     subscription = await get(session, user_id)
@@ -45,6 +46,11 @@ async def set_plan(
         subscription.plan = plan
         subscription.since = now
         subscription.until = until
+    subscription.status = "active"
+    if subscription.started_at is None:
+        subscription.started_at = now
+    subscription.renewed_at = until
+    subscription.txn_id = None if txn_id is None else txn_id
 
     await session.flush()
     return subscription

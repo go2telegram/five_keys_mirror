@@ -57,8 +57,66 @@ class Subscription(Base):
     plan: Mapped[str] = mapped_column(String(16), nullable=False)
     since: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="active")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    renewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    txn_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="subscription")
+
+
+class CommerceSubscription(Base):
+    __tablename__ = "commerce_subscriptions"
+    __table_args__ = (Index("ix_commerce_subscriptions_user_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    plan: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    renewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    txn_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    amount: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False, default=0.0)
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_user_id", "user_id"),
+        Index("ix_orders_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    items_json: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    amount: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False, default=0.0)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="RUB")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    provider: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    coupon_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    utm_json: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Coupon(Base):
+    __tablename__ = "coupons"
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    amount_or_pct: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False)
+    valid_till: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    active: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    usage_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+
+class Bundle(Base):
+    __tablename__ = "bundles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    items_json: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+    price: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False)
+    active: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
 
 
 class Referral(Base):

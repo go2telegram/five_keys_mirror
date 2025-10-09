@@ -64,3 +64,30 @@ async def session_pop(user_id: int) -> Optional[dict[str, Any]]:
     pipe.delete(key)
     raw, _ = await pipe.execute()
     return json.loads(raw) if raw else None
+
+
+async def cart_get(user_id: int) -> dict[str, Any] | None:
+    client = await _conn()
+    raw = await client.get(f"cart:{user_id}")
+    if raw is None:
+        return None
+    return json.loads(raw)
+
+
+async def cart_set(user_id: int, data: dict[str, Any], ttl: int = 3600) -> None:
+    client = await _conn()
+    await client.set(
+        f"cart:{user_id}",
+        json.dumps(data, ensure_ascii=False),
+        ex=ttl,
+    )
+
+
+async def cart_pop(user_id: int) -> Optional[dict[str, Any]]:
+    client = await _conn()
+    key = f"cart:{user_id}"
+    pipe = client.pipeline()
+    pipe.get(key)
+    pipe.delete(key)
+    raw, _ = await pipe.execute()
+    return json.loads(raw) if raw else None

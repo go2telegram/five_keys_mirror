@@ -22,6 +22,7 @@ from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
     admin_crud as h_admin_crud,
+    commerce as h_commerce,
     assistant as h_assistant,
     calc as h_calc,
     calc_unified as h_calc_unified,
@@ -418,6 +419,7 @@ async def main() -> None:
         h_notify.router,
         h_admin.router,
         h_admin_crud.router,
+        h_commerce.router,
         h_assistant.router,
         h_lead.router,
     ]

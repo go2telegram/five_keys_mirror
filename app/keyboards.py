@@ -205,16 +205,21 @@ def kb_actions(
     with_pdf: bool = True,
     with_discount: bool = True,
     with_consult: bool = True,
+    bundle_action: tuple[str, str] | None = None,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buy_buttons = 0
+    cart_buttons = 0
     for card in cards:
-        url = card.get("order_url")
-        if not url:
-            continue
         name = card.get("name") or card.get("code") or "Product"
-        kb.button(text=f"🛒 Купить {name}", url=str(url))
-        buy_buttons += 1
+        url = card.get("order_url")
+        if url:
+            kb.button(text=f"🛒 Купить {name}", url=str(url))
+            buy_buttons += 1
+        code = str(card.get("code") or card.get("id") or card.get("name") or "")
+        if code:
+            kb.button(text="🛒 В корзину", callback_data=f"cart:add:{code}")
+            cart_buttons += 1
 
     if with_pdf:
         kb.button(text="📄 PDF-план", callback_data="report:last")
@@ -225,17 +230,22 @@ def kb_actions(
             kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
     if with_consult:
         kb.button(text="📝 Консультация", callback_data="lead:start")
+    if bundle_action:
+        text, callback = bundle_action
+        kb.button(text=text, callback_data=callback)
 
     kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
     kb.button(text="🏠 Домой", callback_data=home_cb)
 
     layout = [1] * buy_buttons
-    tail = []
+    tail = [1] * cart_buttons
     if with_pdf:
         tail.append(1)
     if with_discount:
         tail.append(1)
     if with_consult:
+        tail.append(1)
+    if bundle_action:
         tail.append(1)
     tail.extend([2])
     kb.adjust(*(layout + tail))
