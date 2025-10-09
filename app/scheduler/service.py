@@ -30,16 +30,18 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
     weekdays = _parse_weekdays(getattr(settings, "NOTIFY_WEEKDAYS", ""))
 
     # Каждый день в NOTIFY_HOUR_LOCAL (локальное TZ); фильтр по weekday внутри job
-    trigger = CronTrigger(hour=settings.NOTIFY_HOUR_LOCAL, minute=0)
-    scheduler.add_job(
-        send_nudges,
-        trigger=trigger,
-        args=[bot, settings.TIMEZONE, weekdays],
-        name="send_nudges",
-        misfire_grace_time=600,
-        coalesce=True,
-        max_instances=1,
-    )
+    if getattr(settings, "SCHEDULER_ENABLE_NUDGES", True):
+        trigger = CronTrigger(hour=settings.NOTIFY_HOUR_LOCAL, minute=0)
+        scheduler.add_job(
+            send_nudges,
+            trigger=trigger,
+            args=[bot, settings.TIMEZONE, weekdays],
+            name="send_nudges",
+            misfire_grace_time=600,
+            coalesce=True,
+            max_instances=1,
+        )
+
     scheduler.add_job(
         _log_heartbeat,
         trigger=IntervalTrigger(seconds=60),
@@ -49,20 +51,23 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         max_instances=1,
     )
 
-    try:
-        weekly_trigger = _parse_weekly_spec(getattr(settings, "WEEKLY_PLAN_CRON", ""))
-    except ValueError:
-        logging.getLogger("scheduler").warning("invalid WEEKLY_PLAN_CRON, falling back to Monday 10:00")
-        weekly_trigger = CronTrigger(day_of_week="mon", hour=10, minute=0)
-    scheduler.add_job(
-        weekly_ai_plan_job,
-        trigger=weekly_trigger,
-        args=[bot, None],
-        name="weekly_ai_plan",
-        misfire_grace_time=900,
-        coalesce=True,
-        max_instances=1,
-    )
+    if getattr(settings, "WEEKLY_PLAN_ENABLED", True):
+        try:
+            weekly_trigger = _parse_weekly_spec(getattr(settings, "WEEKLY_PLAN_CRON", ""))
+        except ValueError:
+            logging.getLogger("scheduler").warning(
+                "invalid WEEKLY_PLAN_CRON, falling back to Monday 10:00"
+            )
+            weekly_trigger = CronTrigger(day_of_week="mon", hour=10, minute=0)
+        scheduler.add_job(
+            weekly_ai_plan_job,
+            trigger=weekly_trigger,
+            args=[bot, None],
+            name="weekly_ai_plan",
+            misfire_grace_time=900,
+            coalesce=True,
+            max_instances=1,
+        )
 
     if getattr(settings, "RETENTION_ENABLED", False):
         scheduler.add_job(
@@ -75,28 +80,29 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
             max_instances=1,
         )
 
-    analytics_cron = getattr(settings, "ANALYTICS_EXPORT_CRON", None)
-    if analytics_cron:
-        try:
-            analytics_trigger = CronTrigger.from_crontab(
-                analytics_cron, timezone=settings.TIMEZONE
-            )
-        except ValueError:
-            logging.getLogger("scheduler").warning(
-                "invalid ANALYTICS_EXPORT_CRON, falling back to 21:00"
-            )
+    if getattr(settings, "ANALYTICS_EXPORT_ENABLED", True):
+        analytics_cron = getattr(settings, "ANALYTICS_EXPORT_CRON", None)
+        if analytics_cron:
+            try:
+                analytics_trigger = CronTrigger.from_crontab(
+                    analytics_cron, timezone=settings.TIMEZONE
+                )
+            except ValueError:
+                logging.getLogger("scheduler").warning(
+                    "invalid ANALYTICS_EXPORT_CRON, falling back to 21:00"
+                )
+                analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
+        else:
             analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
-    else:
-        analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
 
-    scheduler.add_job(
-        export_analytics_snapshot,
-        trigger=analytics_trigger,
-        name="analytics_export",
-        misfire_grace_time=900,
-        coalesce=True,
-        max_instances=1,
-    )
+        scheduler.add_job(
+            export_analytics_snapshot,
+            trigger=analytics_trigger,
+            name="analytics_export",
+            misfire_grace_time=900,
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.start()
     return scheduler
 
