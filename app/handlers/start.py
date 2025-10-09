@@ -20,7 +20,12 @@ from app.keyboards import (
     kb_recommendation_prompt,
     kb_yes_no,
 )
-from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
+from app.repo import (
+    events as events_repo,
+    referrals as referrals_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 from app.config import settings
 from app import build_info
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
@@ -129,6 +134,12 @@ async def _start_full(message: Message, payload: str) -> None:
             await commit_safely(session)
 
         is_new_user = existing_user is None
+
+        async with compat_session(session_scope) as session:
+            is_premium, _ = await subscriptions_repo.is_active(session, tg_id)
+            await commit_safely(session)
+        if is_premium:
+            await message.answer("Добро пожаловать в Premium-центр 💎\n👉 /premium_center")
 
         if not already_prompted:
             async with compat_session(session_scope) as session:

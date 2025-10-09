@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+    AI_PLAN_MODEL: str = "gpt-4o-mini"
+    WEEKLY_PLAN_CRON: str = "mon@10"
+    PLAN_ARCHIVE_DIR: str = "var/plans"
 
     # Каталог и квизы: онлайн/офлайн режимы
     IMAGES_MODE: str = "catalog_remote"

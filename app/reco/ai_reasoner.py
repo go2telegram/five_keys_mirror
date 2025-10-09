@@ -1,8 +1,10 @@
-"""Lightweight heuristic "AI" tips based on quiz tags."""
-
+"""Lightweight heuristic helpers for Premium flows."""
 from __future__ import annotations
 
+import datetime as dt
 from typing import Iterable
+
+from app.services.weekly_ai_plan import PlanPayload, build_ai_plan
 
 _TAG_TIPS: dict[str, str] = {
     "adaptogens": "Попробуй мягкие адаптогены утром — они сгладят стресс и добавят устойчивой энергии.",
@@ -29,7 +31,7 @@ _TAG_TIPS: dict[str, str] = {
     "sleep_calm": "Выключай яркие экраны за час до сна и оставляй только приглушённый свет — нервная система успокаивается быстрее.",
     "sleep_focus": "Попробуй дыхание 4-7-8 и затемнение спальни — глубина сна вырастет уже через несколько вечеров.",
     "sleep_ok": "Продолжай держать стабильный график сна, даже в выходные — так организм восстанавливается быстрее.",
-    "sleep_support": "Вечерняя прогулка и лёгкий ужин за 3 часа до сна заметно улучшают восстановление.",
+    "sleep_support": "Вечерняя прогулка и лёгкий ужин за 3 часа до сна заметно улучшает восстановление.",
     "steady": "Хороший ритм! Сохраняй прогулки, белок и гидратацию — это поддержит иммунитет круглый год.",
     "stress": "Делай короткие паузы с дыханием «коробочка» и разминкой — стресс уходит мягче.",
     "stress_support": "Дневник благодарности и дыхание 4-4-4-4 вечером снижают кортизол и выравнивают настроение.",
@@ -72,4 +74,59 @@ async def ai_tip_for_quiz(quiz_name: str, tags: Iterable[str] | None) -> str | N
     return None
 
 
-__all__ = ["ai_tip_for_quiz"]
+_GOAL_FOCUS = {
+    "energy": ("энергии", "динамичный"),
+    "sleep": ("качественного сна", "успокаивающий"),
+    "stress": ("устойчивости к стрессу", "поддерживающий"),
+    "detox": ("мягкого восстановления", "бережный"),
+    "recovery": ("восстановления", "спокойный"),
+}
+
+
+def _profile_from_diff(diff: dict | None) -> dict:
+    diff = diff or {}
+    goals = [str(item) for item in diff.get("goals", [])]
+    focus = diff.get("focus")
+    tone = diff.get("tone")
+
+    for goal in goals:
+        mapped = _GOAL_FOCUS.get(goal)
+        if mapped:
+            focus = focus or mapped[0]
+            tone = tone or mapped[1]
+
+    if not focus:
+        focus = "энергии"
+    if not tone:
+        tone = "спокойный" if "stress" in goals else "динамичный"
+
+    profile = {
+        "goals": goals,
+        "focus": focus,
+        "tone": tone,
+        "source": diff.get("source", "edit"),
+    }
+    if diff.get("need_short"):
+        profile["need_short"] = True
+    tags = diff.get("tags")
+    if isinstance(tags, Iterable) and not isinstance(tags, (str, bytes)):
+        profile["tags"] = [str(tag) for tag in tags]
+    return profile
+
+
+async def edit_ai_plan(user_id: int, diff_json: dict | None) -> PlanPayload:
+    """Rebuild the AI plan applying overrides from user-selected goals."""
+
+    profile = _profile_from_diff(diff_json)
+    plan = await build_ai_plan(profile)
+    if plan.plan_json is not None:
+        payload = dict(plan.plan_json)
+        payload["edited_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+        payload["edited_by"] = user_id
+        payload["diff"] = diff_json or {}
+        payload["source"] = "edit"
+        plan.plan_json = payload
+    return plan
+
+
+__all__ = ["ai_tip_for_quiz", "edit_ai_plan", "PlanPayload", "build_ai_plan"]

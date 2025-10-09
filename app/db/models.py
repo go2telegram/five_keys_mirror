@@ -44,6 +44,9 @@ class User(Base):
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    profile: Mapped["UserProfile"] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
@@ -133,6 +136,17 @@ class TrackEvent(Base):
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     value: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    plan_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="profile")
 
 
 class RetentionPush(Base):
