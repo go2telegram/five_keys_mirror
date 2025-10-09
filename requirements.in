@@ -26,6 +26,6 @@ python-slugify==8.0.4
 fastapi==0.115.5
 uvicorn==0.32.1
 plotly==5.24.1
-gspread==6.1.4
+gspread==6.2.1
 google-auth==2.36.0
 sentry-sdk==2.19.2
