@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import CommerceSubscription, Order
@@ -47,6 +48,31 @@ async def _ensure_subscription(
     return record
 
 
+async def _find_existing_order(
+    session: AsyncSession,
+    *,
+    user_id: int,
+    provider: str,
+    txn_id: str,
+) -> Order | None:
+    """Return the latest order with the same ``txn_id`` if it exists."""
+
+    stmt = (
+        select(Order)
+        .where(Order.user_id == user_id, Order.provider == provider)
+        .order_by(Order.id.desc())
+        .limit(20)
+    )
+    result = await session.execute(stmt)
+    for record in result.scalars():
+        payload = record.items_json or {}
+        if isinstance(payload, dict):
+            meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+            if payload.get("txn_id") == txn_id or meta.get("txn_id") == txn_id:
+                return record
+    return None
+
+
 async def create_order(
     session: AsyncSession,
     *,
@@ -57,6 +83,17 @@ async def create_order(
     subscription_plan: str | None = None,
     txn_id: str | None = None,
 ) -> CheckoutResult:
+    if txn_id:
+        existing = await _find_existing_order(
+            session,
+            user_id=user_id,
+            provider=provider,
+            txn_id=txn_id,
+        )
+        if existing is not None:
+            receipt = generate_receipt(existing, cart, coupon)
+            return CheckoutResult(order=existing, coupon=coupon, receipt_path=receipt)
+
     amount = cart.total
     coupon_payload: dict[str, Any] = {}
     final_amount = amount
@@ -68,14 +105,24 @@ async def create_order(
         }
         final_amount = coupon.final_amount
     items_payload = cart.to_payload()["items"]
+    items_json: dict[str, Any] = {"items": items_payload}
+    if txn_id:
+        items_json["txn_id"] = txn_id
+        items_json.setdefault("meta", {})
+        if isinstance(items_json["meta"], dict):
+            items_json["meta"]["txn_id"] = txn_id
     utm_payload: dict[str, Any] = {}
     for item in cart.items.values():
         if item.utm:
             utm_payload.setdefault(item.product_id, {}).update(item.utm)
+    if txn_id:
+        utm_payload.setdefault("__meta", {})
+        if isinstance(utm_payload["__meta"], dict):
+            utm_payload["__meta"]["txn_id"] = txn_id
 
     order = Order(
         user_id=user_id,
-        items_json={"items": items_payload},
+        items_json=items_json,
         amount=float(final_amount),
         currency=cart.currency or DEFAULT_CURRENCY,
         status="paid",
