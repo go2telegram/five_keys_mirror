@@ -24,6 +24,7 @@ from app.keyboards import (
 )
 from app.repo import (
     events as events_repo,
+    profiles as profiles_repo,
     referrals as referrals_repo,
     subscriptions as subscriptions_repo,
     users as users_repo,
@@ -33,6 +34,7 @@ from app import build_info
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
 from app.utils import safe_edit_text
+from app.utils.utm import extract_utm_params
 
 from app.quiz.engine import start_quiz
 
@@ -113,24 +115,30 @@ async def _start_full(message: Message, payload: str) -> None:
         username = message.from_user.username
         existing_user = None
         already_prompted = None
+        payload = payload or ""
+        utm_payload = extract_utm_params(payload)
+        ref_id: int | None = None
+        first_token = payload.split("&", 1)[0]
+        if first_token.startswith("ref_"):
+            try:
+                ref_id = int(first_token.split("_", 1)[1])
+            except (ValueError, IndexError):
+                ref_id = None
 
         async with compat_session(session_scope) as session:
             existing_user = await users_repo.get_user(session, tg_id)
             await users_repo.get_or_create_user(session, tg_id, username)
+            if utm_payload:
+                await profiles_repo.update_utm(session, tg_id, utm_payload)
             await events_repo.log(session, tg_id, "start", {"payload": payload})
 
-            if payload.startswith("ref_"):
-                try:
-                    ref_id = int(payload.split("_", 1)[1])
-                except (ValueError, IndexError):
-                    ref_id = None
-                if ref_id and ref_id != tg_id:
-                    await users_repo.get_or_create_user(session, ref_id)
-                    existing_ref = await referrals_repo.get_by_invited(session, tg_id)
-                    if existing_ref is None:
-                        await referrals_repo.create(session, ref_id, tg_id)
-                    await users_repo.set_referrer(session, tg_id, ref_id)
-                    await events_repo.log(session, tg_id, "ref_join", {"referrer_id": ref_id})
+            if ref_id and ref_id != tg_id:
+                await users_repo.get_or_create_user(session, ref_id)
+                existing_ref = await referrals_repo.get_by_invited(session, tg_id)
+                if existing_ref is None:
+                    await referrals_repo.create(session, ref_id, tg_id)
+                await users_repo.set_referrer(session, tg_id, ref_id)
+                await events_repo.log(session, tg_id, "ref_join", {"referrer_id": ref_id})
 
             already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
             await commit_safely(session)

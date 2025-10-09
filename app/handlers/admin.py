@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from io import StringIO
 from pathlib import Path
@@ -30,6 +30,8 @@ from app.middlewares import (
     set_callback_trace_enabled,
 )
 from app.router_map import get_router_map, write_router_map
+from app.services.growth import collect_growth_report
+from app.utils.utm import build_deep_link, format_utm_label, format_utm_tuple, parse_utm_kv
 
 router = Router()
 
@@ -57,6 +59,24 @@ def admin_only(handler: Callable[P, Awaitable[R]]):
         return await handler(*args, **kwargs)
 
     return wrapper
+
+
+def _format_percent(value: float) -> str:
+    return f"{value:.1f}%"
+
+
+def _format_currency(amount: float) -> str:
+    return f"{amount:,.0f}".replace(",", " ")
+
+
+def _parse_days_argument(raw: str, default: int = 7) -> int:
+    for token in raw.replace(",", " ").split():
+        try:
+            value = int(token)
+        except ValueError:
+            continue
+        return max(1, min(90, value))
+    return default
 
 
 @router.message(Command("stats"))
@@ -211,6 +231,143 @@ async def routers_dump(message: Message) -> None:
 
     await message.answer("\n".join(lines))
     await message.answer_document(FSInputFile(path), caption="Router map JSON")
+
+
+@router.message(Command("link_builder"))
+@admin_only
+async def link_builder_cmd(message: Message, command: CommandObject) -> None:
+    args = (command.args or "").strip() if command else ""
+    bot = message.bot
+    me = await bot.get_me()
+    username = me.username or "your_bot"
+
+    if not args:
+        await message.answer(
+            "🔧 Конструктор deep-link\n"
+            "Использование: /link_builder source=tiktok medium=ads campaign=spring content=shorts01\n"
+            "Поддерживаются ключи: utm_source, utm_medium, utm_campaign, utm_content (и короткие алиасы)."
+        )
+        return
+
+    params = parse_utm_kv(args)
+    if not params:
+        await message.answer("Не удалось распознать параметры. Укажите пары вида source=tiktok.")
+        return
+
+    link, payload = build_deep_link(username, params)
+    label = format_utm_tuple(
+        params.get("utm_source"),
+        params.get("utm_medium"),
+        params.get("utm_campaign"),
+        params.get("utm_content"),
+    )
+    payload_text = payload or "(пусто — будет /start без параметров)"
+
+    await message.answer(
+        "🔗 Deep-link готов\n"
+        f"{link}\n\n"
+        f"start payload: {payload_text}\n"
+        f"UTM: {label}\n"
+        "Скопируй ссылку и используй в рекламном канале."
+    )
+
+
+@router.message(Command("growth_report"))
+@admin_only
+async def growth_report_cmd(message: Message, command: CommandObject) -> None:
+    args = (command.args or "").strip() if command else ""
+    days = _parse_days_argument(args)
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+
+    async with compat_session(session_scope) as session:
+        report = await collect_growth_report(session, since=since, until=now)
+
+    total_users = sum(row.new_users for row in report.users)
+    total_quiz = sum(row.quiz for row in report.users)
+    total_reco = sum(row.recommendations for row in report.users)
+    total_subs = sum(row.subscriptions for row in report.users)
+    total_orders = sum(row.orders for row in report.orders)
+    total_revenue = sum(row.revenue for row in report.orders)
+    total_payers = sum(row.payers for row in report.orders)
+
+    lines: list[str] = [
+        "📈 Growth report",
+        f"Период: {since.date()} – {report.until.date()} ({days} дн.)",
+        f"Новые пользователи: {total_users}",
+    ]
+
+    if total_users:
+        lines.append(
+            "CR → тесты {tests}/{users} ({tests_cr}), рекомендации {reco}/{users} ({reco_cr}), подписки {subs}/{users} ({subs_cr})".format(
+                tests=total_quiz,
+                users=total_users,
+                tests_cr=_format_percent(total_quiz / total_users * 100.0),
+                reco=total_reco,
+                reco_cr=_format_percent(total_reco / total_users * 100.0),
+                subs=total_subs,
+                subs_cr=_format_percent(total_subs / total_users * 100.0),
+            )
+        )
+    else:
+        lines.append("Нет новых пользователей за выбранный период.")
+
+    if report.users:
+        lines.append("")
+        lines.append("UTM источники → конверсии:")
+        max_rows = 12
+        for row in report.users[:max_rows]:
+            label = format_utm_label(row.source, row.medium, row.campaign, row.content)
+            lines.append(
+                "• {label}: {users} → тесты {tests} ({tests_cr}), рекомендации {reco} ({reco_cr}), подписки {subs} ({subs_cr})".format(
+                    label=label,
+                    users=row.new_users,
+                    tests=row.quiz,
+                    tests_cr=_format_percent(row.quiz_cr()),
+                    reco=row.recommendations,
+                    reco_cr=_format_percent(row.recommendation_cr()),
+                    subs=row.subscriptions,
+                    subs_cr=_format_percent(row.subscription_cr()),
+                )
+            )
+        remaining = len(report.users) - max_rows
+        if remaining > 0:
+            lines.append(f"…и ещё {remaining} источников")
+    else:
+        lines.append("")
+        lines.append("UTM источники: данных нет")
+
+    lines.append("")
+    lines.append(
+        "Платежи orders_paid: {orders} заказов, плательщиков {payers}, выручка ₽{revenue}".format(
+            orders=total_orders,
+            payers=total_payers,
+            revenue=_format_currency(total_revenue),
+        )
+    )
+    if report.orders:
+        lines.append("По источникам:")
+        max_rows = 12
+        for row in report.orders[:max_rows]:
+            label = format_utm_label(row.source, row.medium, row.campaign, row.content)
+            lines.append(
+                "• {label}: {orders} заказов, плательщиков {payers}, выручка ₽{revenue}".format(
+                    label=label,
+                    orders=row.orders,
+                    payers=row.payers,
+                    revenue=_format_currency(row.revenue),
+                )
+            )
+        remaining = len(report.orders) - max_rows
+        if remaining > 0:
+            lines.append(f"…и ещё {remaining} источников")
+    else:
+        lines.append("Источники платежей: данных нет")
+
+    lines.append("")
+    lines.append("Измени период: /growth_report 30 — последние 30 дней")
+
+    await message.answer("\n".join(lines))
 
 
 @router.message(Command("ci_report"))

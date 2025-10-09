@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.catalog.loader import load_catalog
 from app.config import settings
-from app.db.models import Event, Lead
+from app.db.models import Event, Lead, User, UserProfile
 from app.db.session import session_scope
 from app.repo import events as events_repo, leads as leads_repo
 
@@ -62,6 +62,25 @@ async def _collect_event_stats(
         label = str(payload.get(key) or "unknown")
         counts[label] += 1
     return counts, sum(counts.values())
+
+
+async def _collect_utm_sources(session: AsyncSession, days: int = 30) -> Counter[str]:
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    source_label = func.coalesce(UserProfile.utm_source, "organic").label("source")
+    stmt = (
+        select(source_label, func.count(User.id).label("count"))
+        .select_from(User)
+        .join(UserProfile, UserProfile.user_id == User.id, isouter=True)
+        .where(User.created >= since)
+        .group_by(source_label)
+        .order_by(func.count(User.id).desc())
+    )
+    result = await session.execute(stmt)
+    counter: Counter[str] = Counter()
+    for source, count in result.all():
+        label = str(source or "organic")
+        counter[label] += int(count or 0)
+    return counter
 
 
 async def _collect_plan_stats(session: AsyncSession, limit: int | None = None) -> Tuple[int, Counter[str]]:
@@ -159,6 +178,31 @@ def _build_ctr_gauge(value: float) -> str:
     return to_html(fig, include_plotlyjs=False, full_html=False)
 
 
+def _build_utm_chart(counter: Counter[str]) -> str:
+    if not counter:
+        return "<div class='chart-empty'>Недостаточно данных</div>"
+    items = counter.most_common()
+    labels = [item[0] for item in items]
+    values = [item[1] for item in items]
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=labels,
+            orientation="h",
+            marker_color="#f59e0b",
+        )
+    )
+    fig.update_layout(
+        title="Новые пользователи по UTM (30д)",
+        height=360,
+        margin=dict(l=100, r=40, t=60, b=40),
+        paper_bgcolor="#0f172a",
+        plot_bgcolor="#0f172a",
+        font=dict(color="#e2e8f0"),
+    )
+    return to_html(fig, include_plotlyjs=False, full_html=False)
+
+
 def _format_dt(dt: datetime | None) -> str:
     if not isinstance(dt, datetime):
         return "—"
@@ -250,6 +294,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     calc_chart = context["calc_chart"]
     ctr_chart = context["ctr_chart"]
     load_chart = context["load_chart"]
+    utm_chart = context["utm_chart"]
     top_products_rows = _render_table(context["top_products"])
     goal_rows = _render_table(context["catalog_goals"])
     lead_rows_html = "".join(
@@ -401,6 +446,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     <section class=\"charts\">
       <div class=\"card\">{quiz_chart}</div>
       <div class=\"card\">{calc_chart}</div>
+      <div class=\"card\">{utm_chart}</div>
       <div class=\"card\">{ctr_chart}</div>
       <div class=\"card\">{load_chart}</div>
     </section>
@@ -453,6 +499,7 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         calc_counts, calc_total = await _collect_event_stats(session, "calc_finish", "calc")
         plans_total, products_counter = await _collect_plan_stats(session)
         leads_total, leads_recent, recent_leads = await _collect_lead_details(session)
+        utm_counter = await _collect_utm_sources(session, days=30)
 
     ctr = (plans_total / quiz_total * 100.0) if quiz_total else 0.0
 
@@ -475,6 +522,7 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
     quiz_chart = _build_bar_chart("Завершено квизов", quiz_counts, "#2563eb")
     calc_chart = _build_bar_chart("Использование калькуляторов", calc_counts, "#ec4899")
     ctr_chart = _build_ctr_gauge(ctr)
+    utm_chart = _build_utm_chart(utm_counter)
 
     load_history = _load_load_history()
     load_chart = _build_load_chart(load_history)
@@ -499,6 +547,7 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "quiz_chart": quiz_chart,
         "calc_chart": calc_chart,
         "ctr_chart": ctr_chart,
+        "utm_chart": utm_chart,
         "load_chart": load_chart,
         "leads_total": leads_total,
         "leads_recent": leads_recent,

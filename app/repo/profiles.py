@@ -1,11 +1,13 @@
 """Repository helpers for user profile data."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import UserProfile
+
+UTM_FIELDS = ("utm_source", "utm_medium", "utm_campaign", "utm_content")
 
 
 async def get(session: AsyncSession, user_id: int) -> UserProfile | None:
@@ -33,3 +35,25 @@ async def get_plan(session: AsyncSession, user_id: int) -> dict[str, Any] | None
     if profile is None:
         return None
     return profile.plan_json
+
+
+async def update_utm(
+    session: AsyncSession,
+    user_id: int,
+    data: Mapping[str, str | None],
+) -> UserProfile:
+    profile = await get_or_create(session, user_id)
+    changed = False
+    for field in UTM_FIELDS:
+        if field not in data:
+            continue
+        value = data[field]
+        if isinstance(value, str):
+            value = value.strip() or None
+        current = getattr(profile, field)
+        if current != value:
+            setattr(profile, field, value)
+            changed = True
+    if changed:
+        await session.flush()
+    return profile
