@@ -19,6 +19,7 @@ from aiohttp import web
 from app import build_info
 from app.catalog.loader import CATALOG_SHA
 from app.config import settings
+from app.feature_flags import feature_flags
 from app.db.session import current_revision, head_revision, init_db, session_scope
 from app.catalog import handlers as h_catalog
 from app.handlers import (
@@ -141,18 +142,21 @@ async def home_main(c: CallbackQuery) -> None:
         getattr(c.from_user, "username", None),
     )
     try:
-        from app.handlers.start import GREETING  # local import to avoid cycles
+        from app.handlers.start import greeting_for_user  # local import to avoid cycles
         from app.keyboards import kb_main
 
         if c.message is None:
             log_home.warning("home:main called without message")
             return
 
+        user_id = getattr(c.from_user, "id", None)
+        greeting = greeting_for_user(user_id)
+
         try:
-            await safe_edit_text(c.message, GREETING, kb_main())
+            await safe_edit_text(c.message, greeting, kb_main(user_id=user_id))
         except Exception:
             log_home.warning("home:main edit failed; sending fresh message", exc_info=True)
-            await c.message.answer(GREETING, reply_markup=kb_main())
+            await c.message.answer(greeting, reply_markup=kb_main(user_id=user_id))
     except Exception:
         log_home.exception("home:main failed")
     finally:
@@ -495,6 +499,13 @@ async def main() -> None:
     setup_logging(
         log_dir=settings.LOG_DIR,
         level=_resolve_log_level(settings.LOG_LEVEL),
+    )
+
+    await feature_flags.initialize()
+    startup_log.info(
+        "feature flags ready env=%s snapshot=%s",  # nosec - debug metadata only
+        feature_flags.environment(),
+        feature_flags.snapshot(),
     )
 
     t0 = time.perf_counter()

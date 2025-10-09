@@ -31,6 +31,7 @@ from app.repo import (
 )
 from app.config import settings
 from app import build_info
+from app.feature_flags import feature_flags
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
 from app.utils import safe_edit_text
@@ -44,21 +45,32 @@ log_start = logging.getLogger("start")
 
 router = Router(name="start")
 
-GREETING = (
+GREETING_CLASSIC = (
     "👋 Привет!\n"
     "Я — твой личный гид по энергии, здоровью и продуктам Vilavi.\n"
     "💡 Хочешь узнать, какой у тебя энергетический потенциал и как его увеличить?\n"
     "🚀 Пройди мини-тест — всего 60 секунд."
 )
 
-ONBOARDING_CONFIRMATION = "Класс! Сейчас покажу, что может реально улучшить твои результаты 💪"
+GREETING_FRESH = (
+    "👋 Привет! Это Five Keys в новом формате.\n"
+    "Я помогу оценить уровень энергии, подобрать продукты и собрать полезные материалы.\n"
+    "📊 Начни с экспресс-диагностики или сразу переходи к персональным рекомендациям.\n"
+    "🧭 В навигаторе ниже — подборка статей и эфиров."
+)
+
+ONBOARDING_CONFIRMATION_CLASSIC = "Класс! Сейчас покажу, что может реально улучшить твои результаты 💪"
+ONBOARDING_CONFIRMATION_FRESH = "Отлично! Уже готовлю обновлённую подборку и материалы ✨"
 MENU_HELP_TEXT = (
     "ℹ️ <b>Помощь</b>\n"
     "Есть вопросы по тестам, продуктам или подписке? Напиши их прямо в чат — команда ответит в течение рабочего дня.\n"
     "Можно также выбрать раздел «🎯 Персональные рекомендации» и получить консультацию."
 )
 
-RETURNING_PROMPT = "Готов показать обновлённые рекомендации. Нажми кнопку ниже, чтобы продолжить."
+RETURNING_PROMPT_CLASSIC = "Готов показать обновлённые рекомендации. Нажми кнопку ниже, чтобы продолжить."
+RETURNING_PROMPT_FRESH = (
+    "Готов показать свежие рекомендации, чек-листы и материалы. Выбирай действие ниже 👇"
+)
 
 START_THROTTLE_SECONDS = 3.0
 ADMIN_PANEL_THROTTLE = 5.0
@@ -76,6 +88,24 @@ def _is_admin(user_id: int | None) -> bool:
         grant_role(user_id, ADMIN_ROLE)
         return True
     return has_role(user_id, ADMIN_ROLE)
+
+
+def greeting_for_user(user_id: int | None) -> str:
+    if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
+        return GREETING_FRESH
+    return GREETING_CLASSIC
+
+
+def _confirmation_for_user(user_id: int | None) -> str:
+    if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
+        return ONBOARDING_CONFIRMATION_FRESH
+    return ONBOARDING_CONFIRMATION_CLASSIC
+
+
+def _returning_prompt(user_id: int | None) -> str:
+    if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
+        return RETURNING_PROMPT_FRESH
+    return RETURNING_PROMPT_CLASSIC
 
 
 @router.message(CommandStart())
@@ -101,7 +131,8 @@ async def start_safe(message: Message) -> None:
         getattr(message.from_user, "username", None),
     )
 
-    await message.answer(GREETING, reply_markup=kb_onboarding_entry())
+    greeting = greeting_for_user(user_id)
+    await message.answer(greeting, reply_markup=kb_onboarding_entry(user_id=user_id))
 
     asyncio.create_task(_start_full(message, payload))
 
@@ -175,14 +206,16 @@ async def _start_registration(message: Message) -> None:
 
 
 async def _prompt_recommendations(message: Message) -> None:
-    await message.answer(RETURNING_PROMPT, reply_markup=kb_recommendation_prompt())
+    user_id = getattr(message.from_user, "id", None)
+    prompt = _returning_prompt(user_id)
+    await message.answer(prompt, reply_markup=kb_recommendation_prompt(user_id=user_id))
 
 
 @router.callback_query(F.data == "onboard:energy")
 async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
     await start_quiz(c, state, "energy")
 
 
@@ -190,7 +223,7 @@ async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
 async def onboarding_recommend(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
         await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
 
 
@@ -198,7 +231,7 @@ async def onboarding_recommend(c: CallbackQuery) -> None:
 async def onboarding_recommend_full(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
         locale = resolve_locale(getattr(c.from_user, "language_code", None))
         user_id = getattr(c.from_user, "id", "anon")
         ab_copy = select_copy(
@@ -208,7 +241,10 @@ async def onboarding_recommend_full(c: CallbackQuery) -> None:
             context={"locale": locale},
         )
         copy = ab_copy or gettext("recommend.full_prompt", locale)
-        await c.message.answer(copy, reply_markup=kb_recommendation_prompt())
+        await c.message.answer(
+            copy,
+            reply_markup=kb_recommendation_prompt(user_id=getattr(c.from_user, "id", None)),
+        )
 
 
 @router.callback_query(F.data == "onboard:register")

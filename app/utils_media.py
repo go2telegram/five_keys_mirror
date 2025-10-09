@@ -7,12 +7,12 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import aiohttp
-from aiogram import Bot
 from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
 from aiohttp import ClientError
 
 from app.background import background_queue
 from app.catalog.loader import product_by_alias, product_by_id
+from app.feature_flags import feature_flags
 from app.utils.image_resolver import resolve_media_reference
 
 LOG = logging.getLogger(__name__)
@@ -157,11 +157,12 @@ async def _resolve_media_source(ref: str) -> FSInputFile | BufferedInputFile | N
     if isinstance(resolved, FSInputFile):
         return resolved
     if isinstance(resolved, str):
-        proxy = await fetch_image_as_file(resolved)
-        if proxy:
-            return proxy
-        LOG.warning("Failed to resolve remote media %s", resolved)
-        return None
+        if feature_flags.is_enabled("FF_MEDIA_PROXY"):
+            proxy = await fetch_image_as_file(resolved)
+            if proxy:
+                return proxy
+            LOG.warning("Failed to proxy remote media %s", resolved)
+        return resolved
     return None
 
 

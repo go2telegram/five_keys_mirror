@@ -46,7 +46,10 @@ async def lead_cancel_cb(c: CallbackQuery, state: FSMContext):
     await c.answer()
     await state.clear()
     cancel_text = "Заявка отменена. Если понадобится — нажмите 📝 Консультация."
-    await c.message.answer(cancel_text, reply_markup=kb_main())
+    await c.message.answer(
+        cancel_text,
+        reply_markup=kb_main(user_id=getattr(c.from_user, "id", None)),
+    )
 
 
 @router.message(LeadForm.name)
@@ -120,4 +123,7 @@ async def lead_done(m: Message, state: FSMContext):
         await m.bot.send_message(admin_chat, text_admin)
 
     thanks_text = "Спасибо! Я передал заявку. Мы свяжемся с вами в ближайшее время. 🙌"
-    await m.answer(thanks_text, reply_markup=kb_main())
+    await m.answer(
+        thanks_text,
+        reply_markup=kb_main(user_id=getattr(m.from_user, "id", None)),
+    )
