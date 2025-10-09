@@ -55,7 +55,7 @@ _GROUPS = [
 ]
 
 _FAST_SKIPS = {"linters", "load_smoke"}
-_CRITICAL_FOR_CI = {"migrations", "catalog", "tests"}
+_CRITICAL_FOR_CI = {"migrations", "catalog", "tests", "pytest"}
 
 _STATUS_EMOJI = {
     "ok": "✅",
@@ -69,6 +69,11 @@ def _parse_args(argv: Iterable[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fast", action="store_true", help="Пропустить линтеры и нагрузочный смоук")
     parser.add_argument("--ci", action="store_true", help="CI-режим: выход с ошибкой при критических проблемах")
+    parser.add_argument(
+        "--ci-merge",
+        action="store_true",
+        help="CI merge-guard режим: завершаться с ошибкой при критических проблемах",
+    )
     parser.add_argument("--no-net", action="store_true", help="Пропустить сетевые проверки")
     parser.add_argument("--out", type=Path, default=DEFAULT_REPORT, help="Путь к Markdown-отчёту")
     return parser.parse_args(argv)
@@ -167,7 +172,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         root=ROOT,
         reports_dir=reports_dir,
         fast=args.fast,
-        ci=args.ci,
+        ci=args.ci or args.ci_merge,
         no_net=args.no_net or os.getenv("NO_NET") == "1",
         env={"PYTHONPATH": pythonpath},
     )
@@ -208,6 +213,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     metadata["generated_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
     metadata["fast"] = args.fast
     metadata["ci"] = args.ci
+    metadata["ci_merge"] = args.ci_merge
     metadata["no_net"] = context.no_net
 
     markdown = _render_markdown(metadata, results)
@@ -225,7 +231,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     timings_path.write_text(json.dumps(timings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     critical_errors = [
-        name for name, result in results.items() if result.status == "error" and name in _CRITICAL_FOR_CI
+        name
+        for name, result in results.items()
+        if result.status in {"error", "fail"} and name in _CRITICAL_FOR_CI
     ]
     status_counts: Dict[str, int] = {}
     for result in results.values():
@@ -241,14 +249,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     print(f"Markdown report: {reports_path}")
     print(json.dumps(aggregate, ensure_ascii=False))
 
-    if args.ci and critical_errors:
-        if context.no_net:
-            print(
-                "WARN: Critical sections failed but NO_NET=1 — treating as warning for CI.",
-                file=sys.stderr,
-            )
-            return 0
-        return 1
+    if args.ci or args.ci_merge:
+        return 1 if critical_errors else 0
     return 0
 
 
