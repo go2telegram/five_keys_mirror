@@ -1,0 +1,4 @@
+[allowlist]
+description = "project false positives"
+paths = []
+regexes = ["dummy:000"]
