@@ -21,6 +21,7 @@ from app.db.session import init_db, session_scope
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
+    admin_audit as h_admin_audit,
     admin_crud as h_admin_crud,
     analytics as h_analytics,
     commerce as h_commerce,
@@ -440,6 +441,7 @@ async def main() -> None:
         h_analytics.router,
         h_notify.router,
         h_admin.router,
+        h_admin_audit.router,
         h_admin_crud.router,
         h_commerce.router,
         h_assistant.router,
