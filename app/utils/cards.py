@@ -6,6 +6,7 @@ import logging
 from typing import Iterable, Sequence
 
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
@@ -153,6 +154,7 @@ async def send_product_cards(
     bullets: Sequence[str] | None = None,
     back_cb: str | None = None,
     with_actions: bool = True,
+    with_premium_cta: bool = True,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
@@ -220,9 +222,21 @@ async def send_product_cards(
             await message.answer(first)
         if second:
             await message.answer(second, reply_markup=markup)
-        return
+    else:
+        await message.answer(text, reply_markup=markup)
 
-    await message.answer(text, reply_markup=markup)
+    if with_premium_cta:
+        cta = InlineKeyboardBuilder()
+        cta.button(text="💎 Получить полный план", callback_data="ai_plan:open")
+        cta.button(text="ℹ️ Premium", callback_data="premium:info")
+        cta.adjust(1, 1)
+        await message.answer(
+            "💎 Получи полный AI-план и еженедельные обновления в MITO Premium.",
+            reply_markup=cta.as_markup(),
+        )
+
+    if len(text) > MAX_TEXT:
+        return
 
 
 def catalog_summary(goal: str | None = None) -> list[str]:

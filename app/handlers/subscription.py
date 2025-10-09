@@ -8,7 +8,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
-from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.repo import (
+    events as events_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 from app.storage import commit_safely
 from app.utils import safe_edit_text
 
@@ -82,7 +86,7 @@ async def sub_check(c: CallbackQuery):
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         is_active, sub = await subscriptions_repo.is_active(session, c.from_user.id)
         plan = sub.plan if sub else None
-        until = sub.until.isoformat() if sub else None
+        until = sub.renewed_at.isoformat() if sub and sub.renewed_at else None
         await events_repo.log(
             session,
             c.from_user.id,
@@ -93,10 +97,13 @@ async def sub_check(c: CallbackQuery):
 
     await c.answer()
     if is_active and sub:
-        until_text = _format_until(sub.until)
-        text = (
-            "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until_text}</b>."
-        )
+        until_text = _format_until(sub.renewed_at) if sub.renewed_at else "—"
+        lines = ["✅ <b>Подписка активна</b>", f"Тариф: <b>MITO {sub.plan.upper()}</b>"]
+        if sub.renewed_at:
+            lines.append(f"Доступ до: <b>{until_text}</b>.")
+        else:
+            lines.append("Автопродление включено.")
+        text = "\n".join(lines)
         builder = InlineKeyboardBuilder()
         builder.button(text="🔁 Проверить снова", callback_data="sub:check")
         builder.button(text="Открыть Premium", callback_data="premium:menu")

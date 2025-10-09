@@ -85,6 +85,19 @@ class Settings(BaseSettings):
     SUB_PRO_PRICE: str = "599 ₽/мес"
     # --------------------------------------
 
+    TELEGRAM_PROVIDER_TOKEN: str = ""
+    TELEGRAM_PAYMENTS_TEST_MODE: bool = False
+    PREMIUM_HMAC_SECRET: str = ""
+    PREMIUM_DEFAULT_CURRENCY: str = "RUB"
+    PREMIUM_BASIC_AMOUNT: int = 29900
+    PREMIUM_BASIC_DURATION_DAYS: int = 30
+    PREMIUM_PRO_AMOUNT: int = 59900
+    PREMIUM_PRO_DURATION_DAYS: int = 30
+    PREMIUM_FALLBACK_URL: str | None = None
+    RUN_PAYMENTS_WEBHOOK: bool = False
+    PAYMENTS_WEBHOOK_PATH: str = "/payments/webhook"
+    PAYMENTS_WEBHOOK_SECRET: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -48,7 +48,8 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
 
     kb = InlineKeyboardBuilder()
     kb.button(text="💊 Получить рекомендации", callback_data="pick:menu")
-    kb.adjust(1)
+    kb.button(text="💎 Получить полный план", callback_data="ai_plan:open")
+    kb.adjust(1, 1)
     return kb.as_markup()
 
 

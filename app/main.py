@@ -22,6 +22,7 @@ from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
     admin_crud as h_admin_crud,
+    ai_plan as h_ai_plan,
     assistant as h_assistant,
     calc as h_calc,
     calc_unified as h_calc_unified,
@@ -29,6 +30,7 @@ from app.handlers import (
     navigator as h_navigator,
     notify as h_notify,
     picker as h_picker,
+    payments_webhook as h_payments,
     premium as h_premium,
     profile as h_profile,
     quiz_deficits as h_quiz_deficits,
@@ -49,7 +51,7 @@ from app.handlers import (
 )
 from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
-from app.middlewares import AuditMiddleware
+from app.middlewares import AuditMiddleware, PremiumMiddleware
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
@@ -185,6 +187,8 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web.router.add_get("/metrics", _handle_metrics)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    if settings.RUN_PAYMENTS_WEBHOOK:
+        app_web.router.add_post(settings.PAYMENTS_WEBHOOK_PATH, h_payments.payments_webhook)
 
     runner = web.AppRunner(app_web)
     await runner.setup()
@@ -287,6 +291,14 @@ def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     return audit_middleware
 
 
+def _register_premium_middleware(dp: Dispatcher) -> PremiumMiddleware:
+    premium_middleware = PremiumMiddleware()
+    dp.message.middleware(premium_middleware)
+    dp.callback_query.middleware(premium_middleware)
+    startup_log.info("S4b: premium middleware registered")
+    return premium_middleware
+
+
 def _log_startup_metadata() -> None:
     startup_log.info(
         "build: branch=%s commit=%s time=%s",
@@ -387,6 +399,7 @@ async def main() -> None:
     mark("S3: bot/dispatcher created")
 
     _register_audit_middleware(dp)
+    _register_premium_middleware(dp)
     mark("S4: audit middleware registered")
     _log_startup_metadata()
 
@@ -418,6 +431,7 @@ async def main() -> None:
         h_notify.router,
         h_admin.router,
         h_admin_crud.router,
+        h_ai_plan.router,
         h_assistant.router,
         h_lead.router,
     ]

@@ -43,6 +43,12 @@ class User(Base):
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    profile: Mapped[Optional["UserProfile"]] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    orders: Mapped[list["Order"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
@@ -52,12 +58,26 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
     __table_args__ = (UniqueConstraint("user_id", name="uq_subscriptions_user"),)
 
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
-    plan: Mapped[str] = mapped_column(String(16), nullable=False)
-    since: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    plan: Mapped[str] = mapped_column(String(32), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    renewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    txn_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, unique=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
 
     user: Mapped[User] = relationship(back_populates="subscription")
+
+    @property
+    def until(self) -> Optional[datetime]:
+        """Backward-compatible alias for legacy code referencing `until`."""
+
+        return self.renewed_at
+
+    @until.setter
+    def until(self, value: Optional[datetime]) -> None:  # pragma: no cover - legacy setter
+        self.renewed_at = value
 
 
 class Referral(Base):
@@ -118,3 +138,41 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_user", "user_id"),
+        Index("ix_orders_status", "status"),
+        UniqueConstraint("payload_hash", name="uq_orders_payload"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    product: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
+    payload_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="orders")
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), primary_key=True
+    )
+    plan_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="profile")

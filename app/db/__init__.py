@@ -1,13 +1,25 @@
 """Database package."""
 
-from .models import Base, Event, Lead, PromoUsage, Referral, Subscription, User
+from .models import (
+    Base,
+    Event,
+    Lead,
+    Order,
+    PromoUsage,
+    Referral,
+    Subscription,
+    User,
+    UserProfile,
+)
 
 __all__ = [
     "Base",
     "Event",
     "Lead",
+    "Order",
     "PromoUsage",
     "Referral",
     "Subscription",
     "User",
+    "UserProfile",
 ]

@@ -217,7 +217,7 @@ async def user_card(message: Message) -> None:
     username = f"@{user.username}" if user.username else "-"
     referred = str(user.referred_by) if user.referred_by else "-"
     if subscription:
-        sub_text = f"Plan {subscription.plan} until {_format_dt(subscription.until)}"
+        sub_text = f"Plan {subscription.plan} until {_format_dt(subscription.renewed_at)}"
     else:
         sub_text = "No active subscription"
     text = (
@@ -250,8 +250,8 @@ async def sub_get(message: Message) -> None:
     else:
         text = (
             f"Plan {subscription.plan}\n"
-            f"Since {_format_dt(subscription.since)}\n"
-            f"Until {_format_dt(subscription.until)}"
+            f"Since {_format_dt(subscription.started_at)}\n"
+            f"Until {_format_dt(subscription.renewed_at)}"
         )
     await message.answer(text, reply_markup=kb_back_home("home:main"))
 
@@ -275,7 +275,7 @@ async def sub_set(message: Message) -> None:
             await users_repo.get_or_create_user(session, user_id)
             subscription = await subscriptions_repo.set_plan(session, user_id, plan, days=days)
             await commit_safely(session)
-        text = f"Plan {subscription.plan} until {_format_date(subscription.until)}"
+        text = f"Plan {subscription.plan} until {_format_date(subscription.renewed_at)}"
         await message.answer(text, reply_markup=kb_back_home("home:main"))
     except Exception as exc:  # pragma: no cover
         await message.answer(f"Error: {exc}")

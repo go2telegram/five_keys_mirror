@@ -26,7 +26,7 @@ async def test_subscription_check_shows_active_plan(monkeypatch):
     monkeypatch.setattr(subscription.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(subscription.events_repo, "log", AsyncMock())
     until = datetime.now(timezone.utc) + timedelta(days=3)
-    sub = SimpleNamespace(plan="basic", until=until)
+    sub = SimpleNamespace(plan="basic", renewed_at=until, status="active")
     monkeypatch.setattr(
         subscription.subscriptions_repo,
         "is_active",
@@ -101,7 +101,7 @@ async def test_premium_menu_requires_subscription(monkeypatch):
     assert "Premium доступен" in args[0]
     callbacks = [btn.callback_data for btn in _flatten(kwargs["reply_markup"]) if btn.callback_data]
     assert "sub:menu" in callbacks
-    assert "home:main" in callbacks
+    assert "premium:buy" in callbacks
 
 
 @pytest.mark.asyncio
@@ -109,7 +109,11 @@ async def test_premium_menu_shows_links_for_active_user(monkeypatch):
     monkeypatch.setattr(premium, "session_scope", _dummy_scope)
     monkeypatch.setattr(premium.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(premium.events_repo, "log", AsyncMock())
-    sub = SimpleNamespace(plan="pro", until=datetime.now(timezone.utc) + timedelta(days=30))
+    sub = SimpleNamespace(
+        plan="pro",
+        renewed_at=datetime.now(timezone.utc) + timedelta(days=30),
+        status="active",
+    )
     monkeypatch.setattr(
         premium.subscriptions_repo,
         "is_active",

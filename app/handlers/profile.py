@@ -73,7 +73,7 @@ async def profile_open(c: CallbackQuery) -> None:
 
     username = f"@{user.username}" if user.username else "—"
     sub_status = "Активна" if is_active and subscription else "Не найдена"
-    until_str = _format_date(subscription.until if subscription else None)
+    until_str = _format_date(subscription.renewed_at if subscription else None)
     lines = [
         "👤 <b>Профиль</b>",
         "",
