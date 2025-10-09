@@ -9,6 +9,9 @@ import logging
 import os
 import re
 import sys
+import time
+import urllib.error
+import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,6 +56,16 @@ DEFAULT_IMAGES_BASE = os.getenv(
 DEFAULT_IMAGES_DIR = os.getenv(
     "IMAGES_DIR",
     str(ROOT / "app" / "static" / "images" / "products"),
+)
+
+GITHUB_API_BASE = "https://api.github.com"
+MEDIA_OWNER = os.getenv("MEDIA_OWNER", "go2telegram")
+MEDIA_REPO = os.getenv("MEDIA_REPO", "media")
+MEDIA_REF = os.getenv("MEDIA_REF", "main")
+MEDIA_PRODUCTS_PATH = os.getenv("MEDIA_PRODUCTS_PATH", "media/products")
+MEDIA_DESCRIPTIONS_PATH = os.getenv("MEDIA_DESCRIPTIONS_PATH", "media/descriptions")
+ONLINE_IMAGES_BASE = (
+    f"https://raw.githubusercontent.com/{MEDIA_OWNER}/{MEDIA_REPO}/{MEDIA_REF}/{MEDIA_PRODUCTS_PATH}"
 )
 
 EXPECT_COUNT_FROM_IMAGES = "from=images"
@@ -115,6 +128,79 @@ DESCRIPTION_OVERRIDES: Mapping[str, dict[str, str]] = {
         "contra": "Нет.",
     },
 }
+
+
+def _http_json(url: str, retries: int = 3, sleep: float = 0.4) -> object:
+    headers = {"User-Agent": "five-keys-bot/catalog", "Accept": "application/json"}
+    for attempt in range(retries + 1):
+        try:
+            request = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(request, timeout=15) as response:
+                payload = response.read().decode("utf-8")
+            return json.loads(payload)
+        except urllib.error.HTTPError as exc:
+            if exc.code in {429, 500, 502, 503, 504} and attempt < retries:
+                time.sleep(sleep * (attempt + 1))
+                continue
+            raise
+        except Exception:
+            if attempt < retries:
+                time.sleep(sleep * (attempt + 1))
+                continue
+            raise
+
+
+def list_github_contents(path: str, ref: str) -> list[dict]:
+    quoted_path = quote(path, safe="/")
+    quoted_ref = quote(ref)
+    url = f"{GITHUB_API_BASE}/repos/{MEDIA_OWNER}/{MEDIA_REPO}/contents/{quoted_path}?ref={quoted_ref}"
+    payload = _http_json(url)
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        return [payload]
+    raise CatalogBuildError(f"Unexpected GitHub API response for {url}")
+
+
+def _collect_media_urls(path: str, ref: str, *, extensions: tuple[str, ...]) -> list[str]:
+    urls: list[str] = []
+    for item in list_github_contents(path, ref):
+        item_type = str(item.get("type", ""))
+        if item_type == "dir":
+            nested_path = str(item.get("path", "")) or f"{path}/{item.get('name', '')}"
+            urls.extend(_collect_media_urls(nested_path, ref, extensions=extensions))
+            continue
+        if item_type != "file":
+            continue
+        name = str(item.get("name", ""))
+        if not name.lower().endswith(extensions):
+            continue
+        download_url = item.get("download_url")
+        if isinstance(download_url, str) and download_url:
+            urls.append(download_url)
+    return urls
+
+
+def enumerate_product_images(ref: str) -> list[str]:
+    """Return RAW URLs of all product images for the given ref."""
+
+    return sorted(
+        set(
+            _collect_media_urls(
+                MEDIA_PRODUCTS_PATH,
+                ref,
+                extensions=(".jpg", ".jpeg", ".png", ".webp"),
+            )
+        )
+    )
+
+
+def enumerate_descriptions(ref: str) -> list[str]:
+    """Return RAW URLs of all text descriptions for the given ref."""
+
+    return sorted(
+        set(_collect_media_urls(MEDIA_DESCRIPTIONS_PATH, ref, extensions=(".txt",)))
+    )
 
 
 class CatalogBuildError(RuntimeError):
@@ -204,8 +290,8 @@ def _parse_github_tree(url: str) -> tuple[str, str, str, str]:
         ref = rest[0]
         path = "/".join(rest[1:])
     else:  # raw.githubusercontent.com
-        ref = rest[1]
-        path = "/".join(rest[2:])
+        ref = marker
+        path = "/".join(rest)
     return owner, repo, ref, path
 
 
@@ -292,6 +378,24 @@ def _load_description_texts(
         for entry in entries:
             download_url = entry["download_url"]
             items.append((download_url, _http_get(download_url).decode("utf-8")))
+
+    if not items and os.getenv("NO_NET") != "1":
+        try:
+            remote_urls = enumerate_descriptions(MEDIA_REF)
+        except Exception as exc:  # pragma: no cover - network dependent
+            logging.warning("Failed to enumerate remote descriptions: %s", exc)
+        else:
+            seen: set[str] = set()
+            for url in remote_urls:
+                if url in seen:
+                    continue
+                seen.add(url)
+                try:
+                    text = _http_get(url).decode("utf-8")
+                except CatalogBuildError as exc:  # pragma: no cover - network dependent
+                    logging.warning("Failed to fetch remote description %s: %s", url, exc)
+                    continue
+                items.append((url, text))
 
     if items:
         return items
@@ -886,7 +990,52 @@ def build_catalog(
 
     if mode == "remote":
         base = images_base or DEFAULT_IMAGES_BASE
-        image_base, files = _list_remote_images(base)
+        files: list[str] = []
+        allow_network = os.getenv("NO_NET") != "1"
+        image_base = ONLINE_IMAGES_BASE if allow_network else base
+        if allow_network:
+            try:
+                image_urls = enumerate_product_images(MEDIA_REF)
+            except Exception as exc:  # pragma: no cover - network dependent
+                print(f"WARN: online listing failed ({exc}); fallback to RAW base listing")
+                image_urls = []
+            else:
+                normalized: set[str] = set()
+                for url in image_urls:
+                    if not isinstance(url, str):
+                        continue
+                    name = Path(urlsplit(url).path).name
+                    if name:
+                        normalized.add(name)
+                if normalized:
+                    files = sorted(normalized)
+        if not files:
+            if allow_network:
+                try:
+                    image_base, files = _list_remote_images(base)
+                except CatalogBuildError as exc:
+                    logging.warning("Falling back to local image listing: %s", exc)
+                    image_base = base
+                    local_directory = Path(images_dir or DEFAULT_IMAGES_DIR)
+                    if local_directory.exists():
+                        try:
+                            files = _list_local_images(local_directory)
+                        except CatalogBuildError:
+                            files = []
+                    else:
+                        files = []
+            else:
+                image_base = base
+                local_directory = Path(images_dir or DEFAULT_IMAGES_DIR)
+                if local_directory.exists():
+                    try:
+                        files = _list_local_images(local_directory)
+                    except CatalogBuildError:
+                        files = []
+                else:
+                    files = []
+        if not image_base.endswith("/"):
+            image_base += "/"
     else:
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
         files = _list_local_images(directory)
