@@ -1,10 +1,11 @@
+import importlib.util
 import logging
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-try:
+if importlib.util.find_spec("reportlab") is not None:
     from reportlab.graphics.barcode import qr
     from reportlab.graphics.shapes import Drawing
     from reportlab.lib import colors
@@ -24,7 +25,7 @@ try:
         TableStyle,
     )
     REPORTLAB_OK = True
-except Exception:  # pragma: no cover - optional dependency missing
+else:  # pragma: no cover - optional dependency missing
     REPORTLAB_OK = False
     qr = None  # type: ignore[assignment]
     Drawing = Any  # type: ignore[assignment]
