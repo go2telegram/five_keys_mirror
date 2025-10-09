@@ -31,7 +31,34 @@ DEFAULT_REPORT = ROOT / "build" / "reports" / "self_audit.md"
 JSON_REPORT = "self_audit.json"
 TIMINGS_REPORT = "timings.json"
 
+def _check_git_dirty(context: AuditContext) -> SectionResult:
+    try:
+        result = context.run(["git", "status", "--porcelain"], check=False)
+    except Exception as exc:  # pragma: no cover - defensive
+        return SectionResult(
+            name="git_dirty",
+            status="error",
+            summary="Не удалось проверить состояние git.",
+            details=[str(exc)],
+        )
+
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if lines:
+        return SectionResult(
+            name="git_dirty",
+            status="warn",
+            summary="Рабочее дерево содержит несохранённые изменения.",
+            details=lines,
+        )
+    return SectionResult(
+        name="git_dirty",
+        status="ok",
+        summary="Рабочее дерево чистое.",
+    )
+
+
 _SECTION_HANDLERS: Dict[str, Callable[[AuditContext], SectionResult]] = {
+    "git_dirty": _check_git_dirty,
     "migrations": check_migrations.run,
     "catalog": check_catalog.run,
     "media": check_media_urls.run,
@@ -45,6 +72,7 @@ _SECTION_HANDLERS: Dict[str, Callable[[AuditContext], SectionResult]] = {
 }
 
 _GROUPS = [
+    ("Git", ["git_dirty"]),
     ("Миграции", ["migrations"]),
     ("Каталог", ["catalog"]),
     ("Медиа", ["media"]),
