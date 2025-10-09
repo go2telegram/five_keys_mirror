@@ -18,6 +18,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.reco.ai_reasoner import ai_tip_for_quiz
 from app.utils_media import fetch_image_as_file
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -261,8 +262,25 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
             user_id = call.from_user.id if call.from_user else 0
             handled = await hooks.on_finish(user_id, definition, result_context)
 
+        message = call.message
+        tip: str | None = None
+        if message:
+            tip_tags = result_context.collected_tags or result_context.threshold.tags
+            tip = await ai_tip_for_quiz(quiz_name, tip_tags)
+
         if not handled:
-            await _send_default_result(call, definition, result_context)
+            await _send_default_result(call, definition, result_context, tip=tip)
+        elif message and tip:
+            tags_line = ", ".join(result_context.threshold.tags) if result_context.threshold.tags else "—"
+            tip_lines = [
+                f"💡 AI совет: {tip}",
+                "",
+                f"score: {result_context.total_score}",
+                f"label: {result_context.threshold.label}",
+                f"advice: {result_context.threshold.advice}",
+                f"tags: {tags_line}",
+            ]
+            await message.answer("\n".join(tip_lines))
 
         await state.clear()
         with suppress(Exception):
@@ -431,7 +449,10 @@ async def _send_question(message: Message, definition: QuizDefinition, index: in
 
 
 async def _send_default_result(
-    call: CallbackQuery, definition: QuizDefinition, result: QuizResultContext
+    call: CallbackQuery,
+    definition: QuizDefinition,
+    result: QuizResultContext,
+    tip: str | None = None,
 ) -> None:
     message = call.message
     if not message:
@@ -449,6 +470,9 @@ async def _send_default_result(
     if result.collected_tags:
         answers_line = ", ".join(result.collected_tags)
         text += f"\nanswers: {answers_line}"
+
+    if tip:
+        text = f"{text}\n\n💡 AI совет: {tip}"
 
     await message.answer(text)
 

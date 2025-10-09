@@ -7,12 +7,15 @@ import logging
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.db.session import compat_session, session_scope
 from app.keyboards import (
+    kb_back_home,
     kb_goal_menu,
     kb_onboarding_entry,
+    kb_premium_info_actions,
     kb_quiz_menu,
     kb_recommendation_prompt,
     kb_yes_no,
@@ -24,6 +27,8 @@ from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
 from app.utils import safe_edit_text
 
+from app.quiz.engine import start_quiz
+
 from app.handlers import reg as reg_handlers
 
 logger = logging.getLogger(__name__)
@@ -32,8 +37,17 @@ log_start = logging.getLogger("start")
 router = Router(name="start")
 
 GREETING = (
-    "Привет! На связи «Пять ключей здоровья». "
-    "Помогу подобрать продукты, пройти тесты и оформить регистрацию."
+    "👋 Привет!\n"
+    "Я — твой личный гид по энергии, здоровью и продуктам Vilavi.\n"
+    "💡 Хочешь узнать, какой у тебя энергетический потенциал и как его увеличить?\n"
+    "🚀 Пройди мини-тест — всего 60 секунд."
+)
+
+ONBOARDING_CONFIRMATION = "Класс! Сейчас покажу, что может реально улучшить твои результаты 💪"
+MENU_HELP_TEXT = (
+    "ℹ️ <b>Помощь</b>\n"
+    "Есть вопросы по тестам, продуктам или подписке? Напиши их прямо в чат — команда ответит в течение рабочего дня.\n"
+    "Можно также выбрать раздел «🎯 Персональные рекомендации» и получить консультацию."
 )
 
 RETURNING_PROMPT = "Готов показать обновлённые рекомендации. Нажми кнопку ниже, чтобы продолжить."
@@ -145,24 +159,65 @@ async def _prompt_recommendations(message: Message) -> None:
     await message.answer(RETURNING_PROMPT, reply_markup=kb_recommendation_prompt())
 
 
-@router.callback_query(F.data == "onboard:product")
-async def onboarding_product(c: CallbackQuery) -> None:
+@router.callback_query(F.data == "onboard:energy")
+async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
     await c.answer()
-    await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
+    if c.message:
+        await c.message.answer(ONBOARDING_CONFIRMATION)
+    await start_quiz(c, state, "energy")
 
 
-@router.callback_query(F.data == "onboard:tests")
-async def onboarding_tests(c: CallbackQuery) -> None:
+@router.callback_query(F.data == "onboard:recommend")
+async def onboarding_recommend(c: CallbackQuery) -> None:
     await c.answer()
-    await c.message.answer(
-        "Выбирай тест, чтобы получить персональный план:",
-        reply_markup=kb_quiz_menu(),
-    )
+    if c.message:
+        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
+
+
+@router.callback_query(F.data == "onboard:recommend_full")
+async def onboarding_recommend_full(c: CallbackQuery) -> None:
+    await c.answer()
+    if c.message:
+        await c.message.answer(ONBOARDING_CONFIRMATION)
+        await c.message.answer(
+            "Хочешь бонус-подборку? Нажми кнопку ниже — соберу расширенный план.",
+            reply_markup=kb_recommendation_prompt(),
+        )
 
 
 @router.callback_query(F.data == "onboard:register")
 async def onboarding_register(c: CallbackQuery) -> None:
     return await reg_handlers.reg_open(c)
+
+
+@router.callback_query(F.data == "menu:tests")
+async def menu_tests(c: CallbackQuery) -> None:
+    await c.answer()
+    if c.message:
+        await safe_edit_text(
+            c.message,
+            "Выбирай тест, чтобы получить персональный план:",
+            kb_quiz_menu(),
+        )
+
+
+@router.callback_query(F.data == "menu:premium")
+async def menu_premium(c: CallbackQuery) -> None:
+    await c.answer()
+    if c.message:
+        await safe_edit_text(
+            c.message,
+            "💎 Премиум-доступ — выбери действие:",
+            kb_premium_info_actions(),
+        )
+
+
+@router.callback_query(F.data == "menu:help")
+async def menu_help(c: CallbackQuery) -> None:
+    await c.answer()
+    if c.message:
+        await safe_edit_text(c.message, MENU_HELP_TEXT, kb_back_home())
 
 
 @router.callback_query(F.data == "notify:yes")

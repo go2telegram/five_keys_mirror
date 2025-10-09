@@ -1,3 +1,7 @@
+"""Recommendation helpers and context-specific copy."""
+
+from __future__ import annotations
+
 from typing import List
 
 from app.products import PRODUCTS
@@ -130,19 +134,21 @@ CTX = {
 
 
 def product_lines(codes: List[str], context: str) -> List[str]:
-    """
-    Возвращает строки вида:
-    — <b>Название</b>: краткое описание из PRODUCTS
-      Как поможет сейчас: <i>контекстная фраза</i>
-    """
-    out = []
+    """Return formatted recommendation lines for the selected products."""
+
+    out: list[str] = []
     for code in codes:
         p = PRODUCTS.get(code, {})
         title = p.get("title", code)
         generic = p.get("bullets", [""])[0]
         help_text = CTX.get(context, {}).get(code)
         if help_text:
-            out.append(f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{help_text}</i>")
+            out.append(
+                f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{help_text}</i>"
+            )
         else:
             out.append(f"— <b>{title}</b>: {generic}")
     return out
+
+
+__all__ = ["CTX", "product_lines"]
