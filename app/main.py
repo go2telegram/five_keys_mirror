@@ -17,8 +17,9 @@ from aiogram.types import CallbackQuery
 from aiohttp import web
 
 from app import build_info
+from app.catalog.loader import CATALOG_SHA
 from app.config import settings
-from app.db.session import init_db, session_scope
+from app.db.session import current_revision, head_revision, init_db, session_scope
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
@@ -71,8 +72,12 @@ ALLOWED_UPDATES = ["message", "callback_query"]
 
 log_home = logging.getLogger("home")
 startup_log = logging.getLogger("startup")
+doctor_log = logging.getLogger("doctor")
 
 SERVICE_START_TS = time.time()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+LAST_KNOWN_REVISION: str | None = None
 
 _sentry_spec = importlib.util.find_spec("sentry_sdk")
 if _sentry_spec is not None:
@@ -185,10 +190,50 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
+def _collect_migration_files() -> list[str]:
+    versions_dir = PROJECT_ROOT / "alembic" / "versions"
+    try:
+        paths = sorted(
+            path.name
+            for path in versions_dir.glob("*.py")
+            if path.is_file() and path.name != "__init__.py"
+        )
+    except FileNotFoundError:
+        doctor_log.warning("doctor: versions directory %s not found", versions_dir)
+        return []
+    except Exception:
+        doctor_log.exception("doctor: failed to list migrations in %s", versions_dir)
+        return []
+    return paths
+
+
+async def _handle_doctor(_: web.Request) -> web.Response:
+    current = await current_revision()
+    head = await head_revision()
+    migrations = _collect_migration_files()
+    catalog_sha = CATALOG_SHA or "unknown"
+    payload = {
+        "status": "ok",
+        "alembic": {
+            "current": current or "unknown",
+            "head": head or "unknown",
+            "pending": bool(current and head and current != head),
+            "init_revision": LAST_KNOWN_REVISION or "unknown",
+        },
+        "migrations": {
+            "files": migrations,
+            "count": len(migrations),
+        },
+        "catalog_sha": catalog_sha,
+    }
+    return web.json_response(payload)
+
+
 async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web = web.Application()
     app_web.router.add_get("/ping", _handle_ping)
     app_web.router.add_get("/metrics", _handle_metrics)
+    app_web.router.add_get("/doctor", _handle_doctor)
     if settings.RUN_TRIBUTE_WEBHOOK:
         app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
 
@@ -233,6 +278,21 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
         settings.TRIBUTE_WEBHOOK_PATH if settings.RUN_TRIBUTE_WEBHOOK else "disabled",
     )
     return runner, site
+
+
+async def _cleanup_service_resources(
+    runner: web.AppRunner | None,
+    site: web.BaseSite | None,
+) -> None:
+    if site is not None:
+        await site.stop()
+    if runner is not None:
+        await runner.cleanup()
+
+
+async def _wait_forever() -> None:
+    event = asyncio.Event()
+    await event.wait()
 
 
 async def _setup_tribute_webhook() -> web.AppRunner:
@@ -411,6 +471,7 @@ async def _notify_admin_startup(bot: Bot, allowed_updates: Iterable[str]) -> Non
 
 
 async def main() -> None:
+    global LAST_KNOWN_REVISION
     _init_sentry()
     setup_logging(
         log_dir=settings.LOG_DIR,
@@ -431,12 +492,36 @@ async def main() -> None:
     except Exception:
         startup_log.exception("E!: init_db failed")
     finally:
+        LAST_KNOWN_REVISION = revision
         mark("S2-done: init_db")
         logging.info("current alembic version: %s", revision or "unknown")
 
     bot_token = getattr(settings, "BOT_TOKEN", "") or ""
-    if not bot_token or str(bot_token).startswith("dummy"):
-        startup_log.warning("BOT_TOKEN is dummy — skipping Telegram init")
+    token_prefix = str(bot_token).lower()
+    is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith("placeholder")
+    dry_run_reason: str | None = None
+    if settings.DEV_DRY_RUN:
+        dry_run_reason = "DEV_DRY_RUN"
+    elif not bot_token:
+        dry_run_reason = "missing BOT_TOKEN"
+    elif is_placeholder_token:
+        dry_run_reason = "placeholder BOT_TOKEN"
+
+    if dry_run_reason is not None:
+        mark("S3: dev dry run mode active")
+        runner: web.AppRunner | None = None
+        site: web.BaseSite | None = None
+        try:
+            runner, site = await _setup_service_app()
+            startup_log.warning(
+                "DEV_DRY_RUN enabled — telegram init skipped%s",
+                f" ({dry_run_reason})" if dry_run_reason else "",
+            )
+            await _wait_forever()
+        except asyncio.CancelledError:
+            raise
+        finally:
+            await _cleanup_service_resources(runner, site)
         return
 
     bot = Bot(
@@ -549,10 +634,7 @@ async def main() -> None:
     finally:
         mark("S9: shutdown sequence")
         logging.info(">>> Polling stopped")
-        if site is not None:
-            await site.stop()
-        if runner is not None:
-            await runner.cleanup()
+        await _cleanup_service_resources(runner, site)
         if background_started:
             with contextlib.suppress(Exception):
                 await stop_background_queue()
