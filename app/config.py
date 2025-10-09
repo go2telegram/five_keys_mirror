@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     GOOGLE_WORKSHEET_TITLE: str = Field(default="Leads")
     GOOGLE_SERVICE_ACCOUNT_FILE: str | None = None
     GOOGLE_SERVICE_ACCOUNT_INFO: str | None = None
+    GOOGLE_EVENTS_WORKSHEET_TITLE: str = Field(default="Events")
+    EVENTS_EXPORT_DIR: str = "/var/exports"
+    CLICKHOUSE_URL: str | None = None
+    CLICKHOUSE_TABLE: str = "events"
 
     # Логи
     LOG_LEVEL: str = "INFO"
@@ -37,6 +41,11 @@ class Settings(BaseSettings):
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
     RETENTION_ENABLED: bool = False
+    ANALYTICS_REPORT_ENABLED: bool = True
+    ANALYTICS_REPORT_HOUR: int = 7
+    ANALYTICS_REPORT_MINUTE: int = 30
+    ANALYTICS_REPORT_DAYS: int = 7
+    ANALYTICS_ADMIN_CHAT_ID: int | None = None
 
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None

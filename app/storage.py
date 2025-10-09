@@ -207,6 +207,7 @@ ACCESS_ROLES: dict[int, set[str]] = defaultdict(set)
 
 async def set_last_plan(session: AsyncSession, user_id: int, plan: Dict[str, Any]) -> None:
     await events.log(session, user_id, "plan_generated", plan)
+    await events.log_extra(session, user_id, "reco_shown", plan)
 
 
 async def get_last_plan(session: AsyncSession, user_id: int) -> Dict[str, Any] | None:

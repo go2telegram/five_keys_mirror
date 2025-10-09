@@ -64,7 +64,7 @@ async def _collect_event_stats(
 
 
 async def _collect_plan_stats(session: AsyncSession, limit: int | None = None) -> Tuple[int, Counter[str]]:
-    stmt = select(Event.meta).where(Event.name == "plan_generated").order_by(Event.ts.desc())
+    stmt = select(Event.meta).where(Event.name == "reco_shown").order_by(Event.ts.desc())
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await session.execute(stmt)
@@ -371,12 +371,14 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 
 async def _gather_dashboard_context() -> Dict[str, Any]:
     async with session_scope() as session:
-        quiz_counts, quiz_total = await _collect_event_stats(session, "quiz_finish", "quiz")
-        calc_counts, calc_total = await _collect_event_stats(session, "calc_finish", "calc")
+        quiz_counts, quiz_total = await _collect_event_stats(session, "quiz_finished", "quiz")
+        calc_counts, calc_total = await _collect_event_stats(session, "calc_done", "calc")
         plans_total, products_counter = await _collect_plan_stats(session)
         leads_total, leads_recent, recent_leads = await _collect_lead_details(session)
+        clicks_total_stmt = select(func.count()).where(Event.name == "reco_click_buy")
+        clicks_total = (await session.execute(clicks_total_stmt)).scalar_one()
 
-    ctr = (plans_total / quiz_total * 100.0) if quiz_total else 0.0
+    ctr = (clicks_total / plans_total * 100.0) if plans_total else 0.0
 
     catalog_data = load_catalog()
     catalog_products = list(catalog_data["products"].values())

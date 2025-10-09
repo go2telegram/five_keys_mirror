@@ -18,6 +18,10 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.db.session import compat_session, session_scope
+from app.repo import events as events_repo, users as users_repo
+from app.storage import commit_safely
+
 from app.reco.ai_reasoner import ai_tip_for_quiz
 from app.utils_media import fetch_image_as_file
 
@@ -181,6 +185,20 @@ async def start_quiz(entry: CallbackQuery | Message, state: FSMContext, name: st
 
     await _send_cover(message, definition)
     await _send_question(message, definition, 0)
+
+    user = getattr(message, "from_user", None)
+    user_id = getattr(user, "id", None)
+    username = getattr(user, "username", None) if user is not None else None
+    if user_id is not None:
+        async with compat_session(session_scope) as session:
+            await users_repo.get_or_create_user(session, user_id, username)
+            await events_repo.log(
+                session,
+                user_id,
+                "quiz_started",
+                {"quiz": name},
+            )
+            await commit_safely(session)
 
     if isinstance(entry, CallbackQuery):
         with suppress(Exception):

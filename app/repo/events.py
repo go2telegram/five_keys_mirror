@@ -21,6 +21,31 @@ async def log(session: AsyncSession, user_id: Optional[int], name: str, meta: Op
     return event
 
 
+async def log_extra(
+    session: AsyncSession,
+    user_id: Optional[int],
+    name: str,
+    meta: Optional[Dict[str, Any]] = None,
+) -> Event:
+    if not hasattr(session, "add"):
+        return Event(
+            user_id=user_id,
+            name=name,
+            meta=meta or {},
+            ts=datetime.now(timezone.utc),
+        )
+
+    event = Event(
+        user_id=user_id,
+        name=name,
+        meta=meta or {},
+        ts=datetime.now(timezone.utc),
+    )
+    session.add(event)
+    await session.flush()
+    return event
+
+
 async def last_by(session: AsyncSession, user_id: int, name: str) -> Optional[Event]:
     stmt = select(Event).where(Event.user_id == user_id, Event.name == name).order_by(Event.ts.desc()).limit(1)
     result = await session.execute(stmt)

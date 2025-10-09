@@ -1,100 +1,200 @@
-title: "ЖКТ/Дефициты"
-cover: "gut/cover.png"
-questions:
-  - id: q1
-    text: "Как часто испытываешь вздутие или тяжесть после еды?"
-    image: "gut/q1.png"
-    options:
-      - key: rarely
-        text: "Редко"
-        score: 1
-        tags: ["ok"]
-      - key: sometimes
-        text: "Иногда"
-        score: 2
-        tags: ["digest_support"]
-      - key: often
-        text: "Часто"
-        score: 3
-        tags: ["gut", "probiotic"]
-  - id: q2
-    text: "Сколько клетчатки (овощи, цельные продукты) в рационе?"
-    image: "gut/q2.png"
-    options:
-      - key: plenty
-        text: "Достаточно каждый день"
-        score: 1
-        tags: ["ok"]
-      - key: moderate
-        text: "Есть, но нерегулярно"
-        score: 2
-        tags: ["fiber"]
-      - key: low
-        text: "Мало или почти нет"
-        score: 3
-        tags: ["fiber", "digest_support"]
-  - id: q3
-    text: "Как часто принимаешь пробиотики или ферментированные продукты?"
-    image: "gut/q3.png"
-    options:
-      - key: weekly
-        text: "Почти ежедневно"
-        score: 1
-        tags: ["ok"]
-      - key: sometimes
-        text: "Несколько раз в неделю"
-        score: 2
-        tags: ["probiotic"]
-      - key: rarely
-        text: "Редко/никогда"
-        score: 3
-        tags: ["probiotic", "gut"]
-  - id: q4
-    text: "Наблюдаются ли проблемы с кожей или суставами, связанные с ЖКТ?"
-    image: "gut/q4.png"
-    options:
-      - key: none
-        text: "Нет"
-        score: 1
-        tags: ["ok"]
-      - key: mild
-        text: "Иногда"
-        score: 2
-        tags: ["collagen"]
-      - key: severe
-        text: "Часто"
-        score: 3
-        tags: ["collagen", "gut"]
-  - id: q5
-    text: "Как часто болеешь простудными заболеваниями?"
-    image: "gut/q5.png"
-    options:
-      - key: rare
-        text: "Редко"
-        score: 1
-        tags: ["ok"]
-      - key: few
-        text: "Несколько раз в год"
-        score: 2
-        tags: ["vitamins"]
-      - key: often
-        text: "Часто"
-        score: 3
-        tags: ["vitamins", "digest_support"]
-result:
-  thresholds:
-    - min: 0
-      max: 5
-      label: "ЖКТ в хорошем состоянии"
-      advice: "Продолжай поддерживать разнообразное питание и питьевой режим."
-      tags: ["gut"]
-    - min: 6
-      max: 10
-      label: "Нужна дополнительная поддержка"
-      advice: "Усиль рацион клетчаткой, пробиотиками и мягкими ферментами."
-      tags: ["digest_support", "fiber", "probiotic"]
-    - min: 11
-      max: 15
-      label: "Вероятны выраженные дефициты"
-      advice: "Подумай о курсе пробиотиков, коллагене, витаминах и комплексной поддержке ЖКТ."
-      tags: ["collagen", "vitamins"]
+{
+  "title": "ЖКТ/Дефициты",
+  "cover": "gut/cover.png",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Как часто испытываешь вздутие или тяжесть после еды?",
+      "image": "gut/q1.png",
+      "options": [
+        {
+          "key": "rarely",
+          "text": "Редко",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "Иногда",
+          "score": 2,
+          "tags": [
+            "digest_support"
+          ]
+        },
+        {
+          "key": "often",
+          "text": "Часто",
+          "score": 3,
+          "tags": [
+            "gut",
+            "probiotic"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "text": "Сколько клетчатки (овощи, цельные продукты) в рационе?",
+      "image": "gut/q2.png",
+      "options": [
+        {
+          "key": "plenty",
+          "text": "Достаточно каждый день",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "moderate",
+          "text": "Есть, но нерегулярно",
+          "score": 2,
+          "tags": [
+            "fiber"
+          ]
+        },
+        {
+          "key": "low",
+          "text": "Мало или почти нет",
+          "score": 3,
+          "tags": [
+            "fiber",
+            "digest_support"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "text": "Как часто принимаешь пробиотики или ферментированные продукты?",
+      "image": "gut/q3.png",
+      "options": [
+        {
+          "key": "weekly",
+          "text": "Почти ежедневно",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "Несколько раз в неделю",
+          "score": 2,
+          "tags": [
+            "probiotic"
+          ]
+        },
+        {
+          "key": "rarely",
+          "text": "Редко/никогда",
+          "score": 3,
+          "tags": [
+            "probiotic",
+            "gut"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "Наблюдаются ли проблемы с кожей или суставами, связанные с ЖКТ?",
+      "image": "gut/q4.png",
+      "options": [
+        {
+          "key": "none",
+          "text": "Нет",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "mild",
+          "text": "Иногда",
+          "score": 2,
+          "tags": [
+            "collagen"
+          ]
+        },
+        {
+          "key": "severe",
+          "text": "Часто",
+          "score": 3,
+          "tags": [
+            "collagen",
+            "gut"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "text": "Как часто болеешь простудными заболеваниями?",
+      "image": "gut/q5.png",
+      "options": [
+        {
+          "key": "rare",
+          "text": "Редко",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "few",
+          "text": "Несколько раз в год",
+          "score": 2,
+          "tags": [
+            "vitamins"
+          ]
+        },
+        {
+          "key": "often",
+          "text": "Часто",
+          "score": 3,
+          "tags": [
+            "vitamins",
+            "digest_support"
+          ]
+        }
+      ]
+    }
+  ],
+  "result": {
+    "thresholds": [
+      {
+        "min": 0,
+        "max": 5,
+        "label": "ЖКТ в хорошем состоянии",
+        "advice": "Продолжай поддерживать разнообразное питание и питьевой режим.",
+        "tags": [
+          "gut"
+        ]
+      },
+      {
+        "min": 6,
+        "max": 10,
+        "label": "Нужна дополнительная поддержка",
+        "advice": "Усиль рацион клетчаткой, пробиотиками и мягкими ферментами.",
+        "tags": [
+          "digest_support",
+          "fiber",
+          "probiotic"
+        ]
+      },
+      {
+        "min": 11,
+        "max": 15,
+        "label": "Вероятны выраженные дефициты",
+        "advice": "Подумай о курсе пробиотиков, коллагене, витаминах и комплексной поддержке ЖКТ.",
+        "tags": [
+          "collagen",
+          "vitamins"
+        ]
+      }
+    ]
+  }
+}

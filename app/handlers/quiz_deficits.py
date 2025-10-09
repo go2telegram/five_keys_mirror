@@ -215,20 +215,18 @@ async def _finish_quiz(c: CallbackQuery) -> None:
         "order_url": settings.velavie_url,
     }
 
+    payload = {
+        "quiz": "deficits",
+        "scores": scores,
+        "levels": levels,
+        "overall": level_key,
+    }
+
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, user_id, c.from_user.username)
         await set_last_plan(session, user_id, plan_payload)
-        await events_repo.log(
-            session,
-            user_id,
-            "quiz_finish",
-            {
-                "quiz": "deficits",
-                "scores": scores,
-                "levels": levels,
-                "overall": level_key,
-            },
-        )
+        await events_repo.log(session, user_id, "quiz_finish", payload)
+        await events_repo.log_extra(session, user_id, "quiz_finished", payload)
         await commit_safely(session)
 
     cards = pick_for_context("deficit", level_key, rec_codes)

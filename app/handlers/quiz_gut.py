@@ -116,15 +116,13 @@ async def quiz_gut_step(c: CallbackQuery):
             "order_url": settings.velavie_url,
         }
 
+        payload = {"quiz": "gut", "score": total, "level": level_label}
+
         async with compat_session(session_scope) as session:
             await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
             await set_last_plan(session, c.from_user.id, plan_payload)
-            await events_repo.log(
-                session,
-                c.from_user.id,
-                "quiz_finish",
-                {"quiz": "gut", "score": total, "level": level_label},
-            )
+            await events_repo.log(session, c.from_user.id, "quiz_finish", payload)
+            await events_repo.log_extra(session, c.from_user.id, "quiz_finished", payload)
             await commit_safely(session)
 
         cards = pick_for_context("gut", level_key, rec_codes[:3])

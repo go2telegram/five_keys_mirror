@@ -130,6 +130,7 @@ async def _finish(
         payload = dict(result.event_payload)
         payload.setdefault("calc", definition.slug)
         await events_repo.log(db, user.id, "calc_finish", payload)
+        await events_repo.log_extra(db, user.id, "calc_done", payload)
         await commit_safely(db)
 
     await send_product_cards(

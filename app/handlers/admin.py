@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -23,6 +23,7 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.services import analytics as analytics_service
 
 router = Router()
 
@@ -60,7 +61,10 @@ async def stats(m: Message):
         "• /leads — последние 10 лидов\n"
         "• /leads 20 — последние 20 лидов\n"
         "• /leads_csv — CSV последних 100\n"
-        "• /leads_csv 500 — CSV последних 500"
+        "• /leads_csv 500 — CSV последних 500\n"
+        "• /funnel_report [дни] — воронка\n"
+        "• /cohort_report [недели] — ретеншн\n"
+        "• /ctr_report [дни] [топ] — CTR"
     )
 
 
@@ -182,6 +186,67 @@ async def doctor_db(m: Message) -> None:
         )
 
     await m.answer(text)
+
+
+@router.message(Command("funnel_report"))
+async def funnel_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    parts = (m.text or "").split()
+    try:
+        days = int(parts[1]) if len(parts) > 1 else settings.ANALYTICS_REPORT_DAYS
+    except (ValueError, TypeError):
+        days = settings.ANALYTICS_REPORT_DAYS
+
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+
+    async with compat_session(session_scope) as session:
+        stages = await analytics_service.funnel_stats(session, since=since, until=now)
+
+    await m.answer(analytics_service.render_funnel_report(stages))
+
+
+@router.message(Command("cohort_report"))
+async def cohort_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    parts = (m.text or "").split()
+    try:
+        weeks = int(parts[1]) if len(parts) > 1 else 8
+    except (ValueError, TypeError):
+        weeks = 8
+
+    async with compat_session(session_scope) as session:
+        rows = await analytics_service.cohort_retention(session, weeks=weeks)
+
+    await m.answer(analytics_service.render_cohort_report(rows))
+
+
+@router.message(Command("ctr_report"))
+async def ctr_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    parts = (m.text or "").split()
+    try:
+        days = int(parts[1]) if len(parts) > 1 else settings.ANALYTICS_REPORT_DAYS
+    except (ValueError, TypeError):
+        days = settings.ANALYTICS_REPORT_DAYS
+    try:
+        limit = int(parts[2]) if len(parts) > 2 else 10
+    except (ValueError, TypeError):
+        limit = 10
+
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+
+    async with compat_session(session_scope) as session:
+        rows = await analytics_service.ctr_stats(session, since=since, until=now, limit=limit)
+
+    await m.answer(analytics_service.render_ctr_report(rows))
 
 
 def _format_catalog_items(items: list[str], *, limit: int = 10) -> str:

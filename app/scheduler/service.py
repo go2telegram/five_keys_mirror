@@ -8,7 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.scheduler.jobs import send_nudges, send_retention_reminders
+from app.scheduler.jobs import send_daily_analytics, send_nudges, send_retention_reminders
 
 
 def _parse_weekdays(csv: str | None) -> set[str]:
@@ -44,6 +44,20 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+
+    if settings.ANALYTICS_REPORT_ENABLED:
+        scheduler.add_job(
+            send_daily_analytics,
+            trigger=CronTrigger(
+                hour=settings.ANALYTICS_REPORT_HOUR,
+                minute=settings.ANALYTICS_REPORT_MINUTE,
+            ),
+            args=[bot],
+            name="daily_analytics",
+            misfire_grace_time=600,
+            coalesce=True,
+            max_instances=1,
+        )
 
     if getattr(settings, "RETENTION_ENABLED", False):
         scheduler.add_job(

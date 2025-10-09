@@ -1,116 +1,247 @@
-title: "Сон"
-cover: "sleep/cover.png"
-questions:
-  - id: q1
-    text: "Как быстро засыпаешь после отбоя?"
-    image: "sleep/q1.png"
-    options:
-      - key: fast
-        text: "В течение 10–20 минут"
-        score: 0
-        tags: ["sleep_support"]
-      - key: neutral
-        text: "Иногда дольше"
-        score: 1
-        tags: ["sleep_support", "sleep_calm"]
-      - key: slow
-        text: "Часто не могу долго заснуть"
-        score: 2
-        tags: ["sleep_support", "sleep_calm", "magnesium"]
-  - id: q2
-    text: "Просыпаешься ли среди ночи?"
-    image: "sleep/q2.png"
-    options:
-      - key: rarely
-        text: "Редко"
-        score: 0
-        tags: ["sleep_support"]
-      - key: sometimes
-        text: "1–2 раза в неделю"
-        score: 1
-        tags: ["sleep_support", "sleep_calm"]
-      - key: often
-        text: "Часто, сложно заснуть снова"
-        score: 2
-        tags: ["sleep_support", "sleep_calm", "glycine"]
-  - id: q3
-    text: "Сколько экранного времени за час до сна?"
-    image: "sleep/q3.png"
-    options:
-      - key: low
-        text: "Почти нет"
-        score: 0
-        tags: ["sleep_support"]
-      - key: mid
-        text: "30–60 минут"
-        score: 1
-        tags: ["sleep_support", "sleep_calm"]
-      - key: high
-        text: ">60 минут"
-        score: 2
-        tags: ["sleep_support", "sleep_calm", "magnesium"]
-  - id: q4
-    text: "Есть ли расслабляющий ритуал перед сном (ванна, чтение, дыхание)?"
-    image: "sleep/q4.png"
-    options:
-      - key: yes
-        text: "Да, регулярно"
-        score: 0
-        tags: ["sleep_support"]
-      - key: sometimes
-        text: "Иногда вспоминаю"
-        score: 1
-        tags: ["sleep_support", "sleep_calm"]
-      - key: never
-        text: "Почти не бывает"
-        score: 2
-        tags: ["sleep_support", "sleep_calm", "glycine"]
-  - id: q5
-    text: "Как ощущаешь себя утром после пробуждения?"
-    image: "sleep/q5.png"
-    options:
-      - key: fresh
-        text: "Бодро и легко"
-        score: 0
-        tags: ["sleep_support"]
-      - key: ok
-        text: "Нужна пара часов, чтобы включиться"
-        score: 1
-        tags: ["sleep_support", "mct"]
-      - key: tired
-        text: "Даже после 7–8 часов усталость"
-        score: 2
-        tags: ["sleep_support", "magnesium", "mct"]
-  - id: q6
-    text: "Как часто ужинаешь поздно или плотно за 2 часа до сна?"
-    image: "sleep/q6.png"
-    options:
-      - key: early
-        text: "Редко, слежу за режимом"
-        score: 0
-        tags: ["sleep_support"]
-      - key: sometimes
-        text: "Иногда не успеваю"
-        score: 1
-        tags: ["sleep_support", "magnesium"]
-      - key: late
-        text: "Часто ем поздно"
-        score: 2
-        tags: ["sleep_support", "magnesium", "glycine"]
-result:
-  thresholds:
-    - min: 0
-      max: 4
-      label: "Сон под контролем"
-      advice: "Сохраняй режим, продолжай умеренную гигиену сна и свет по утрам."
-      tags: ["sleep_support"]
-    - min: 5
-      max: 8
-      label: "Нужна настройка режима"
-      advice: "Добавь больше ритуалов расслабления, уменьши свет экрана и укрепи минерализацию."
-      tags: ["sleep_support", "sleep_calm", "magnesium"]
-    - min: 9
-      max: 12
-      label: "Выраженные сложности со сном"
-      advice: "Сфокусируйся на вечернем спокойствии: магний, глицин, тёплый душ и контроль ужина."
-      tags: ["sleep_support", "sleep_calm", "magnesium", "glycine", "mct"]
+{
+  "title": "Сон",
+  "cover": "sleep/cover.png",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Как быстро засыпаешь после отбоя?",
+      "image": "sleep/q1.png",
+      "options": [
+        {
+          "key": "fast",
+          "text": "В течение 10–20 минут",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "neutral",
+          "text": "Иногда дольше",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "sleep_calm"
+          ]
+        },
+        {
+          "key": "slow",
+          "text": "Часто не могу долго заснуть",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "sleep_calm",
+            "magnesium"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "text": "Просыпаешься ли среди ночи?",
+      "image": "sleep/q2.png",
+      "options": [
+        {
+          "key": "rarely",
+          "text": "Редко",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "1–2 раза в неделю",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "sleep_calm"
+          ]
+        },
+        {
+          "key": "often",
+          "text": "Часто, сложно заснуть снова",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "sleep_calm",
+            "glycine"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "text": "Сколько экранного времени за час до сна?",
+      "image": "sleep/q3.png",
+      "options": [
+        {
+          "key": "low",
+          "text": "Почти нет",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "mid",
+          "text": "30–60 минут",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "sleep_calm"
+          ]
+        },
+        {
+          "key": "high",
+          "text": ">60 минут",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "sleep_calm",
+            "magnesium"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "Есть ли расслабляющий ритуал перед сном (ванна, чтение, дыхание)?",
+      "image": "sleep/q4.png",
+      "options": [
+        {
+          "key": true,
+          "text": "Да, регулярно",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "Иногда вспоминаю",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "sleep_calm"
+          ]
+        },
+        {
+          "key": "never",
+          "text": "Почти не бывает",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "sleep_calm",
+            "glycine"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "text": "Как ощущаешь себя утром после пробуждения?",
+      "image": "sleep/q5.png",
+      "options": [
+        {
+          "key": "fresh",
+          "text": "Бодро и легко",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "ok",
+          "text": "Нужна пара часов, чтобы включиться",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "mct"
+          ]
+        },
+        {
+          "key": "tired",
+          "text": "Даже после 7–8 часов усталость",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "magnesium",
+            "mct"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q6",
+      "text": "Как часто ужинаешь поздно или плотно за 2 часа до сна?",
+      "image": "sleep/q6.png",
+      "options": [
+        {
+          "key": "early",
+          "text": "Редко, слежу за режимом",
+          "score": 0,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "Иногда не успеваю",
+          "score": 1,
+          "tags": [
+            "sleep_support",
+            "magnesium"
+          ]
+        },
+        {
+          "key": "late",
+          "text": "Часто ем поздно",
+          "score": 2,
+          "tags": [
+            "sleep_support",
+            "magnesium",
+            "glycine"
+          ]
+        }
+      ]
+    }
+  ],
+  "result": {
+    "thresholds": [
+      {
+        "min": 0,
+        "max": 4,
+        "label": "Сон под контролем",
+        "advice": "Сохраняй режим, продолжай умеренную гигиену сна и свет по утрам.",
+        "tags": [
+          "sleep_support"
+        ]
+      },
+      {
+        "min": 5,
+        "max": 8,
+        "label": "Нужна настройка режима",
+        "advice": "Добавь больше ритуалов расслабления, уменьши свет экрана и укрепи минерализацию.",
+        "tags": [
+          "sleep_support",
+          "sleep_calm",
+          "magnesium"
+        ]
+      },
+      {
+        "min": 9,
+        "max": 12,
+        "label": "Выраженные сложности со сном",
+        "advice": "Сфокусируйся на вечернем спокойствии: магний, глицин, тёплый душ и контроль ужина.",
+        "tags": [
+          "sleep_support",
+          "sleep_calm",
+          "magnesium",
+          "glycine",
+          "mct"
+        ]
+      }
+    ]
+  }
+}

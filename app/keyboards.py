@@ -1,6 +1,6 @@
 from typing import Iterable, Mapping
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
@@ -207,14 +207,18 @@ def kb_actions(
     with_consult: bool = True,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    buy_buttons = 0
+    buy_pairs = 0
     for card in cards:
         url = card.get("order_url")
-        if not url:
+        code = card.get("code") or card.get("name")
+        if not url or not code:
             continue
         name = card.get("name") or card.get("code") or "Product"
-        kb.button(text=f"🛒 Купить {name}", url=str(url))
-        buy_buttons += 1
+        payload = f"reco:buy:{code}"[:64]
+        buy_button = InlineKeyboardButton(text=f"🛒 Купить {name}", callback_data=payload)
+        open_button = InlineKeyboardButton(text=f"🔗 Купить {name}", url=str(url))
+        kb.row(buy_button, open_button)
+        buy_pairs += 1
 
     if with_pdf:
         kb.button(text="📄 PDF-план", callback_data="report:last")
@@ -229,7 +233,7 @@ def kb_actions(
     kb.button(text="⬅️ Назад", callback_data=back_cb or home_cb)
     kb.button(text="🏠 Домой", callback_data=home_cb)
 
-    layout = [1] * buy_buttons
+    layout = [2] * buy_pairs
     tail = []
     if with_pdf:
         tail.append(1)

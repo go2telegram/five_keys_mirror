@@ -1,100 +1,201 @@
-title: "Энергия"
-cover: "energy/cover.png"
-questions:
-  - id: q1
-    text: "Как часто чувствуешь упадок сил днём?"
-    image: "energy/q1.png"
-    options:
-      - key: rarely
-        text: "Редко"
-        score: 1
-        tags: ["ok"]
-      - key: sometimes
-        text: "Иногда"
-        score: 2
-        tags: ["support"]
-      - key: often
-        text: "Часто"
-        score: 3
-        tags: ["energy", "mitochondria"]
-  - id: q2
-    text: "Какой у тебя сон?"
-    image: "energy/q2.png"
-    options:
-      - key: deep
-        text: "Крепкий"
-        score: 1
-        tags: ["sleep_ok"]
-      - key: broken
-        text: "Бывает рвётся"
-        score: 2
-        tags: ["sleep_support"]
-      - key: bad
-        text: "Лёгкий/поверхностный"
-        score: 3
-        tags: ["sleep_focus"]
-  - id: q3
-    text: "Сколько чашек кофе в день?"
-    image: "energy/q3.png"
-    options:
-      - key: none
-        text: "0–1"
-        score: 1
-        tags: ["ok"]
-      - key: mid
-        text: "2–3"
-        score: 2
-        tags: ["caffeine"]
-      - key: high
-        text: "4+"
-        score: 3
-        tags: ["overstim"]
-  - id: q4
-    text: "Лёгкость подъёма по утрам?"
-    image: "energy/q4.png"
-    options:
-      - key: easy
-        text: "Легко"
-        score: 1
-        tags: ["ok"]
-      - key: neutral
-        text: "Нормально"
-        score: 2
-        tags: ["tonus"]
-      - key: hard
-        text: "Тяжело"
-        score: 3
-        tags: ["adaptogens", "mct"]
-  - id: q5
-    text: "Физическая активность в неделю?"
-    image: "energy/q5.png"
-    options:
-      - key: none
-        text: "Редко"
-        score: 3
-        tags: ["recovery"]
-      - key: light
-        text: "1–2 раза"
-        score: 2
-        tags: ["support"]
-      - key: good
-        text: "3+ раз"
-        score: 1
-        tags: ["ok"]
-result:
-  thresholds:
-    - min: 0
-      max: 5
-      label: "Энергия ок"
-      advice: "Поддерживай режим сна/воды. Лёгкая минерализация и витамины группы B."
-      tags: ["support", "vitamin-d3", "b-complex"]
-    - min: 6
-      max: 10
-      label: "Нужна поддержка"
-      advice: "Попробуй MIT UP/Brain Coffee, MCT утром, электролиты. Пересмотри сон."
-      tags: ["mitup", "brain-coffee", "mct", "electrolytes"]
-    - min: 11
-      max: 15
-      label: "Выраженный дефицит"
-      advice: "Сфокусируйся на восстановлении: митохондриальная поддержка, адаптогены, D3."
-      tags: ["mitochondria", "adaptogens", "vitamin-d3"]
+{
+  "title": "Энергия",
+  "cover": "energy/cover.png",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Как часто чувствуешь упадок сил днём?",
+      "image": "energy/q1.png",
+      "options": [
+        {
+          "key": "rarely",
+          "text": "Редко",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "sometimes",
+          "text": "Иногда",
+          "score": 2,
+          "tags": [
+            "support"
+          ]
+        },
+        {
+          "key": "often",
+          "text": "Часто",
+          "score": 3,
+          "tags": [
+            "energy",
+            "mitochondria"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "text": "Какой у тебя сон?",
+      "image": "energy/q2.png",
+      "options": [
+        {
+          "key": "deep",
+          "text": "Крепкий",
+          "score": 1,
+          "tags": [
+            "sleep_ok"
+          ]
+        },
+        {
+          "key": "broken",
+          "text": "Бывает рвётся",
+          "score": 2,
+          "tags": [
+            "sleep_support"
+          ]
+        },
+        {
+          "key": "bad",
+          "text": "Лёгкий/поверхностный",
+          "score": 3,
+          "tags": [
+            "sleep_focus"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "text": "Сколько чашек кофе в день?",
+      "image": "energy/q3.png",
+      "options": [
+        {
+          "key": "none",
+          "text": "0–1",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "mid",
+          "text": "2–3",
+          "score": 2,
+          "tags": [
+            "caffeine"
+          ]
+        },
+        {
+          "key": "high",
+          "text": "4+",
+          "score": 3,
+          "tags": [
+            "overstim"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "Лёгкость подъёма по утрам?",
+      "image": "energy/q4.png",
+      "options": [
+        {
+          "key": "easy",
+          "text": "Легко",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        },
+        {
+          "key": "neutral",
+          "text": "Нормально",
+          "score": 2,
+          "tags": [
+            "tonus"
+          ]
+        },
+        {
+          "key": "hard",
+          "text": "Тяжело",
+          "score": 3,
+          "tags": [
+            "adaptogens",
+            "mct"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "text": "Физическая активность в неделю?",
+      "image": "energy/q5.png",
+      "options": [
+        {
+          "key": "none",
+          "text": "Редко",
+          "score": 3,
+          "tags": [
+            "recovery"
+          ]
+        },
+        {
+          "key": "light",
+          "text": "1–2 раза",
+          "score": 2,
+          "tags": [
+            "support"
+          ]
+        },
+        {
+          "key": "good",
+          "text": "3+ раз",
+          "score": 1,
+          "tags": [
+            "ok"
+          ]
+        }
+      ]
+    }
+  ],
+  "result": {
+    "thresholds": [
+      {
+        "min": 0,
+        "max": 5,
+        "label": "Энергия ок",
+        "advice": "Поддерживай режим сна/воды. Лёгкая минерализация и витамины группы B.",
+        "tags": [
+          "support",
+          "vitamin-d3",
+          "b-complex"
+        ]
+      },
+      {
+        "min": 6,
+        "max": 10,
+        "label": "Нужна поддержка",
+        "advice": "Попробуй MIT UP/Brain Coffee, MCT утром, электролиты. Пересмотри сон.",
+        "tags": [
+          "mitup",
+          "brain-coffee",
+          "mct",
+          "electrolytes"
+        ]
+      },
+      {
+        "min": 11,
+        "max": 15,
+        "label": "Выраженный дефицит",
+        "advice": "Сфокусируйся на восстановлении: митохондриальная поддержка, адаптогены, D3.",
+        "tags": [
+          "mitochondria",
+          "adaptogens",
+          "vitamin-d3"
+        ]
+      }
+    ]
+  }
+}

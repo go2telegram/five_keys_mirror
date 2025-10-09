@@ -133,6 +133,22 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 "subscription_activated",
                 {"plan": plan, "until": until.isoformat()},
             )
+            await events_repo.log(
+                session,
+                tg_id_int,
+                "premium_on",
+                {"plan": plan, "until": until.isoformat()},
+            )
+            await events_repo.log(
+                session,
+                tg_id_int,
+                "order_paid",
+                {
+                    "plan": plan,
+                    "until": until.isoformat(),
+                    "subscription_name": sub_name,
+                },
+            )
             await commit_safely(session)
 
         if LOG:
@@ -161,6 +177,12 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                     session,
                     tg_id_int,
                     "subscription_cancelled",
+                    {"until": until.isoformat()},
+                )
+                await events_repo.log(
+                    session,
+                    tg_id_int,
+                    "premium_off",
                     {"until": until.isoformat()},
                 )
                 await commit_safely(session)
