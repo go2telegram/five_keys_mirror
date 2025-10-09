@@ -12,20 +12,14 @@ from app.products import BUY_URLS, PRODUCTS
 def kb_main() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="⚡ Тест энергии", callback_data="quiz:energy")
-    kb.button(text="📐 Калькуляторы", callback_data="calc:menu")
-    kb.button(text="💊 Подбор продуктов", callback_data="pick:menu")
+    kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")
+    kb.button(text="🎯 Персональные рекомендации", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
-    kb.button(text="🎁 Регистрация", callback_data="reg:open")
-    kb.button(text="💎 Премиум", callback_data="premium:menu")
+    kb.button(text="💎 Премиум-доступ", callback_data="menu:premium")
     kb.button(text="👤 Профиль", callback_data="profile:open")
-    kb.button(text="🔗 Реф. ссылка", callback_data="ref:menu")
-    kb.button(text="🎫 Подписка", callback_data="sub:menu")
-    kb.button(text="🧭 Навигатор", callback_data="nav:root")
-    kb.button(text="🧾 PDF отчёт", callback_data="report:last")
-    kb.button(text="🔔 Уведомления", callback_data="notify:help")
+    kb.button(text="ℹ️ Помощь", callback_data="menu:help")
 
-    kb.adjust(2, 2, 2, 2, 2, 1, 1)
+    kb.adjust(2, 2, 2)
     return kb.as_markup()
 
 
@@ -36,9 +30,9 @@ def kb_onboarding_entry() -> InlineKeyboardMarkup:
     """Первый экран /start с основными сценариями."""
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="💊 Подбор продукта", callback_data="onboard:product")
-    kb.button(text="🧪 Пройти тесты", callback_data="onboard:tests")
-    kb.button(text="🎁 Регистрация", callback_data="onboard:register")
+    kb.button(text="⚡ Пройти тест энергии", callback_data="onboard:energy")
+    kb.button(text="🎯 Подобрать продукты", callback_data="onboard:recommend")
+    kb.button(text="🎁 Получить бонус-рекомендации", callback_data="onboard:recommend_full")
     kb.adjust(1)
     return kb.as_markup()
 
@@ -48,6 +42,15 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
 
     kb = InlineKeyboardBuilder()
     kb.button(text="💊 Получить рекомендации", callback_data="pick:menu")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def kb_premium_info_actions() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💎 Оформить подписку", callback_data="sub:menu")
+    kb.button(text="📘 Что входит в Премиум", callback_data="premium:info")
+    kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.adjust(1)
     return kb.as_markup()
 
@@ -78,6 +81,13 @@ def kb_yes_no(cb_yes: str, cb_no: str) -> InlineKeyboardMarkup:
     kb.button(text="✅ Да", callback_data=cb_yes)
     kb.button(text="❌ Нет", callback_data=cb_no)
     kb.adjust(2)
+    return kb.as_markup()
+
+
+def kb_premium_cta() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💎 Узнать про Премиум", callback_data="premium:info")
+    kb.adjust(1)
     return kb.as_markup()
 
 

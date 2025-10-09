@@ -5,13 +5,17 @@ from __future__ import annotations
 import logging
 from typing import Iterable, Sequence
 
+from typing import TYPE_CHECKING
+
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
-from app.keyboards import kb_actions, kb_back_home
+from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.utils.image_resolver import resolve_media_reference
-from app.utils_media import fetch_image_as_file
+
+if TYPE_CHECKING:  # pragma: no cover - import for type hints only
+    from app.utils_media import fetch_image_as_file
 
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
@@ -171,6 +175,8 @@ async def send_product_cards(
 
     media = MediaGroupBuilder(caption=None)
     for img in _collect_media(cards):
+        from app.utils_media import fetch_image_as_file
+
         resolved = resolve_media_reference(img)
         if not resolved:
             continue
@@ -212,6 +218,8 @@ async def send_product_cards(
     text = "\n".join(lines).strip()
     markup = kb_actions(cards, back_cb=back_cb) if with_actions else kb_back_home(back_cb)
 
+    cta_markup = kb_premium_cta()
+
     if len(text) > MAX_TEXT:
         midpoint = len(lines) // 2
         first = "\n".join(lines[:midpoint]).strip()
@@ -220,9 +228,11 @@ async def send_product_cards(
             await message.answer(first)
         if second:
             await message.answer(second, reply_markup=markup)
+        await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
         return
 
     await message.answer(text, reply_markup=markup)
+    await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
 
 
 def catalog_summary(goal: str | None = None) -> list[str]:

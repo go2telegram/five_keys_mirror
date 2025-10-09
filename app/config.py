@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9
     NOTIFY_WEEKDAYS: str | None = ""
+    RETENTION_ENABLED: bool = False
 
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
