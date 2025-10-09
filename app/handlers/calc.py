@@ -60,6 +60,11 @@ async def calc_menu(c: CallbackQuery):
     await safe_edit_text(c.message, "Выбери калькулятор:", kb_calc_menu())
 
 
+@router.callback_query(F.data == "/calculators")
+async def calc_menu_shortcut(c: CallbackQuery):
+    await calc_menu(c)
+
+
 # --- MSD (идеальный вес по росту) ---
 
 

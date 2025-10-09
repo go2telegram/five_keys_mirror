@@ -1,14 +1,20 @@
 # app/scheduler/jobs.py
 import datetime as dt
+import json
+import logging
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 from sqlalchemy import func, or_, select
 
-from app.db.models import Event, Subscription
+from app.config import settings
+from app.db.models import Event, Lead, Subscription
 from app.db.session import session_scope
 from app.repo import events as events_repo
 from app.utils_openai import ai_generate
+
+_analytics_log = logging.getLogger("scheduler.analytics")
 
 
 async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
@@ -154,3 +160,56 @@ async def send_retention_reminders(bot: Bot) -> None:
         for uid in sent_premium:
             await events_repo.log(session, uid, "retention_premium_nudge", {})
         await session.commit()
+
+
+async def export_analytics_snapshot() -> Path | None:
+    target = getattr(settings, "ANALYTICS_EXPORT_PATH", "")
+    if not target:
+        _analytics_log.info("analytics export skipped: path not configured")
+        return None
+
+    export_path = Path(target)
+    now = dt.datetime.now(dt.timezone.utc)
+    day_ago = now - dt.timedelta(hours=24)
+    week_ago = now - dt.timedelta(days=7)
+
+    async with session_scope() as session:
+        quiz_24h = await events_repo.stats(session, name="quiz_finish", since=day_ago)
+        quiz_7d = await events_repo.stats(session, name="quiz_finish", since=week_ago)
+        plans_24h = await events_repo.stats(session, name="plan_generated", since=day_ago)
+        plans_7d = await events_repo.stats(session, name="plan_generated", since=week_ago)
+        retention_test_24h = await events_repo.stats(session, name="retention_test_nudge", since=day_ago)
+        retention_test_7d = await events_repo.stats(session, name="retention_test_nudge", since=week_ago)
+        retention_premium_24h = await events_repo.stats(
+            session, name="retention_premium_nudge", since=day_ago
+        )
+        retention_premium_7d = await events_repo.stats(
+            session, name="retention_premium_nudge", since=week_ago
+        )
+
+        total_leads_stmt = select(func.count(Lead.id))
+        total_leads = (await session.execute(total_leads_stmt)).scalar_one()
+        leads_7d_stmt = select(func.count(Lead.id)).where(Lead.ts >= week_ago)
+        leads_7d = (await session.execute(leads_7d_stmt)).scalar_one()
+
+        active_subs_stmt = select(func.count(Subscription.user_id)).where(Subscription.until > now)
+        active_subs = (await session.execute(active_subs_stmt)).scalar_one()
+        new_subs_stmt = select(func.count(Subscription.user_id)).where(Subscription.since >= week_ago)
+        new_subs = (await session.execute(new_subs_stmt)).scalar_one()
+
+    payload = {
+        "generated_at": now.isoformat(),
+        "quiz_finishes": {"24h": quiz_24h, "7d": quiz_7d},
+        "plans": {"24h": plans_24h, "7d": plans_7d},
+        "retention": {
+            "test": {"24h": retention_test_24h, "7d": retention_test_7d},
+            "premium": {"24h": retention_premium_24h, "7d": retention_premium_7d},
+        },
+        "leads": {"total": total_leads, "7d": leads_7d},
+        "premium": {"active": active_subs, "new_7d": new_subs},
+    }
+
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    export_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _analytics_log.info("analytics snapshot exported", extra={"path": str(export_path)})
+    return export_path

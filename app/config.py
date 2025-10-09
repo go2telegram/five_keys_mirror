@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     AI_PLAN_MODEL: str = "gpt-4o-mini"
     WEEKLY_PLAN_CRON: str = "mon@10"
+    ANALYTICS_EXPORT_CRON: str | None = "0 21 * * *"
+    ANALYTICS_EXPORT_PATH: str = "exports/analytics_snapshot.json"
     PLAN_ARCHIVE_DIR: str = "var/plans"
 
     # Каталог и квизы: онлайн/офлайн режимы

@@ -8,7 +8,11 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.scheduler.jobs import send_nudges, send_retention_reminders
+from app.scheduler.jobs import (
+    export_analytics_snapshot,
+    send_nudges,
+    send_retention_reminders,
+)
 from app.services.weekly_ai_plan import weekly_ai_plan_job
 
 
@@ -71,6 +75,29 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
             coalesce=True,
             max_instances=1,
         )
+
+    analytics_cron = getattr(settings, "ANALYTICS_EXPORT_CRON", None)
+    if analytics_cron:
+        try:
+            analytics_trigger = CronTrigger.from_crontab(
+                analytics_cron, timezone=settings.TIMEZONE
+            )
+        except ValueError:
+            logging.getLogger("scheduler").warning(
+                "invalid ANALYTICS_EXPORT_CRON, falling back to 21:00"
+            )
+            analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
+    else:
+        analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
+
+    scheduler.add_job(
+        export_analytics_snapshot,
+        trigger=analytics_trigger,
+        name="analytics_export",
+        misfire_grace_time=900,
+        coalesce=True,
+        max_instances=1,
+    )
     scheduler.start()
     return scheduler
 
