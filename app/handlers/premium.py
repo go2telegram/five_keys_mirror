@@ -1,13 +1,16 @@
-from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import compat_session, session_scope
+from app.handlers.guards import PREMIUM_REQUIRED_TEXT, premium_only
 from app.keyboards import kb_back_home, kb_premium_info_actions
+from app.reco.ai_reasoner import build_ai_plan
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.storage import commit_safely
 from app.utils import safe_edit_text
+from app.utils.text import split_md
 
 router = Router(name="premium")
 
@@ -17,6 +20,21 @@ PREMIUM_INFO_TEXT = (
     "🧠 AI-анализ профиля\n"
     "📅 Еженедельные обновления и персональный чат."
 )
+
+
+@router.message(Command("ai_plan"))
+@premium_only
+async def ai_plan_cmd(message: Message) -> None:
+    user = getattr(message, "from_user", None)
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        await message.answer(PREMIUM_REQUIRED_TEXT)
+        return
+
+    await message.answer("⏳ Собираю твой план на неделю…")
+    text = await build_ai_plan(user_id, "7d")
+    for chunk in split_md(text, 3500):
+        await message.answer(chunk, parse_mode="Markdown")
 
 
 @router.message(Command("premium_info"))

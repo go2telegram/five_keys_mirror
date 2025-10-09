@@ -1,0 +1,8 @@
+energy:    { utm_category: "energy",    tags: ["energy","mct","mitochondria"] }
+sleep:     { utm_category: "sleep",     tags: ["sleep_support","sleep_calm","magnesium","glycine"] }
+stress:    { utm_category: "stress",    tags: ["stress_support","theanine","adaptogens","reduce_caffeine"] }
+immunity:  { utm_category: "immunity",  tags: ["immunity","vitamin_d3","probiotic","fiber"] }
+gut:       { utm_category: "gut",       tags: ["gut","digest_support","fiber","probiotic","collagen"] }
+focus:     { utm_category: "focus",     tags: ["focus","omega3","mct"] }
+sport:     { utm_category: "sport",     tags: ["sport","recovery"] }
+beauty:    { utm_category: "beauty",    tags: ["beauty","collagen","vitamins"] }

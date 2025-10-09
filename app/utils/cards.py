@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Iterable, Sequence
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from app.catalog.loader import load_catalog, product_by_alias, product_by_id
+from app.config import settings
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.utils.image_resolver import resolve_media_reference
 
@@ -20,6 +22,40 @@ if TYPE_CHECKING:  # pragma: no cover - import for type hints only
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
 MAX_MEDIA = 3
+
+
+def build_order_link(product_id: str | None, utm_category: str | None = None) -> str:
+    """Construct a Velavie order link enriched with AI-plan UTM parameters."""
+
+    utm = (utm_category or "catalog").strip().lower() or "catalog"
+    base_url: str | None = None
+    if product_id:
+        product = product_by_id(str(product_id))
+        if isinstance(product, dict):
+            order = product.get("order") or {}
+            for key in ("velavie_link", "url"):
+                candidate = order.get(key)
+                if isinstance(candidate, str) and candidate.strip():
+                    base_url = candidate
+                    break
+    if not base_url:
+        fallback = settings.velavie_url
+        base_url = fallback if fallback else None
+    if not base_url:
+        return ""
+
+    parsed = urlparse(base_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.update(
+        {
+            "utm_source": "bot",
+            "utm_medium": "telegram",
+            "utm_campaign": "ai_plan",
+            "utm_content": utm,
+        }
+    )
+    new_query = urlencode(query)
+    return urlunparse(parsed._replace(query=new_query))
 
 
 def _resolve_catalog_product(code: str) -> dict | None:
@@ -253,4 +289,10 @@ def catalog_summary(goal: str | None = None) -> list[str]:
     return result
 
 
-__all__ = ["catalog_summary", "prepare_cards", "render_product_text", "send_product_cards"]
+__all__ = [
+    "build_order_link",
+    "catalog_summary",
+    "prepare_cards",
+    "render_product_text",
+    "send_product_cards",
+]
