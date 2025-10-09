@@ -18,6 +18,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.content.overrides import load_quiz_override
+from app.content.overrides.quiz_merge import apply_quiz_override
 from app.reco.ai_reasoner import ai_tip_for_quiz
 from app.utils_media import fetch_image_as_file
 
@@ -126,6 +128,18 @@ def load_quiz(name: str) -> QuizDefinition:
 
     with path.open(encoding="utf-8") as fh:
         raw: dict[str, Any] = yaml.safe_load(fh)
+
+    try:
+        override = load_quiz_override(name)
+    except Exception:
+        logger.exception("Failed to load override for quiz %s", name)
+        override = {}
+
+    if override:
+        try:
+            raw = apply_quiz_override(raw, override)
+        except Exception:
+            logger.exception("Failed to apply override for quiz %s", name)
 
     title = str(raw.get("title", name)).strip()
     cover = raw.get("cover")

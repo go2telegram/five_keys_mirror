@@ -1,0 +1,9 @@
+experiments:
+  recommend_full_copy:
+    variants:
+      control:
+        weight: 1
+        text: "Хочешь бонус-подборку? Нажми кнопку ниже — соберу расширенный план."
+      experiment:
+        weight: 1
+        text: "У меня есть расширенный план с бонусами — нажми кнопку, чтобы получить!"
