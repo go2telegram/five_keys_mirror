@@ -9,8 +9,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.config import settings
 from app.scheduler.jobs import (
     export_analytics_snapshot,
+    process_retention_journeys,
+    send_daily_tips,
     send_nudges,
     send_retention_reminders,
+    send_water_reminders,
 )
 from app.services.weekly_ai_plan import weekly_ai_plan_job
 
@@ -41,6 +44,26 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
             coalesce=True,
             max_instances=1,
         )
+
+    scheduler.add_job(
+        send_daily_tips,
+        trigger=IntervalTrigger(minutes=5),
+        args=[bot],
+        name="daily_tips",
+        misfire_grace_time=300,
+        coalesce=True,
+        max_instances=1,
+    )
+
+    scheduler.add_job(
+        send_water_reminders,
+        trigger=IntervalTrigger(minutes=10),
+        args=[bot],
+        name="water_reminders",
+        misfire_grace_time=300,
+        coalesce=True,
+        max_instances=1,
+    )
 
     scheduler.add_job(
         _log_heartbeat,
@@ -75,6 +98,16 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
             trigger=IntervalTrigger(hours=1),
             args=[bot],
             name="retention_followups",
+            misfire_grace_time=300,
+            coalesce=True,
+            max_instances=1,
+        )
+
+        scheduler.add_job(
+            process_retention_journeys,
+            trigger=IntervalTrigger(minutes=10),
+            args=[bot],
+            name="retention_journeys",
             misfire_grace_time=300,
             coalesce=True,
             max_instances=1,

@@ -1,3 +1,5 @@
+import datetime as dt
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
@@ -12,7 +14,7 @@ from app.quiz.engine import (
     register_quiz_hooks,
 )
 from app.reco import product_lines
-from app.repo import events as events_repo, users as users_repo
+from app.repo import events as events_repo, retention as retention_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
 
@@ -175,6 +177,12 @@ async def quiz_sleep_step(c: CallbackQuery):
                 c.from_user.id,
                 "quiz_finish",
                 {"quiz": "sleep", "score": total, "level": level_label},
+            )
+            await retention_repo.schedule_journey(
+                session,
+                c.from_user.id,
+                "sleep_checkin",
+                dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=24),
             )
             await commit_safely(session)
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Optional
 
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -14,6 +16,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    Time,
     UniqueConstraint,
     func,
 )
@@ -215,3 +218,45 @@ class RetentionPush(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     flow: Mapped[str] = mapped_column(String(32), nullable=False)
     last_sent: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DailyTip(Base):
+    __tablename__ = "daily_tips"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class RetentionSetting(Base):
+    __tablename__ = "retention_settings"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
+    tips_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    tips_time: Mapped[time] = mapped_column(Time, nullable=False, default=time(10, 0))
+    last_tip_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_tip_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    water_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    water_window_start: Mapped[time] = mapped_column(Time, nullable=False, default=time(9, 0))
+    water_window_end: Mapped[time] = mapped_column(Time, nullable=False, default=time(21, 0))
+    water_last_sent_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    water_sent_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    water_goal_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=2000)
+    water_reminders: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=3)
+    weight_kg: Mapped[float | None] = mapped_column(Float(asdecimal=False), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class RetentionJourney(Base):
+    __tablename__ = "retention_journeys"
+    __table_args__ = (Index("ix_retention_journeys_schedule", "journey", "scheduled_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    journey: Mapped[str] = mapped_column(String(32), nullable=False)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payload: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
