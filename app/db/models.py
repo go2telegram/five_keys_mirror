@@ -7,6 +7,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -118,3 +119,27 @@ class Lead(Base):
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class TrackEvent(Base):
+    __tablename__ = "track_events"
+    __table_args__ = (
+        Index("ix_track_events_user_kind_ts", "user_id", "kind", "ts"),
+        Index("ix_track_events_ts", "ts"),
+    )
+
+    id: Mapped[int] = mapped_column(_bigint_pk, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    value: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class RetentionPush(Base):
+    __tablename__ = "retention_pushes"
+    __table_args__ = (UniqueConstraint("user_id", "flow", name="uq_retention_push"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    flow: Mapped[str] = mapped_column(String(32), nullable=False)
+    last_sent: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
