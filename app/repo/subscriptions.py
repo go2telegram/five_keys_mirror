@@ -72,3 +72,12 @@ async def delete(session: AsyncSession, user_id: int) -> None:
         return
     await session.delete(subscription)
     await session.flush()
+
+
+async def active_users(session: AsyncSession) -> list[Subscription]:
+    """Return subscriptions that are currently active."""
+
+    now = datetime.now(timezone.utc)
+    stmt = select(Subscription).where(Subscription.until > now).order_by(Subscription.user_id.asc())
+    result = await session.execute(stmt)
+    return list(result.scalars())
