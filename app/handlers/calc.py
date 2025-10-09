@@ -4,7 +4,6 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from app.catalog.api import product_meta
-from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
@@ -13,6 +12,7 @@ from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils import safe_edit_text
 from app.utils.premium_cta import send_premium_cta
+from app.link_manager import get_register_link
 
 router = Router()
 
@@ -102,6 +102,8 @@ async def _process_msd(message: Message) -> None:
     ]
     notes = "Цель — баланс мышц и жира. Делай замеры раз в 2 недели."
 
+    discount_link = await get_register_link()
+
     plan_payload = {
         "title": "План: Идеальный вес (MSD)",
         "context": "msd",
@@ -111,7 +113,7 @@ async def _process_msd(message: Message) -> None:
         "lines": lines,
         "actions": bullets,
         "notes": notes,
-        "order_url": settings.velavie_url,
+        "order_url": discount_link,
     }
 
     async with compat_session(session_scope) as session:
@@ -135,6 +137,7 @@ async def _process_msd(message: Message) -> None:
         headline=headline,
         bullets=bullets,
         back_cb="calc:menu",
+        utm_category="calc_msd",
     )
     await send_premium_cta(message, "💎 Получить полный план (AI)", source="calc:msd")
     SESSIONS.pop(message.from_user.id, None)

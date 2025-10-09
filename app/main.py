@@ -24,6 +24,7 @@ from app.db.session import current_revision, head_revision, init_db, session_sco
 from app.catalog import handlers as h_catalog
 from app.handlers import (
     admin as h_admin,
+    admin_links as h_admin_links,
     admin_audit as h_admin_audit,
     admin_crud as h_admin_crud,
     analytics as h_analytics,
@@ -608,6 +609,7 @@ async def main() -> None:
         h_retention.router,
         h_commerce.router,
         h_admin.router,
+        h_admin_links.router,
         h_admin_audit.router,
         h_admin_crud.router,
     ]

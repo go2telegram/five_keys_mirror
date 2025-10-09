@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""
     VELAVIE_URL: str = ""
+    BASE_PRODUCT_URL: str = ""
+    BASE_REGISTER_URL: str = ""
+    LINK_AUTOBUILD: bool = True
 
     # Напоминания
     NOTIFY_HOUR_LOCAL: int = 9

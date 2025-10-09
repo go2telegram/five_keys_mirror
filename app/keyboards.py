@@ -165,10 +165,11 @@ def kb_goal_menu() -> InlineKeyboardMarkup:
 # ---------- CTA без PDF ----------
 
 
-def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
+def kb_products_cta_home(back_cb: str, *, discount_url: str | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    discount = discount_url or settings.velavie_url
+    if discount:
+        kb.button(text="🔗 Заказать со скидкой", url=discount)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 2)
@@ -178,10 +179,11 @@ def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
 # ---------- CTA с PDF + консультация ----------
 
 
-def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
+def kb_products_cta_home_pdf(back_cb: str, *, discount_url: str | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    discount = discount_url or settings.velavie_url
+    if discount:
+        kb.button(text="🔗 Заказать со скидкой", url=discount)
     kb.button(text="📄 PDF-план", callback_data="report:last")
     kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="⬅️ Назад", callback_data=back_cb)
@@ -204,19 +206,30 @@ def kb_cancel_home() -> InlineKeyboardMarkup:
 # ---------- Кнопки покупки продуктов ----------
 
 
-def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
+def kb_buylist_pdf(
+    back_cb: str,
+    codes: list[str],
+    *,
+    links: Mapping[str, str] | None = None,
+    discount_url: str | None = None,
+) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for code in codes:
         p = PRODUCTS.get(code)
-        url = BUY_URLS.get(code)
+        url = None
+        if links:
+            url = links.get(code)
+        if not url:
+            url = BUY_URLS.get(code)
         if not p or not url:
             continue
         title = p.get("title", code)
         kb.button(text=f"🛒 Купить {title}", url=url)
 
     kb.button(text="📄 PDF-план", callback_data="report:last")
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    discount = discount_url or settings.velavie_url
+    if discount:
+        kb.button(text="🔗 Заказать со скидкой", url=discount)
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
 
@@ -234,6 +247,7 @@ def kb_actions(
     with_discount: bool = True,
     with_consult: bool = True,
     bundle_action: tuple[str, str] | None = None,
+    discount_url: str | None = None,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buy_buttons = 0
@@ -252,8 +266,9 @@ def kb_actions(
     if with_pdf:
         kb.button(text="📄 PDF-план", callback_data="report:last")
     if with_discount:
-        if settings.velavie_url:
-            kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+        discount = discount_url or settings.velavie_url
+        if discount:
+            kb.button(text="🔗 Заказать со скидкой", url=discount)
         else:
             kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
     if with_consult:

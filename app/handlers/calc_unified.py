@@ -18,6 +18,7 @@ from app.calculators.engine import (
 )
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
+from app.link_manager import get_register_link
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
 from app.utils import safe_edit_text
@@ -123,10 +124,14 @@ async def _finish(
     user = target.from_user
     context = CalculationContext(data=data, user_id=user.id, username=getattr(user, "username", None))
     result: CalculationResult = definition.build_result(context)
+    discount_link = await get_register_link()
+    plan_data = dict(result.plan_payload)
+    if not plan_data.get("order_url"):
+        plan_data["order_url"] = discount_link
 
     async with compat_session(session_scope) as db:
         await users_repo.get_or_create_user(db, user.id, getattr(user, "username", None))
-        await set_last_plan(db, user.id, dict(result.plan_payload))
+        await set_last_plan(db, user.id, plan_data)
         payload = dict(result.event_payload)
         payload.setdefault("calc", definition.slug)
         await events_repo.log(db, user.id, "calc_finish", payload)
@@ -141,6 +146,7 @@ async def _finish(
         back_cb=result.back_cb,
         with_actions=result.with_actions,
         ctx=result.cards_ctx,
+        utm_category=f"calc_{definition.slug}",
     )
     slug = getattr(definition, "slug", "unknown")
     await send_premium_cta(target, "💎 Получить полный план (AI)", source=f"calc:{slug}")

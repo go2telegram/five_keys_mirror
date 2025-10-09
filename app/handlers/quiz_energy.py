@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from app.catalog.api import pick_for_context
-from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.quiz.engine import (
@@ -21,6 +20,7 @@ from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
+from app.link_manager import get_register_link
 
 router = Router()
 
@@ -65,6 +65,8 @@ async def _on_finish_energy(
     ]
     notes = "Следи за гидратацией: 30–35 мл воды/кг. Ужин — за 3 часа до сна."
 
+    discount_link = await get_register_link()
+
     plan_payload = {
         "title": "План: Энергия",
         "context": "energy",
@@ -74,7 +76,7 @@ async def _on_finish_energy(
         "lines": lines,
         "actions": actions,
         "notes": notes,
-        "order_url": settings.velavie_url,
+        "order_url": discount_link,
     }
 
     origin = result.origin
@@ -100,6 +102,7 @@ async def _on_finish_energy(
             bullets=actions,
             headline=notes,
             back_cb="quiz:menu",
+            utm_category="quiz_energy",
         )
         await send_premium_cta(
             origin,

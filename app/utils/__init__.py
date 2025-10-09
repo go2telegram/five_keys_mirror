@@ -6,6 +6,7 @@ from importlib import import_module
 from typing import Any
 
 __all__ = [
+    "build_order_link",
     "catalog_summary",
     "nav_footer",
     "prepare_cards",
@@ -15,6 +16,7 @@ __all__ = [
 ]
 
 _CARD_EXPORTS = {
+    "build_order_link",
     "catalog_summary",
     "prepare_cards",
     "render_product_text",
