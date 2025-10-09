@@ -21,6 +21,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.content.overrides import load_quiz_override
 from app.content.overrides.quiz_merge import apply_quiz_override
 from app.reco.ai_reasoner import ai_tip_for_quiz
+from app.services.growth_flywheel import maybe_send_free_value_drop
 from app.utils_media import fetch_image_as_file
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -295,6 +296,15 @@ async def answer_callback(call: CallbackQuery, state: FSMContext) -> None:
                 f"tags: {tags_line}",
             ]
             await message.answer("\n".join(tip_lines))
+
+        user_id = call.from_user.id if call.from_user else None
+        if user_id:
+            await maybe_send_free_value_drop(
+                call,
+                user_id=user_id,
+                quiz_name=quiz_name,
+                tip_tags=result_context.collected_tags or result_context.threshold.tags,
+            )
 
         await state.clear()
         with suppress(Exception):

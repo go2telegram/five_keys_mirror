@@ -64,6 +64,52 @@ async def stats(m: Message):
     )
 
 
+@router.message(Command("growth_report"))
+async def growth_report(m: Message) -> None:
+    if not _is_admin(m.from_user.id if m.from_user else None):
+        return
+
+    async with compat_session(session_scope) as session:
+        utm_stats = await users_repo.utm_summary(session)
+        exposures = await events_repo.count_by_meta(
+            session,
+            "premium_cta_show",
+            meta_filters={"source": "growth_drop"},
+        )
+        clicks = await events_repo.count_by_meta(
+            session,
+            "premium_cta_click",
+            meta_filters={"source": "growth_drop"},
+        )
+
+    ctr = 0.0
+    if exposures:
+        ctr = (clicks / exposures) * 100.0
+
+    lines = [
+        "🚀 <b>Growth report</b>",
+        f"CTA показы: {exposures}",
+        f"CTA клики: {clicks}",
+        f"CTR: {ctr:.1f}%",
+        "",
+        "UTM конверсии:",
+    ]
+    if not utm_stats:
+        lines.append("• данных пока нет")
+    else:
+        for row in utm_stats:
+            source = row["utm_source"]
+            medium = row["utm_medium"]
+            campaign = row["utm_campaign"]
+            users = row["users"]
+            premium = row["premium"]
+            lines.append(
+                f"• {source}/{medium}/{campaign}: {users} пользователей, Premium: {premium}"
+            )
+
+    await m.answer("\n".join(lines))
+
+
 @router.message(Command("leads"))
 async def leads_list(m: Message):
     if not _is_admin(m.from_user.id if m.from_user else None):

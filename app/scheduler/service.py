@@ -8,7 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.scheduler.jobs import send_nudges, send_retention_reminders
+from app.scheduler.jobs import send_daily_tips, send_nudges, send_retention_reminders
 from app.services.weekly_ai_plan import weekly_ai_plan_job
 
 
@@ -34,6 +34,15 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         args=[bot, settings.TIMEZONE, weekdays],
         name="send_nudges",
         misfire_grace_time=600,
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        send_daily_tips,
+        trigger=IntervalTrigger(minutes=10),
+        args=[bot],
+        name="send_daily_tips",
+        misfire_grace_time=300,
         coalesce=True,
         max_instances=1,
     )

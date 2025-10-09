@@ -62,6 +62,19 @@ async def stats(
     return result.scalar_one()
 
 
+async def count_by_meta(
+    session: AsyncSession,
+    name: str,
+    *,
+    meta_filters: dict[str, str],
+) -> int:
+    stmt = select(func.count(Event.id)).where(Event.name == name)
+    for key, value in meta_filters.items():
+        stmt = stmt.where(Event.meta[key].astext == value)
+    result = await session.execute(stmt)
+    return int(result.scalar_one() or 0)
+
+
 async def latest_by_users(
     session: AsyncSession,
     name: str,

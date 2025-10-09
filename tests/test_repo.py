@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.db.models import Base
 from app.repo import events, leads, referrals, subscriptions, users
+from app.services.daily_tip import compute_next_fire
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
 os.environ.setdefault("ADMIN_ID", "1")
@@ -163,5 +164,123 @@ def test_events_notify():
             recipients = await events.notify_recipients(session)
             assert 1 in recipients
             assert 2 not in recipients
+
+    run(_test())
+
+
+def test_user_utm_persistence():
+    async def _test():
+        async with SessionManager() as session:
+            await users.get_or_create_user(
+                session,
+                101,
+                "utm",
+                utm={"utm_source": "tiktok", "utm_medium": "ads"},
+            )
+            await session.commit()
+
+            record = await users.get_user(session, 101)
+            assert record.utm_source == "tiktok"
+            assert record.utm_medium == "ads"
+
+            await users.get_or_create_user(
+                session,
+                101,
+                "utm",
+                utm={"utm_source": "instagram"},
+            )
+            await session.commit()
+            record = await users.get_user(session, 101)
+            # сохраняем исходный источник
+            assert record.utm_source == "tiktok"
+
+            await users.set_utm(session, 101, {"utm_campaign": "launch"})
+            await session.commit()
+            record = await users.get_user(session, 101)
+            assert record.utm_campaign == "launch"
+
+            await users.set_utm(
+                session,
+                101,
+                {"utm_source": "stories"},
+                overwrite=True,
+            )
+            await session.commit()
+            record = await users.get_user(session, 101)
+            assert record.utm_source == "stories"
+
+    run(_test())
+
+
+def test_daily_tip_schedule_calculation():
+    base = datetime(2024, 1, 1, 6, 0, tzinfo=timezone.utc)
+    fire = compute_next_fire(timezone="Europe/Moscow", now=base)
+    local = fire.astimezone(timezone.utc)
+    # 6 UTC -> 9 MSK, значит рассылка должна быть в тот же день 7 UTC (10 MSK)
+    assert local.hour == 7
+
+    after = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
+    next_fire = compute_next_fire(timezone="Europe/Moscow", now=after)
+    assert next_fire > after
+    assert next_fire.astimezone(timezone.utc).hour == 7
+    assert next_fire.date() > after.date()
+
+
+def test_growth_metrics_summary():
+    async def _test():
+        async with SessionManager() as session:
+            await users.get_or_create_user(
+                session,
+                201,
+                "user1",
+                utm={
+                    "utm_source": "tiktok",
+                    "utm_medium": "ads",
+                    "utm_campaign": "spring",
+                },
+            )
+            await users.get_or_create_user(
+                session,
+                202,
+                "user2",
+                utm={
+                    "utm_source": "tiktok",
+                    "utm_medium": "ads",
+                    "utm_campaign": "spring",
+                },
+            )
+            await users.get_or_create_user(
+                session,
+                203,
+                "user3",
+                utm={
+                    "utm_source": "instagram",
+                    "utm_medium": "stories",
+                    "utm_campaign": "summer",
+                },
+            )
+            await subscriptions.set_plan(session, 201, "basic", days=7)
+            await session.commit()
+
+            summary = await users.utm_summary(session)
+            assert any(row["premium"] == 1 for row in summary if row["utm_source"] == "tiktok")
+
+            await events.log(session, 201, "premium_cta_show", {"source": "growth_drop"})
+            await events.log(session, 201, "premium_cta_click", {"source": "growth_drop"})
+            await events.log(session, 202, "premium_cta_show", {"source": "growth_drop"})
+            await session.commit()
+
+            exposures = await events.count_by_meta(
+                session,
+                "premium_cta_show",
+                meta_filters={"source": "growth_drop"},
+            )
+            clicks = await events.count_by_meta(
+                session,
+                "premium_cta_click",
+                meta_filters={"source": "growth_drop"},
+            )
+            assert exposures == 2
+            assert clicks == 1
 
     run(_test())

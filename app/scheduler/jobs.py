@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from app.db.models import Event, Subscription
 from app.db.session import session_scope
 from app.repo import events as events_repo
+from app.services.daily_tip import dispatch_due_tips
 from app.utils_openai import ai_generate
 
 
@@ -37,6 +38,10 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
             await bot.send_message(uid, text)
         except Exception:
             continue
+
+
+async def send_daily_tips(bot: Bot) -> None:
+    await dispatch_due_tips(bot)
 
 
 async def _start_followup_candidates(session, cutoff: dt.datetime) -> list[int]:

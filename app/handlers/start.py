@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from urllib.parse import parse_qs
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -64,6 +66,37 @@ ADMIN_PANEL_THROTTLE = 5.0
 ADMIN_ROLE = "admin"
 
 
+UTM_MESSAGES = {
+    "tiktok": "Пришёл из TikTok — начни с ⏱ 60s теста",
+    "instagram": "Привет с Instagram! Запусти ⏱ 60s тест и получи рекомендации.",
+    "youtube": "С YouTube? Тогда начнём с ⏱ 60s теста для энергии.",
+}
+
+
+def _parse_utm(payload: str) -> dict[str, str]:
+    if not payload:
+        return {}
+    if payload.startswith("ref_"):
+        return {}
+    parsed = parse_qs(payload, keep_blank_values=False)
+    utm: dict[str, str] = {}
+    for key in ("utm_source", "utm_medium", "utm_campaign"):
+        values = parsed.get(key)
+        if not values:
+            continue
+        value = values[0].strip()
+        if value:
+            utm[key] = value
+    return utm
+
+
+def _utm_hint(utm: dict[str, str]) -> str | None:
+    source = (utm.get("utm_source") or "").lower()
+    if not source:
+        return None
+    return UTM_MESSAGES.get(source)
+
+
 def _is_admin(user_id: int | None) -> bool:
     if user_id is None:
         return False
@@ -113,11 +146,31 @@ async def _start_full(message: Message, payload: str) -> None:
         username = message.from_user.username
         existing_user = None
         already_prompted = None
+        utm_payload = _parse_utm(payload)
+        utm_hint = _utm_hint(utm_payload)
+        utm_applied = False
 
         async with compat_session(session_scope) as session:
             existing_user = await users_repo.get_user(session, tg_id)
-            await users_repo.get_or_create_user(session, tg_id, username)
-            await events_repo.log(session, tg_id, "start", {"payload": payload})
+            previous = {
+                "utm_source": getattr(existing_user, "utm_source", None),
+                "utm_medium": getattr(existing_user, "utm_medium", None),
+                "utm_campaign": getattr(existing_user, "utm_campaign", None),
+            }
+            user = await users_repo.get_or_create_user(
+                session,
+                tg_id,
+                username,
+                utm=utm_payload,
+            )
+            utm_applied = any(
+                previous.get(key) != getattr(user, key)
+                for key in ("utm_source", "utm_medium", "utm_campaign")
+            )
+            event_meta = {"payload": payload}
+            if utm_payload:
+                event_meta["utm"] = utm_payload
+            await events_repo.log(session, tg_id, "start", event_meta)
 
             if payload.startswith("ref_"):
                 try:
@@ -142,6 +195,9 @@ async def _start_full(message: Message, payload: str) -> None:
             await commit_safely(session)
         if is_premium:
             await message.answer("Добро пожаловать в Premium-центр 💎\n👉 /premium_center")
+
+        if utm_hint and utm_applied:
+            await message.answer(utm_hint)
 
         if not already_prompted:
             async with compat_session(session_scope) as session:

@@ -40,6 +40,9 @@ class User(Base):
     username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     referred_by: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
+    utm_source: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    utm_medium: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    utm_campaign: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
@@ -49,6 +52,9 @@ class User(Base):
     )
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
+    )
+    daily_tip_subscription: Mapped[Optional["DailyTipSubscription"]] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
 
@@ -215,3 +221,26 @@ class RetentionPush(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     flow: Mapped[str] = mapped_column(String(32), nullable=False)
     last_sent: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DailyTip(Base):
+    __tablename__ = "daily_tips"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    active: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+
+
+class DailyTipSubscription(Base):
+    __tablename__ = "daily_tip_subscriptions"
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
+    enabled: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    next_send_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_tip_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("daily_tips.id"), nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="daily_tip_subscription")
+    tip: Mapped[Optional[DailyTip]] = relationship()
