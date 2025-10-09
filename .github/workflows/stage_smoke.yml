@@ -1,0 +1,59 @@
+name: Stage smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  stage-smoke:
+    name: Stage smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: docker compose -f deploy/docker-compose.yml build
+
+      - name: Launch stack
+        run: docker compose -f deploy/docker-compose.yml up -d
+
+      - name: Wait for /ping
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            response=$(curl -fsS http://127.0.0.1:8080/ping || true)
+            if echo "$response" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              echo "Ping response: $response"
+              exit 0
+            fi
+            echo "Attempt $attempt: service not ready yet"
+            sleep 2
+          done
+          echo "Service failed to respond with status ok" >&2
+          exit 1
+
+      - name: Run /doctor
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS http://127.0.0.1:8080/doctor)
+          echo "$response" | tee stage-doctor.json
+          echo "$response" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"' || (echo "Doctor check failed" >&2; exit 1)
+
+      - name: Collect docker logs
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color > stage-smoke.log
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage-smoke-logs
+          path: |
+            stage-smoke.log
+            stage-doctor.json
+
+      - name: Shutdown stack
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v
