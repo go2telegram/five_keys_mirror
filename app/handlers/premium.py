@@ -49,9 +49,22 @@ async def premium_menu(c: CallbackQuery):
         await events_repo.log(
             session,
             c.from_user.id,
+            "cta_premium_clicked",
+            {"source": "premium_menu", "plan": plan},
+        )
+        await events_repo.log(
+            session,
+            c.from_user.id,
             "premium_open",
             {"active": is_active, "plan": plan},
         )
+        if not is_active or plan is None:
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "cta_premium_shown",
+                {"source": "premium_locked"},
+            )
         await commit_safely(session)
 
     await c.answer()

@@ -19,6 +19,7 @@ from app.config import settings
 from app.db.models import Event, Lead
 from app.db.session import session_scope
 from app.repo import events as events_repo, leads as leads_repo
+from app.services.premium_analytics import collect_premium_report
 
 app = FastAPI(title="Five Keys Admin Dashboard")
 
@@ -417,6 +418,13 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "catalog_goals": catalog_goals,
         "recent_leads": recent_leads,
     }
+
+
+@app.get("/admin/premium_report")
+async def premium_report(_: None = Depends(_require_token)) -> Dict[str, Any]:
+    async with session_scope() as session:
+        report = await collect_premium_report(session)
+    return report.as_dict()
 
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)

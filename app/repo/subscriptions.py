@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,6 +64,18 @@ async def count_active(session: AsyncSession) -> int:
     stmt = select(func.count(Subscription.user_id)).where(Subscription.until > now)
     result = await session.execute(stmt)
     return result.scalar_one()
+
+
+async def count_active_by_plan(session: AsyncSession) -> Dict[str, int]:
+    now = datetime.now(timezone.utc)
+    stmt = (
+        select(Subscription.plan, func.count(Subscription.user_id))
+        .where(Subscription.until > now)
+        .group_by(Subscription.plan)
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    return {plan: count for plan, count in rows if plan is not None}
 
 
 async def delete(session: AsyncSession, user_id: int) -> None:

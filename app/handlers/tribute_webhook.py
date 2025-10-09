@@ -133,6 +133,12 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 "subscription_activated",
                 {"plan": plan, "until": until.isoformat()},
             )
+            await events_repo.log(
+                session,
+                tg_id_int,
+                "buy_success",
+                {"plan": plan, "until": until.isoformat()},
+            )
             await commit_safely(session)
 
         if LOG:

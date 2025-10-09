@@ -66,6 +66,30 @@ async def sub_menu(c: CallbackQuery):
     async with compat_session(session_scope) as session:
         await users_repo.get_or_create_user(session, c.from_user.id, c.from_user.username)
         await events_repo.log(session, c.from_user.id, "subscription_menu", {})
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "cta_premium_clicked",
+            {"source": "subscription_menu"},
+        )
+        plans: list[str] = []
+        if settings.TRIBUTE_LINK_BASIC:
+            plans.append("basic")
+        if settings.TRIBUTE_LINK_PRO:
+            plans.append("pro")
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "cta_premium_shown",
+            {"source": "subscription_menu", "plans": plans},
+        )
+        if plans:
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "buy_started",
+                {"source": "subscription_menu", "plans": plans},
+            )
         await commit_safely(session)
     await c.answer()
     markup = _kb_sub_menu()
@@ -113,6 +137,26 @@ async def sub_check(c: CallbackQuery):
 
 @router.callback_query(F.data == "sub:renew")
 async def sub_renew(c: CallbackQuery):
+    async with compat_session(session_scope) as session:
+        plans: list[str] = []
+        if settings.TRIBUTE_LINK_BASIC:
+            plans.append("basic")
+        if settings.TRIBUTE_LINK_PRO:
+            plans.append("pro")
+        await events_repo.log(
+            session,
+            c.from_user.id,
+            "cta_premium_shown",
+            {"source": "subscription_renew", "plans": plans},
+        )
+        if plans:
+            await events_repo.log(
+                session,
+                c.from_user.id,
+                "buy_started",
+                {"source": "subscription_renew", "plans": plans},
+            )
+        await commit_safely(session)
     await c.answer()
     await safe_edit_text(
         c.message,
