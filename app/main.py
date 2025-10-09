@@ -7,6 +7,7 @@ import contextlib
 import errno
 import importlib
 import logging
+import socket
 import time
 from pathlib import Path
 from typing import Iterable
@@ -259,10 +260,27 @@ async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]
         logging.getLogger("startup").exception("dashboard import failed")
         return None, None
 
+    host = settings.DASHBOARD_HOST
+    port = settings.DASHBOARD_PORT
+    if port != 0:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind((host, port))
+        except OSError as exc:
+            errno_value = getattr(exc, "errno", None)
+            if errno_value in (errno.EADDRINUSE, 10048):
+                logging.getLogger("startup").warning(
+                    "dashboard port %s busy, using ephemeral 0",
+                    port,
+                )
+                port = 0
+            else:
+                raise
+
     config = uvicorn_module.Config(
         dashboard_app,
-        host=settings.DASHBOARD_HOST,
-        port=settings.DASHBOARD_PORT,
+        host=host,
+        port=port,
         loop="asyncio",
         log_level="info",
         access_log=False,
@@ -274,10 +292,26 @@ async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]
         await started.wait()
     else:  # pragma: no cover - fallback for older uvicorn
         await asyncio.sleep(0)
+    resolved_port = port
+    try:
+        servers = getattr(server, "servers", [])
+        for srv in servers:
+            sockets = getattr(srv, "sockets", [])
+            for sock in sockets:
+                try:
+                    resolved_port = sock.getsockname()[1]
+                    break
+                except Exception:
+                    continue
+            if resolved_port != port:
+                break
+    except Exception:  # pragma: no cover - defensive
+        resolved_port = port
+
     logging.getLogger("startup").info(
         "dashboard server running at http://%s:%s/admin/dashboard",
-        settings.DASHBOARD_HOST,
-        settings.DASHBOARD_PORT,
+        host,
+        resolved_port,
     )
     return server, task
 
@@ -399,6 +433,11 @@ async def main() -> None:
     finally:
         mark("S2-done: init_db")
         logging.info("current alembic version: %s", revision or "unknown")
+
+    bot_token = getattr(settings, "BOT_TOKEN", "") or ""
+    if not bot_token or str(bot_token).startswith("dummy"):
+        startup_log.warning("BOT_TOKEN is dummy — skipping Telegram init")
+        return
 
     bot = Bot(
         token=settings.BOT_TOKEN,

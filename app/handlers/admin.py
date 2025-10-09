@@ -1,11 +1,13 @@
 from datetime import datetime
+from functools import wraps
 from io import StringIO
 from pathlib import Path
+from typing import Awaitable, Callable, ParamSpec, TypeVar
 from zoneinfo import ZoneInfo
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import BufferedInputFile, Message
+from aiogram.types import BufferedInputFile, FSInputFile, Message
 
 from app.catalog.report import CatalogReportError, get_catalog_report
 from app.config import settings
@@ -33,6 +35,23 @@ def _is_admin(user_id: int | None) -> bool:
     allowed = set(settings.ADMIN_USER_IDS or [])
     allowed.add(settings.ADMIN_ID)
     return user_id in allowed
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def admin_only(handler: Callable[P, Awaitable[R]]):
+    @wraps(handler)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs):
+        target = args[0] if args else kwargs.get("message")
+        from_user = getattr(target, "from_user", None)
+        user_id = getattr(from_user, "id", None)
+        if not _is_admin(user_id):
+            return None
+        return await handler(*args, **kwargs)
+
+    return wrapper
 
 
 @router.message(Command("stats"))
@@ -136,6 +155,20 @@ async def leads_csv(m: Message):
     await m.answer_document(
         BufferedInputFile(csv_bytes, filename=fname),
         caption=f"Экспорт лидов ({len(items)})",
+    )
+
+
+@router.message(Command("ci_report"))
+@admin_only
+async def ci_report_cmd(m: Message) -> None:
+    report_path = Path("build/reports/ci_diagnostics.md")
+    if not report_path.exists():
+        await m.answer("📄 Отчёт CI пока не найден.")
+        return
+
+    await m.answer_document(
+        FSInputFile(report_path),
+        caption="CI diagnostics report",
     )
 
 
