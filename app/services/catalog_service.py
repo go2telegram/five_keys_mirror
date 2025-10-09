@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Dict, List
 
 from app.cache import catalog_cached
@@ -9,6 +10,7 @@ from app.catalog.loader import load_catalog
 from app.db.session import session_scope
 from app.storage import get_last_plan
 from app.utils_media import precache_remote_images
+from app.products import GOAL_MAP
 
 
 def _normalize_product_payload(product: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,11 +78,45 @@ async def _load_user_plan_products(user_id: int) -> List[str]:
         return [str(code) for code in products if code]
 
 
+_SLEEP_TAG_FALLBACKS: dict[str, list[str]] = {
+    "magnesium": ["MAG_B6"],
+    "glycine": ["MAG_B6"],
+    "sleep_calm": ["OMEGA3"],
+    "sleep_support": ["OMEGA3", "D3"],
+    "mct": ["OMEGA3"],
+}
+
+
+def _fallback_reco(source: str | None, tags: Sequence[str] | None) -> list[str]:
+    if source == "quiz:sleep":
+        ordered: list[str] = []
+        for tag in tags or []:
+            for code in _SLEEP_TAG_FALLBACKS.get(tag, []):
+                if code not in ordered:
+                    ordered.append(code)
+        for code in GOAL_MAP.get("sleep", []):
+            if code not in ordered:
+                ordered.append(code)
+        return ordered
+    return []
+
+
 @catalog_cached("get_reco")
-async def get_reco(user_id: int) -> List[str]:
-    if not user_id:
-        return []
-    return await _load_user_plan_products(user_id)
+async def get_reco(
+    user_id: int,
+    *,
+    limit: int = 3,
+    source: str | None = None,
+    tags: Sequence[str] | None = None,
+) -> List[str]:
+    products: list[str] = []
+    if user_id:
+        products = await _load_user_plan_products(user_id)
+    if not products:
+        products = _fallback_reco(source, tags)
+    if limit and limit > 0:
+        products = products[:limit]
+    return products
 
 
 __all__ = ["catalog_search", "product_get", "get_reco"]

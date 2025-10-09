@@ -5,6 +5,7 @@ from app.catalog.api import pick_for_context
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.products import GOAL_MAP
 from app.quiz.engine import (
     QuizDefinition,
     QuizHooks,
@@ -14,7 +15,10 @@ from app.quiz.engine import (
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
+from app.services import get_reco
+from app.utils.nav import nav_footer
 from app.utils.premium_cta import send_premium_cta
+from app.utils.sender import chat_sender
 
 router = Router()
 
@@ -43,6 +47,19 @@ SLEEP_QUESTIONS = [
 ]
 
 
+def _merge_tags(result: QuizResultContext) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for source in (result.threshold.tags, result.collected_tags):
+        for tag in source or []:
+            normalized = str(tag).strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            merged.append(normalized)
+    return merged
+
+
 def _register_yaml_hooks() -> None:
     async def _on_finish_sleep(
         user_id: int, definition: QuizDefinition, result: QuizResultContext
@@ -52,20 +69,34 @@ def _register_yaml_hooks() -> None:
         if not message:
             return False
 
-        threshold = result.threshold
-        tags_line = ", ".join(threshold.tags) if threshold.tags else "—"
-        text = (
-            f"Тест «{definition.title}» завершён!\n\n"
-            f"score: {result.total_score}\n"
-            f"label: {threshold.label}\n"
-            f"advice: {threshold.advice}\n"
-            f"tags: {tags_line}"
+        chat_id = message.chat.id
+        tags = _merge_tags(result)
+        products = await get_reco(
+            user_id,
+            limit=3,
+            source="quiz:sleep",
+            tags=tags,
         )
-        if result.collected_tags:
-            collected = ", ".join(result.collected_tags)
-            text += f"\nanswers: {collected}"
+        if not products:
+            products = GOAL_MAP.get("sleep", [])
 
-        await message.answer(text)
+        selected_products = list(products)[:3]
+        title = f"Итог: {result.threshold.label}"
+        headline = result.threshold.advice
+
+        await chat_sender.send_sequence(
+            chat_id,
+            chat_sender.chat_action(chat_id, "typing"),
+            lambda: send_product_cards(
+                origin,
+                title,
+                selected_products,
+                ctx="sleep",
+                headline=headline,
+                back_cb="menu:tests",
+            ),
+            chat_sender.send_text(chat_id, "Главное меню", reply_markup=nav_footer()),
+        )
         return True
 
     register_quiz_hooks("sleep", QuizHooks(on_finish=_on_finish_sleep))

@@ -16,6 +16,7 @@ from app.i18n import gettext, resolve_locale
 from app.keyboards import (
     kb_back_home,
     kb_goal_menu,
+    kb_main,
     kb_onboarding_entry,
     kb_premium_info_actions,
     kb_quiz_menu,
@@ -103,6 +104,11 @@ async def start_safe(message: Message) -> None:
     await message.answer(GREETING, reply_markup=kb_onboarding_entry())
 
     asyncio.create_task(_start_full(message, payload))
+
+
+@router.message(Command("menu"))
+async def command_menu(message: Message) -> None:
+    await message.answer(GREETING, reply_markup=kb_main())
 
 
 async def _start_full(message: Message, payload: str) -> None:
