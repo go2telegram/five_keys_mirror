@@ -150,10 +150,18 @@ def _http_json(url: str, retries: int = 3, sleep: float = 0.4) -> object:
             raise
 
 
-def list_github_contents(path: str, ref: str) -> list[dict]:
+def list_github_contents(
+    path: str,
+    ref: str,
+    *,
+    owner: str | None = None,
+    repo: str | None = None,
+) -> list[dict]:
+    owner = owner or MEDIA_OWNER
+    repo = repo or MEDIA_REPO
     quoted_path = quote(path, safe="/")
     quoted_ref = quote(ref)
-    url = f"{GITHUB_API_BASE}/repos/{MEDIA_OWNER}/{MEDIA_REPO}/contents/{quoted_path}?ref={quoted_ref}"
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{quoted_path}?ref={quoted_ref}"
     payload = _http_json(url)
     if isinstance(payload, list):
         return payload
@@ -162,13 +170,28 @@ def list_github_contents(path: str, ref: str) -> list[dict]:
     raise CatalogBuildError(f"Unexpected GitHub API response for {url}")
 
 
-def _collect_media_urls(path: str, ref: str, *, extensions: tuple[str, ...]) -> list[str]:
+def _collect_media_urls(
+    path: str,
+    ref: str,
+    *,
+    extensions: tuple[str, ...],
+    owner: str | None = None,
+    repo: str | None = None,
+) -> list[str]:
     urls: list[str] = []
-    for item in list_github_contents(path, ref):
+    for item in list_github_contents(path, ref, owner=owner, repo=repo):
         item_type = str(item.get("type", ""))
         if item_type == "dir":
             nested_path = str(item.get("path", "")) or f"{path}/{item.get('name', '')}"
-            urls.extend(_collect_media_urls(nested_path, ref, extensions=extensions))
+            urls.extend(
+                _collect_media_urls(
+                    nested_path,
+                    ref,
+                    extensions=extensions,
+                    owner=owner,
+                    repo=repo,
+                )
+            )
             continue
         if item_type != "file":
             continue
@@ -190,6 +213,24 @@ def enumerate_product_images(ref: str) -> list[str]:
                 MEDIA_PRODUCTS_PATH,
                 ref,
                 extensions=(".jpg", ".jpeg", ".png", ".webp"),
+                owner=MEDIA_OWNER,
+                repo=MEDIA_REPO,
+            )
+        )
+    )
+
+
+def _enumerate_product_images_for(
+    owner: str, repo: str, ref: str, path: str
+) -> list[str]:
+    return sorted(
+        set(
+            _collect_media_urls(
+                path,
+                ref,
+                extensions=(".jpg", ".jpeg", ".png", ".webp"),
+                owner=owner,
+                repo=repo,
             )
         )
     )
@@ -199,7 +240,15 @@ def enumerate_descriptions(ref: str) -> list[str]:
     """Return RAW URLs of all text descriptions for the given ref."""
 
     return sorted(
-        set(_collect_media_urls(MEDIA_DESCRIPTIONS_PATH, ref, extensions=(".txt",)))
+        set(
+            _collect_media_urls(
+                MEDIA_DESCRIPTIONS_PATH,
+                ref,
+                extensions=(".txt",),
+                owner=MEDIA_OWNER,
+                repo=MEDIA_REPO,
+            )
+        )
     )
 
 
@@ -292,6 +341,20 @@ def _parse_github_tree(url: str) -> tuple[str, str, str, str]:
     else:  # raw.githubusercontent.com
         ref = marker
         path = "/".join(rest)
+    return owner, repo, ref, path
+
+
+def _parse_remote_images_base(url: str) -> tuple[str, str, str, str] | None:
+    parsed = urlsplit(url)
+    host = parsed.netloc.lower()
+    if host not in {"raw.githubusercontent.com", "github.com"}:
+        return None
+    try:
+        owner, repo, ref, path = _parse_github_tree(url)
+    except CatalogBuildError:
+        return None
+    if not path:
+        return None
     return owner, repo, ref, path
 
 
@@ -992,10 +1055,21 @@ def build_catalog(
         base = images_base or DEFAULT_IMAGES_BASE
         files: list[str] = []
         allow_network = os.getenv("NO_NET") != "1"
-        image_base = ONLINE_IMAGES_BASE if allow_network else base
+        listing_override = images_base or os.getenv("IMAGES_BASE")
+        if allow_network and not listing_override:
+            image_base = ONLINE_IMAGES_BASE
+        else:
+            image_base = base
+        remote_listing: tuple[str, str, str, str] | None = None
+        if listing_override:
+            remote_listing = _parse_remote_images_base(base)
         if allow_network:
             try:
-                image_urls = enumerate_product_images(MEDIA_REF)
+                if remote_listing:
+                    owner, repo, ref, path = remote_listing
+                    image_urls = _enumerate_product_images_for(owner, repo, ref, path)
+                else:
+                    image_urls = enumerate_product_images(MEDIA_REF)
             except Exception as exc:  # pragma: no cover - network dependent
                 print(f"WARN: online listing failed ({exc}); fallback to RAW base listing")
                 image_urls = []
