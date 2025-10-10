@@ -449,7 +449,8 @@ TEST_COMMANDS: list[list[str]] = [
 def run_tests(pr: PRStatus) -> None:
     for cmd in TEST_COMMANDS:
         result = run(cmd, check=False)
-        if cmd[0].endswith("self_audit.py"):
+        is_self_audit = len(cmd) > 1 and Path(cmd[1]).name == "self_audit.py"
+        if is_self_audit:
             if result.ok:
                 pr.audit_ok = True
             else:
