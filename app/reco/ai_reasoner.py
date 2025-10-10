@@ -41,7 +41,7 @@ from app.repo.calculators import get_user_calcs
 from app.repo.user_profile import get_user_profile
 from app.utils.cards import build_order_link
 
-PROMPTS_DIR = Path("app/reco/prompts")
+PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 LANG = lambda prof: ("en" if (prof and prof.get("lang") == "en") else "ru")
 
 
