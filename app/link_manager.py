@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
+import csv
+import io
 import json
 import logging
 import re
@@ -50,6 +52,8 @@ __all__ = [
     "switch_set",
     "list_sets",
     "export_set",
+    "export_set_csv",
+    "import_set",
     "audit_actor",
 ]
 
@@ -370,6 +374,11 @@ async def export_set(name: str | None = None) -> dict[str, Any]:
     return data
 
 
+async def export_set_csv(name: str | None = None) -> str:
+    data = await export_set(name)
+    return _build_csv_snapshot(data["register"], data["products"])
+
+
 def _schedule_ping(url: str) -> None:
     try:
         loop = asyncio.get_running_loop()
@@ -411,3 +420,183 @@ async def _append_audit(
             fh.write("\n")
 
     await asyncio.to_thread(_write)
+
+
+def _build_csv_snapshot(register: str | None, products: dict[str, str]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["product_id", "url"])
+    if register:
+        writer.writerow(["register", register])
+    for pid, url in sorted(products.items()):
+        writer.writerow([pid, url])
+    return buffer.getvalue().strip()
+
+
+def _parse_import_payload(data: Any) -> tuple[str | None, dict[str, str], list[str]]:
+    if isinstance(data, dict):
+        return _parse_import_dict(data)
+    if isinstance(data, bytes):
+        text = data.decode("utf-8")
+    elif isinstance(data, str):
+        text = data
+    else:
+        raise ValueError("unsupported import payload type")
+
+    candidate = text.strip()
+    if not candidate:
+        raise ValueError("import payload cannot be empty")
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        return _parse_import_csv(candidate)
+    return _parse_import_dict(parsed)
+
+
+def _parse_import_dict(data: Dict[str, Any]) -> tuple[str | None, dict[str, str], list[str]]:
+    warnings: list[str] = []
+    register: str | None = None
+    products: dict[str, str] = {}
+
+    if "register" in data:
+        register_value = data.get("register")
+        if isinstance(register_value, str) and register_value.strip():
+            register = _validate_url(register_value)
+        elif register_value:
+            warnings.append("register value ignored: expected string URL")
+
+    products_value = data.get("products")
+    if isinstance(products_value, dict):
+        products = _canonicalise_mapping(products_value)
+    elif isinstance(products_value, list):
+        for item in products_value:
+            if not isinstance(item, dict):
+                continue
+            pid = item.get("product_id") or item.get("product") or item.get("id")
+            url = item.get("url")
+            if not pid or not url:
+                continue
+            try:
+                products[_sanitize_product_id(pid)] = _validate_url(str(url))
+            except ValueError:
+                warnings.append(f"invalid product row ignored: {pid!r}")
+    elif products_value:
+        warnings.append("products value ignored: expected mapping")
+
+    if not products and not ("products" in data):
+        products = _canonicalise_mapping({k: v for k, v in data.items() if isinstance(v, str)})
+
+    return register, products, warnings
+
+
+def _parse_import_csv(text: str) -> tuple[str | None, dict[str, str], list[str]]:
+    stream = io.StringIO(text)
+    reader = csv.DictReader(stream)
+    if not reader.fieldnames:
+        raise ValueError("CSV payload must include headers")
+
+    field_map = {name.strip().lower(): name for name in reader.fieldnames if isinstance(name, str)}
+    url_field = field_map.get("url")
+    if not url_field:
+        raise ValueError("CSV payload must include a 'url' column")
+    product_field = None
+    for candidate in ("product_id", "product", "id", "code"):
+        if candidate in field_map:
+            product_field = field_map[candidate]
+            break
+    register_field = None
+    for candidate in ("register", "is_register", "kind", "type"):
+        if candidate in field_map:
+            register_field = field_map[candidate]
+            break
+    if product_field is None and register_field is None:
+        raise ValueError("CSV payload must include a product identifier column")
+
+    warnings: list[str] = []
+    register: str | None = None
+    products: dict[str, str] = {}
+
+    for row in reader:
+        if not row:
+            continue
+        url_raw = (row.get(url_field) or "").strip()
+        if not url_raw:
+            continue
+        marker = (row.get(register_field) or "").strip().lower() if register_field else ""
+        product_raw = (row.get(product_field) or "").strip() if product_field else ""
+        try:
+            candidate_url = _validate_url(url_raw)
+        except ValueError:
+            warnings.append(f"invalid URL ignored: {url_raw!r}")
+            continue
+
+        if marker in {"1", "true", "yes", "register"} or product_raw.lower() == "register":
+            register = candidate_url
+            continue
+
+        if not product_raw:
+            warnings.append("row without product_id skipped")
+            continue
+
+        try:
+            pid = _sanitize_product_id(product_raw)
+        except ValueError:
+            warnings.append(f"invalid product_id ignored: {product_raw!r}")
+            continue
+        products[pid] = candidate_url
+
+    return register, products, warnings
+
+
+async def import_set(
+    data: Any,
+    *,
+    target: str | None = None,
+    apply: bool = False,
+) -> dict[str, Any]:
+    global _REGISTER_LINK, _PRODUCT_LINKS, _LOADED_SET
+    register, products, warnings = _parse_import_payload(data)
+    name = _sanitize_set_name(target) if target else await active_set_name()
+    result = {
+        "set": name,
+        "register": register,
+        "products": dict(products),
+        "warnings": warnings,
+        "applied": False,
+    }
+
+    if not apply:
+        return result
+
+    active = await active_set_name()
+    async with _CACHE_LOCK:
+        await _refresh_cache(force=True)
+        payload = await _load_set_payload(name)
+        old_register = payload.get("register") if isinstance(payload.get("register"), str) else None
+        old_products = (
+            dict(payload.get("products")) if isinstance(payload.get("products"), dict) else {}
+        )
+        if register:
+            payload["register"] = register
+        else:
+            payload.pop("register", None)
+        payload["products"] = dict(products)
+        await _save_set_payload(name, payload)
+        if name == active:
+            global _REGISTER_LINK, _PRODUCT_LINKS, _LOADED_SET
+            _REGISTER_LINK = register
+            _PRODUCT_LINKS = dict(products)
+            _LOADED_SET = name
+        else:
+            _invalidate_cache()
+
+    if register:
+        _schedule_ping(register)
+    for url in products.values():
+        _schedule_ping(url)
+
+    await _append_audit("import_register", "register", old_register, register, name)
+    await _append_audit("import_products", "products", old_products, products, name)
+
+    result["applied"] = True
+    return result
