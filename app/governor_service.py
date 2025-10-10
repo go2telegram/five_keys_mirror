@@ -57,7 +57,14 @@ def _build_engine() -> GovernorEngine:
 
 
 _engine: GovernorEngine = _build_engine()
-_engine_lock = asyncio.Lock()
+_engine_lock: asyncio.Lock | None = None
+
+
+def _get_engine_lock() -> asyncio.Lock:
+    global _engine_lock
+    if _engine_lock is None:
+        _engine_lock = asyncio.Lock()
+    return _engine_lock
 
 
 def get_engine() -> GovernorEngine:
@@ -65,7 +72,7 @@ def get_engine() -> GovernorEngine:
 
 
 async def run_governor(bot: Bot) -> None:
-    async with _engine_lock:
+    async with _get_engine_lock():
         await _engine.run(bot=bot, admin_chat_id=settings.ADMIN_ID)
 
 

@@ -9,11 +9,18 @@ _metrics: Dict[str, float] = {
     "error_rate": 0.0,
     "revenue_drop_percent": 0.0,
 }
-_lock = Lock()
+_lock: Lock | None = None
+
+
+def _get_lock() -> Lock:
+    global _lock
+    if _lock is None:
+        _lock = Lock()
+    return _lock
 
 
 async def set_metric(name: str, value: float) -> None:
-    async with _lock:
+    async with _get_lock():
         _metrics[name] = float(value)
 
 
