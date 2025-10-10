@@ -155,14 +155,16 @@ class SessionStore(MutableMapping[int, SessionData]):
         return len(self._cache)
 
     def _load(self, key: int) -> Dict[str, Any] | None:
-        if key in self._cache:
-            return self._cache[key]
         if USE_REDIS:
             data = _run_async(redis_session_get(key))
             if data is not None:
                 self._cache[key] = data
                 return data
+            self._cache.pop(key, None)
             return None
+
+        if key in self._cache:
+            return self._cache[key]
         return None
 
     def _save(self, key: int, data: Dict[str, Any]) -> None:
