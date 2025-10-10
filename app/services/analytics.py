@@ -139,10 +139,12 @@ async def funnel_stats(
     previous_total = None
     for label, event_name in stages:
         users = len(seen_users.get(event_name, set()))
-        if previous_total in (None, 0):
-            conv_prev = 100.0 if previous_total == 0 else 0.0
+        if previous_total is None:
+            conv_prev = 0.0
+        elif previous_total == 0:
+            conv_prev = 0.0
         else:
-            conv_prev = (users / previous_total * 100.0) if previous_total else 0.0
+            conv_prev = users / previous_total * 100.0
         conv_start = (users / start_total * 100.0) if start_total else 0.0
         stages_data.append(
             FunnelStage(
