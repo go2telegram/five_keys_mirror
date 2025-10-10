@@ -84,10 +84,11 @@ async def show_orchestrator(message: Message) -> None:
         parts.append("\n".join(pending_lines))
 
     if metrics:
-        parts.append(
-            "📈 Метрики:\n"
-            f"• tasks_distributed_total: {metrics.get('tasks_distributed_total', 0)}\n"
-            f"• avg_task_latency: {metrics.get('avg_task_latency', 0):.3f}s"
-        )
+        metrics_lines = [
+            "📈 Метрики:",
+            f"• tasks_distributed_total: {metrics.get('tasks_distributed_total', 0)}",
+            f"• avg_task_latency: {metrics.get('avg_task_latency', 0):.3f}s",
+        ]
+        parts.append("\n".join(metrics_lines))
 
     await message.answer("\n\n".join(parts))
