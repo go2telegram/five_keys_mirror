@@ -68,12 +68,14 @@ from app.middlewares import (
     CallbackDebounceMiddleware,
     CallbackTraceMiddleware,
     InputValidationMiddleware,
+    MetricsMiddleware,
     RateLimitMiddleware,
     UpdateDeduplicateMiddleware,
 )
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
+from app.services.runtime_metrics import runtime_metrics
 from app.router_map import capture_router_map
 
 try:
@@ -205,6 +207,7 @@ async def _handle_metrics(_: web.Request) -> web.Response:
             f"five_keys_bot_quiz_completed_total {quiz_total if quiz_total is not None else 'nan'}",
         ]
     )
+    lines.extend(runtime_metrics.render_prometheus())
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
@@ -432,6 +435,15 @@ def _register_update_deduplicate_middleware(dp: Dispatcher) -> UpdateDeduplicate
     return deduplicate
 
 
+def _register_metrics_middleware(dp: Dispatcher) -> None:
+    """Register middleware that collects Prometheus runtime metrics."""
+
+    dp.update.outer_middleware(MetricsMiddleware.for_updates())
+    dp.message.middleware(MetricsMiddleware.for_messages())
+    dp.callback_query.middleware(MetricsMiddleware.for_callbacks())
+    startup_log.info("S4aa: metrics middleware registered")
+
+
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     """Register the audit middleware on every dispatcher layer."""
 
@@ -615,6 +627,7 @@ async def main() -> None:
     mark("S3: bot/dispatcher created")
 
     _register_update_deduplicate_middleware(dp)
+    _register_metrics_middleware(dp)
     _register_audit_middleware(dp)
     _register_rate_limit_middleware(dp)
     _register_callback_middlewares(dp)
