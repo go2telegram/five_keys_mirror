@@ -1,5 +1,6 @@
 import asyncio
 import json
+import textwrap
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -115,3 +116,64 @@ async def test_build_order_link_adds_utms(tmp_path, tmp_path_factory, _isolate_l
     assert params_existing["utm_medium"] == ["recommend"]
     assert params_existing["utm_campaign"] == ["recommend"]
     assert params_existing["utm_content"] == ["item-2"]
+
+
+@pytest.mark.asyncio
+async def test_import_set_json_and_apply(tmp_path, tmp_path_factory, _isolate_link_manager, **_):
+    payload = {
+        "register": "https://demo.example/reg-new",
+        "products": {
+            "alpha": "https://shop.example/alpha",
+            "beta": "https://shop.example/beta",
+        },
+    }
+    preview = await link_manager.import_set(payload, apply=False)
+    assert preview["register"] == payload["register"]
+    assert preview["products"] == payload["products"]
+    assert preview["warnings"] == []
+    assert preview["applied"] is False
+
+    with link_manager.audit_actor(9):
+        applied = await link_manager.import_set(payload, apply=True)
+
+    assert applied["applied"] is True
+    assert await link_manager.get_register_link() == payload["register"]
+    assert await link_manager.get_product_link("alpha") == payload["products"]["alpha"]
+    csv_snapshot = await link_manager.export_set_csv()
+    assert "register,https://demo.example/reg-new" in csv_snapshot
+
+
+@pytest.mark.asyncio
+async def test_import_set_csv_support(tmp_path, tmp_path_factory, _isolate_link_manager, **_):
+    csv_payload = textwrap.dedent(
+        """
+        product_id,url
+        register,https://demo.example/register
+        alpha,https://shop.example/alpha
+        invalid,not-a-url
+        ,https://shop.example/missing
+        """
+    ).strip()
+
+    preview = await link_manager.import_set(csv_payload, target="stage", apply=False)
+    assert preview["set"] == "stage"
+    assert preview["register"] == "https://demo.example/register"
+    assert "alpha" in preview["products"]
+    assert "invalid" not in preview["products"]
+    assert preview["applied"] is False
+    assert preview["warnings"]
+
+    staged_payload = {
+        "register": preview["register"],
+        "products": preview["products"],
+    }
+
+    with link_manager.audit_actor(11):
+        applied = await link_manager.import_set(staged_payload, target="stage", apply=True)
+
+    assert applied["applied"] is True
+    assert await link_manager.active_set_name() == "default"
+
+    await link_manager.switch_set("stage")
+    assert await link_manager.get_register_link() == "https://demo.example/register"
+    assert await link_manager.get_product_link("alpha") == "https://shop.example/alpha"

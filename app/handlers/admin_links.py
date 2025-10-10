@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import json
-from typing import Any
+from typing import Any, Dict, Optional, TypedDict
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
@@ -16,10 +17,11 @@ from app.link_manager import (
     audit_actor,
     delete_product_link,
     export_set,
+    export_set_csv,
     get_all_product_links,
     get_register_link,
+    import_set,
     list_sets,
-    set_bulk_links,
     set_product_link,
     set_register_link,
     switch_set,
@@ -27,7 +29,14 @@ from app.link_manager import (
 
 router = Router(name="admin_links")
 
-_PENDING_IMPORT: set[int] = set()
+
+class PendingImport(TypedDict, total=False):
+    set: Optional[str]
+    payload: Dict[str, Any]
+    warnings: list[str]
+
+
+_PENDING_IMPORT: dict[int, PendingImport] = {}
 
 
 def _collect_core_products(limit: int = 38) -> list[str]:
@@ -129,23 +138,70 @@ async def cmd_switch_links(message: Message, command: CommandObject) -> None:
 @router.message(Command("export_links"))
 @admin_only
 async def cmd_export_links(message: Message, command: CommandObject) -> None:
-    target = (command.args or "").strip() or None
+    raw_args = (command.args or "").strip()
+    tokens = [part for part in raw_args.split() if part]
+    fmt = "all"
+    target = None
+    if tokens:
+        last = tokens[-1].lower()
+        if last in {"json", "csv"}:
+            fmt = last
+            tokens = tokens[:-1]
+    if tokens:
+        target = tokens[0]
+
     data = await export_set(target)
-    payload = json.dumps(data, ensure_ascii=False, indent=2)
-    await message.answer(f"<pre>{payload}</pre>", parse_mode="HTML")
+    if fmt in {"all", "json"}:
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+        await message.answer(f"<pre>{payload}</pre>", parse_mode="HTML")
+    if fmt in {"all", "csv"}:
+        csv_payload = await export_set_csv(target)
+        await message.answer(
+            f"<pre>{html.escape(csv_payload)}</pre>",
+            parse_mode="HTML",
+        )
 
 
 @router.message(Command("import_links"))
 @admin_only
 async def cmd_import_links(message: Message, command: CommandObject) -> None:
-    raw = (command.args or "").strip()
-    if raw:
-        await _apply_import(message, raw)
-        return
     if not message.from_user:
         return
-    _PENDING_IMPORT.add(message.from_user.id)
-    await message.answer("Пришли JSON с ключами register/products в следующем сообщении")
+    admin_id = message.from_user.id
+    raw = (command.args or "").strip()
+    lowered = raw.lower()
+    if lowered == "apply":
+        pending = _PENDING_IMPORT.get(admin_id)
+        if not pending or not pending.get("payload"):
+            await message.answer("⚠️ Нет данных для применения. Сначала пришли JSON или CSV.")
+            return
+        target = pending.get("set")
+        payload = pending["payload"]
+        try:
+            with audit_actor(admin_id):
+                result = await import_set(payload, target=target, apply=True)
+        except ValueError as exc:
+            await message.answer(f"⚠️ {exc}")
+            return
+        _PENDING_IMPORT.pop(admin_id, None)
+        await message.answer(
+            "✅ Импорт применён\n"
+            f"Сет: <b>{result['set']}</b>\n"
+            f"Регистрация: {result['register'] or '—'}\n"
+            f"Overrides: {len(result['products'])}",
+            parse_mode="HTML",
+        )
+        return
+    if lowered == "cancel":
+        _PENDING_IMPORT.pop(admin_id, None)
+        await message.answer("Импорт отменён")
+        return
+
+    target = raw or None
+    _PENDING_IMPORT[admin_id] = PendingImport(set=target)
+    await message.answer(
+        "Пришли JSON или CSV (product_id,url). После проверки отправь /import_links apply",
+    )
 
 
 @router.message(F.text)
@@ -154,35 +210,37 @@ async def handle_import_payload(message: Message) -> None:
     if not message.from_user:
         return
     admin_id = message.from_user.id
-    if admin_id not in _PENDING_IMPORT:
+    pending = _PENDING_IMPORT.get(admin_id)
+    if not pending:
         return
-    _PENDING_IMPORT.discard(admin_id)
-    await _apply_import(message, message.text or "")
-
-
-async def _apply_import(message: Message, raw: str) -> None:
-    admin_id = message.from_user.id if message.from_user else None
+    target = pending.get("set")
+    raw = (message.text or "").strip()
+    if not raw:
+        await message.answer("⚠️ Пустой импорт")
+        return
     try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        await message.answer("⚠️ Невалидный JSON")
-        return
-    if not isinstance(payload, dict):
-        await message.answer("⚠️ Ожидался объект с полями register/products")
-        return
-    register = payload.get("register")
-    products_raw: Any = payload.get("products")
-    products = products_raw if isinstance(products_raw, dict) else {}
-    try:
-        with audit_actor(admin_id):
-            if register:
-                await set_register_link(register)
-            await set_bulk_links(products)
+        result = await import_set(raw, target=target, apply=False)
     except ValueError as exc:
         await message.answer(f"⚠️ {exc}")
         return
-    await message.answer(
-        "✅ Импорт завершён\n"
-        f"Регистрация: {register or 'без изменений'}\n"
-        f"Overrides: {len(products)}",
-    )
+
+    payload = {"register": result["register"], "products": result["products"]}
+    warnings = result.get("warnings") or []
+    _PENDING_IMPORT[admin_id] = PendingImport(set=result["set"], payload=payload, warnings=warnings)
+
+    preview_lines = [f"Сет: <b>{result['set']}</b>"]
+    preview_lines.append(f"Регистрация: {result['register'] or '—'}")
+    preview_lines.append(f"Overrides: {len(result['products'])}")
+    sample = list(result["products"].items())[:5]
+    if sample:
+        preview_lines.append("Пример:")
+        for pid, url in sample:
+            preview_lines.append(f"• {pid}: {url}")
+    if warnings:
+        preview_lines.append("")
+        preview_lines.append("⚠️ Предупреждения:")
+        for warn in warnings:
+            preview_lines.append(f"- {warn}")
+    preview_lines.append("")
+    preview_lines.append("Отправь /import_links apply чтобы применить или /import_links cancel")
+    await message.answer("\n".join(preview_lines), parse_mode="HTML")
