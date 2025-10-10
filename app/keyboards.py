@@ -7,11 +7,14 @@ from app.config import settings
 from app.products import BUY_URLS, PRODUCTS
 
 _TEST_MENU_ITEMS = [
-    ("⚡ Энергия", "energy"),
-    ("😴 Сон", "sleep"),
-    ("😰 Стресс", "stress"),
-    ("🛡 Иммунитет", "immunity"),
-    ("🌿 ЖКТ", "gut"),
+    ("⚡ Энергия", "tests:energy"),
+    ("😴 Сон", "tests:sleep"),
+    ("😰 Стресс", "tests:stress"),
+    ("🛡 Иммунитет", "tests:immunity"),
+    ("🌿 ЖКТ", "tests:gut"),
+    ("🩸 Дефициты", "quiz:deficits"),
+    ("🧘 Стресс 2.0", "quiz:stress2"),
+    ("✨ Кожа и суставы", "quiz:skin_joint"),
 ]
 
 # ---------- Главное меню ----------
@@ -65,8 +68,8 @@ def kb_recommendation_prompt() -> InlineKeyboardMarkup:
 
 def kb_tests_menu() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    for title, slug in _TEST_MENU_ITEMS:
-        kb.button(text=title, callback_data=f"tests:{slug}")
+    for title, callback_data in _TEST_MENU_ITEMS:
+        kb.button(text=title, callback_data=callback_data)
     kb.button(text="⬅️ Назад", callback_data="home:main")
     kb.adjust(2, 2, 1)
     return kb.as_markup()

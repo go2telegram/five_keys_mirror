@@ -3,6 +3,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.keyboards import _TEST_MENU_ITEMS
+
 router = Router()
 
 # ====== ДАННЫЕ НАВИГАЦИИ (только ссылки и названия) ======
@@ -106,15 +108,8 @@ def kb_nav_category(cat_key: str):
 
 def kb_nav_tests():
     kb = InlineKeyboardBuilder()
-    tests = [
-        ("⚡ Энергия", "energy"),
-        ("😴 Сон", "sleep"),
-        ("😰 Стресс", "stress"),
-        ("🛡️ Иммунитет", "immunity"),
-        ("🦠 ЖКТ", "gut"),
-    ]
-    for title, slug in tests:
-        kb.button(text=title, callback_data=f"tests:{slug}")
+    for title, callback_data in _TEST_MENU_ITEMS:
+        kb.button(text=title, callback_data=callback_data)
     kb.button(text="⬅️ Назад", callback_data="nav:root")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)
