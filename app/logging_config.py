@@ -3,11 +3,52 @@
 from __future__ import annotations
 
 import logging
+import re
 from contextlib import suppress
 from logging import Handler
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Iterable
+
+
+_EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+_PHONE_RE = re.compile(r"\b\+?\d{6,15}\b")
+_TOKEN_RE = re.compile(r"(?P<key>token\s*[=:]\s*)(?P<secret>[A-Za-z0-9._-]{4,})", re.IGNORECASE)
+
+
+def _scrub_text(value: str) -> str:
+    """Mask email, phone numbers and tokens in the provided value."""
+
+    if not value:
+        return value
+
+    value = _EMAIL_RE.sub("<email>", value)
+    value = _PHONE_RE.sub("<phone>", value)
+    value = _TOKEN_RE.sub(lambda m: f"{m.group('key')}<token>", value)
+    return value
+
+
+def _scrub_value(value: object) -> object:
+    if isinstance(value, str):
+        return _scrub_text(value)
+    return value
+
+
+class PiiScrubbingFilter(logging.Filter):
+    """Filter that scrubs PII from log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401 - standard logging hook
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {key: _scrub_value(value) for key, value in record.args.items()}
+            elif isinstance(record.args, (list, tuple)):
+                record.args = tuple(_scrub_value(item) for item in record.args)
+
+        message = record.getMessage()
+        record.msg = _scrub_text(message)
+        record.args = ()
+
+        return True
 
 
 def _close_handlers(handlers: Iterable[Handler]) -> None:
@@ -56,11 +97,20 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
     )
     error_handler.setLevel(logging.WARNING)
     error_handler.setFormatter(formatter)
+    error_handler.addFilter(PiiScrubbingFilter())
     root.addHandler(error_handler)
 
     logging.getLogger("aiogram.event").setLevel(logging.INFO)
     logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.INFO)
+
+    pii_filter = PiiScrubbingFilter()
+    for logger_name in ("audit", "doctor"):
+        logger = logging.getLogger(logger_name)
+        logger.filters = [
+            existing for existing in logger.filters if not isinstance(existing, PiiScrubbingFilter)
+        ]
+        logger.addFilter(pii_filter)
 
     resolved_level = logging.getLevelName(level)
     root.info("logging initialized, level=%s", resolved_level)
