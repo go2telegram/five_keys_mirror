@@ -5,7 +5,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-if importlib.util.find_spec("reportlab") is not None:
+try:
+    if importlib.util.find_spec("reportlab") is None:
+        raise ImportError("reportlab not available")
+
     from reportlab.graphics.barcode import qr
     from reportlab.graphics.shapes import Drawing
     from reportlab.lib import colors
@@ -25,7 +28,11 @@ if importlib.util.find_spec("reportlab") is not None:
         TableStyle,
     )
     REPORTLAB_OK = True
-else:  # pragma: no cover - optional dependency missing
+except Exception:  # pragma: no cover - optional dependency missing or broken
+    logging.getLogger(__name__).warning(
+        "ReportLab import failed, disabling PDF generation.",
+        exc_info=True,
+    )
     REPORTLAB_OK = False
     qr = None  # type: ignore[assignment]
     Drawing = Any  # type: ignore[assignment]
