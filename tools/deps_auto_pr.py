@@ -39,6 +39,8 @@ def main() -> int:
         check=True,
     )
 
+    run("pip-sync requirements.txt requirements-dev.txt", check=True)
+
     run("python tools/build_products.py build", check=True)
     run("python tools/build_products.py validate", check=True)
 
@@ -48,7 +50,7 @@ def main() -> int:
     )
 
     tests_rc = run("pytest -q", check=False).returncode
-    security_rc = run("python tools/security_audit.py || true", check=False).returncode
+    security_rc = run("python tools/security_audit.py", check=False).returncode
 
     meta = {
         "datetime": datetime.datetime.utcnow().isoformat() + "Z",
