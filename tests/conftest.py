@@ -34,6 +34,25 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "asyncio: execute the test inside an event loop")
 
 
+def pytest_sessionstart(session: pytest.Session) -> None:  # noqa: ARG001 - hook signature
+    """Ensure the SQLite schema exists before the async tests run."""
+
+    try:
+        from app.db.models import Base
+        from app.db.session import async_engine
+    except Exception:
+        return
+
+    if async_engine is None:  # pragma: no cover - driver missing in CI sandbox
+        return
+
+    async def _create() -> None:
+        async with async_engine.begin() as conn:  # type: ignore[union-attr]
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_create())
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
     """Execute ``@pytest.mark.asyncio`` tests without requiring pytest-asyncio."""

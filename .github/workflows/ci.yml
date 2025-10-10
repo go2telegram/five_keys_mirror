@@ -40,6 +40,11 @@ jobs:
           python tools/build_products.py validate
       - name: Head check media (warn-only)
         run: python tools/head_check.py || true
+      - name: Partner link health (warn-only)
+        run: |
+          python tools/check_partner_links.py \
+            --report build/reports/links_head_report.txt \
+            --diff-json build/reports/links_head_diff.json || true
       - name: Self audit (fast)
         if: github.event_name == 'pull_request'
         run: python tools/self_audit.py --fast --no-net --out build/reports/self_audit_pr.md || true

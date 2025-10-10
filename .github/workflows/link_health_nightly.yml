@@ -1,0 +1,52 @@
+name: Nightly Link Health
+
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  link-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: link-health-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Restore previous partner link report
+        id: previous
+        uses: dawidd6/action-download-artifact@v2
+        continue-on-error: true
+        with:
+          workflow: link_health_nightly.yml
+          branch: main
+          name: link-health-report
+          path: build/reports/previous
+          if_no_artifact_found: warn
+      - name: Run partner link health check
+        env:
+          LINK_HEALTH_BOT_TOKEN: ${{ secrets.LINK_HEALTH_BOT_TOKEN }}
+          LINK_HEALTH_CHAT_ID: ${{ secrets.LINK_HEALTH_CHAT_ID }}
+        run: |
+          python tools/check_partner_links.py \
+            --report build/reports/links_head_report.txt \
+            --previous build/reports/previous/links_head_report.txt \
+            --diff-json build/reports/links_head_diff.json \
+            --notify
+      - name: Publish partner link report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-health-report
+          path: |
+            build/reports/links_head_report.txt
+            build/reports/links_head_diff.json
