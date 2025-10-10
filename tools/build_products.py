@@ -765,6 +765,7 @@ def build_catalog(
         image_base, files = _list_remote_images(base)
     else:
         directory = Path(images_dir or DEFAULT_IMAGES_DIR)
+        normalize_images_directory(directory)
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
     unique_ids: set[str] = set()
