@@ -12,7 +12,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, NamedTuple
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -433,7 +433,14 @@ def _build_csv_snapshot(register: str | None, products: dict[str, str]) -> str:
     return buffer.getvalue().strip()
 
 
-def _parse_import_payload(data: Any) -> tuple[str | None, dict[str, str], list[str]]:
+class ImportPayload(NamedTuple):
+    register_in_payload: bool
+    register: str | None
+    products: dict[str, str]
+    warnings: list[str]
+
+
+def _parse_import_payload(data: Any) -> ImportPayload:
     if isinstance(data, dict):
         return _parse_import_dict(data)
     if isinstance(data, bytes):
@@ -453,10 +460,11 @@ def _parse_import_payload(data: Any) -> tuple[str | None, dict[str, str], list[s
     return _parse_import_dict(parsed)
 
 
-def _parse_import_dict(data: Dict[str, Any]) -> tuple[str | None, dict[str, str], list[str]]:
+def _parse_import_dict(data: Dict[str, Any]) -> ImportPayload:
     warnings: list[str] = []
     register: str | None = None
     products: dict[str, str] = {}
+    register_in_payload = "register" in data
 
     if "register" in data:
         register_value = data.get("register")
@@ -486,10 +494,15 @@ def _parse_import_dict(data: Dict[str, Any]) -> tuple[str | None, dict[str, str]
     if not products and not ("products" in data):
         products = _canonicalise_mapping({k: v for k, v in data.items() if isinstance(v, str)})
 
-    return register, products, warnings
+    return ImportPayload(
+        register_in_payload=register_in_payload,
+        register=register,
+        products=products,
+        warnings=warnings,
+    )
 
 
-def _parse_import_csv(text: str) -> tuple[str | None, dict[str, str], list[str]]:
+def _parse_import_csv(text: str) -> ImportPayload:
     stream = io.StringIO(text)
     reader = csv.DictReader(stream)
     if not reader.fieldnames:
@@ -515,6 +528,7 @@ def _parse_import_csv(text: str) -> tuple[str | None, dict[str, str], list[str]]
     warnings: list[str] = []
     register: str | None = None
     products: dict[str, str] = {}
+    register_in_payload = False
 
     for row in reader:
         if not row:
@@ -532,6 +546,7 @@ def _parse_import_csv(text: str) -> tuple[str | None, dict[str, str], list[str]]
 
         if marker in {"1", "true", "yes", "register"} or product_raw.lower() == "register":
             register = candidate_url
+            register_in_payload = True
             continue
 
         if not product_raw:
@@ -545,7 +560,12 @@ def _parse_import_csv(text: str) -> tuple[str | None, dict[str, str], list[str]]
             continue
         products[pid] = candidate_url
 
-    return register, products, warnings
+    return ImportPayload(
+        register_in_payload=register_in_payload,
+        register=register,
+        products=products,
+        warnings=warnings,
+    )
 
 
 async def import_set(
@@ -555,11 +575,16 @@ async def import_set(
     apply: bool = False,
 ) -> dict[str, Any]:
     global _REGISTER_LINK, _PRODUCT_LINKS, _LOADED_SET
-    register, products, warnings = _parse_import_payload(data)
+    parsed = _parse_import_payload(data)
+    register = parsed.register
+    products = parsed.products
+    warnings = parsed.warnings
+    register_in_payload = parsed.register_in_payload
     name = _sanitize_set_name(target) if target else await active_set_name()
     result = {
         "set": name,
         "register": register,
+        "register_in_payload": register_in_payload,
         "products": dict(products),
         "warnings": warnings,
         "applied": False,
@@ -576,27 +601,37 @@ async def import_set(
         old_products = (
             dict(payload.get("products")) if isinstance(payload.get("products"), dict) else {}
         )
-        if register:
-            payload["register"] = register
-        else:
-            payload.pop("register", None)
+        new_register = old_register
+        if register_in_payload:
+            if register:
+                payload["register"] = register
+                new_register = register
+            else:
+                payload.pop("register", None)
+                new_register = None
         payload["products"] = dict(products)
         await _save_set_payload(name, payload)
         if name == active:
             global _REGISTER_LINK, _PRODUCT_LINKS, _LOADED_SET
-            _REGISTER_LINK = register
+            if register_in_payload:
+                _REGISTER_LINK = new_register
             _PRODUCT_LINKS = dict(products)
             _LOADED_SET = name
         else:
             _invalidate_cache()
 
-    if register:
+    if register_in_payload and register:
         _schedule_ping(register)
     for url in products.values():
         _schedule_ping(url)
 
-    await _append_audit("import_register", "register", old_register, register, name)
+    if register_in_payload:
+        await _append_audit("import_register", "register", old_register, new_register, name)
     await _append_audit("import_products", "products", old_products, products, name)
 
     result["applied"] = True
+    if register_in_payload:
+        result["register"] = new_register
+    else:
+        result["register"] = old_register
     return result

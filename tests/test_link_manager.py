@@ -177,3 +177,27 @@ async def test_import_set_csv_support(tmp_path, tmp_path_factory, _isolate_link_
     await link_manager.switch_set("stage")
     assert await link_manager.get_register_link() == "https://demo.example/register"
     assert await link_manager.get_product_link("alpha") == "https://shop.example/alpha"
+
+
+@pytest.mark.asyncio
+async def test_import_set_preserves_register_when_missing(tmp_path, tmp_path_factory, _isolate_link_manager, **_):
+    initial_payload = {
+        "register": "https://demo.example/register",
+        "products": {"alpha": "https://shop.example/alpha"},
+    }
+
+    with link_manager.audit_actor(21):
+        await link_manager.import_set(initial_payload, apply=True)
+
+    product_only_payload = {"products": {"beta": "https://shop.example/beta"}}
+
+    preview = await link_manager.import_set(product_only_payload, apply=False)
+    assert preview["register"] is None
+    assert preview["register_in_payload"] is False
+
+    with link_manager.audit_actor(22):
+        applied = await link_manager.import_set(product_only_payload, apply=True)
+
+    assert applied["register"] == initial_payload["register"]
+    assert await link_manager.get_register_link() == initial_payload["register"]
+    assert await link_manager.get_product_link("beta") == "https://shop.example/beta"
