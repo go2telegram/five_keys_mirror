@@ -82,7 +82,7 @@ class EthicsValidator:
         with self._lock:
             if action_key in self._forbidden:
                 violation_reason = "действие находится в forbidden_actions"
-            elif self._allowed and action_key not in self._allowed:
+            elif action_key not in self._allowed:
                 violation_reason = "действие не перечислено в allowed_actions"
 
             if violation_reason:
