@@ -80,15 +80,21 @@ async def main():
             metrics = collect_business_metrics()
             return web.Response(
                 text=render_admin_dashboard(metrics),
-                content_type="text/html; charset=utf-8",
+                content_type="text/html",
+                charset="utf-8",
             )
 
         async def metrics_endpoint(_: web.Request) -> web.Response:
             metrics = collect_business_metrics()
-            return web.Response(
+            response = web.Response(
                 text=render_prometheus(metrics),
-                content_type="text/plain; version=0.0.4",
+                content_type="text/plain",
+                charset="utf-8",
             )
+            response.headers["Content-Type"] = (
+                "text/plain; version=0.0.4; charset=utf-8"
+            )
+            return response
 
         app_web.router.add_get("/admin", admin_dashboard)
         app_web.router.add_get("/metrics", metrics_endpoint)
