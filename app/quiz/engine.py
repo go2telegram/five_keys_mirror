@@ -39,10 +39,9 @@ QUIZ_REMOTE_BASE = os.getenv("QUIZ_IMG_BASE", DEFAULT_REMOTE_BASE).rstrip("/")
 class QuizSession(StatesGroup):
     """Aiogram FSM states for quiz questions."""
 
-
-for _idx in range(1, 51):  # Support up to 50 questions per quiz.
-    setattr(QuizSession, f"Q{_idx}", State())
-del _idx
+    for _idx in range(1, 51):  # Support up to 50 questions per quiz.
+        locals()[f"Q{_idx}"] = State()
+    del _idx
 
 
 @dataclass
