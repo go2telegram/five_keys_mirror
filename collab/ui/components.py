@@ -15,8 +15,16 @@ STATUS_LABELS = {
 }
 
 
-def render_task_panel(task: dict[str, str], *, operator_name: str, on_decision: DecisionCallback) -> None:
+def render_task_panel(
+    task: dict[str, str],
+    *,
+    operator_name: str,
+    on_decision: DecisionCallback,
+    widget_prefix: str = "",
+) -> None:
     """Render a single collaboration card with decision buttons."""
+
+    prefix = f"{widget_prefix}-" if widget_prefix else ""
 
     with st.container(border=True):
         st.subheader(task["title"], anchor=False)
@@ -31,22 +39,22 @@ def render_task_panel(task: dict[str, str], *, operator_name: str, on_decision: 
         recommendation = st.text_area(
             "Рекомендация для клиента",
             value=task.get("recommendation", ""),
-            key=f"rec-{task['id']}",
+            key=f"{prefix}rec-{task['id']}",
             height=160,
         )
         notes = st.text_area(
             "Заметки оператора (опционально)",
             value=task.get("operator_notes", ""),
-            key=f"notes-{task['id']}",
+            key=f"{prefix}notes-{task['id']}",
         )
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            accept = st.button("Принять", key=f"accept-{task['id']}")
+            accept = st.button("Принять", key=f"{prefix}accept-{task['id']}")
         with col2:
-            modify = st.button("Изменить", key=f"modify-{task['id']}")
+            modify = st.button("Изменить", key=f"{prefix}modify-{task['id']}")
         with col3:
-            reject = st.button("Отклонить", type="primary", key=f"reject-{task['id']}")
+            reject = st.button("Отклонить", type="primary", key=f"{prefix}reject-{task['id']}")
 
         if accept:
             _handle_decision(

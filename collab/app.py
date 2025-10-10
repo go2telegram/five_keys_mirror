@@ -77,15 +77,23 @@ def main() -> None:
         ]
     )
 
-    for tab, status in zip(tabs, [None, "pending", "accepted", "modified", "rejected"]):
+    tab_keys = ["all", "pending", "accepted", "modified", "rejected"]
+    for tab, status, tab_key in zip(
+        tabs,
+        [None, "pending", "accepted", "modified", "rejected"],
+        tab_keys,
+    ):
         with tab:
             _render_task_list(
                 _filter_tasks(tasks, status),
                 operator_name=st.session_state.operator_name,
+                widget_prefix=tab_key,
             )
 
 
-def _render_task_list(tasks: list[dict[str, str]], *, operator_name: str) -> None:
+def _render_task_list(
+    tasks: list[dict[str, str]], *, operator_name: str, widget_prefix: str
+) -> None:
     if not tasks:
         st.info("Нет задач в этой категории. Попробуйте выбрать другой фильтр.")
         return
@@ -101,6 +109,7 @@ def _render_task_list(tasks: list[dict[str, str]], *, operator_name: str) -> Non
                 operator=operator_name or "",
                 operator_notes=notes,
             ),
+            widget_prefix=widget_prefix,
         )
 
 
