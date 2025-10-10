@@ -30,7 +30,7 @@ def _status_keyboard(enabled: bool):
 
 async def _set_event(user_id: int, event_name: str) -> None:
     async with compat_session(session_scope) as session:
-        await events_repo.log(session, user_id, event_name, {})
+        await events_repo.upsert(session, user_id, event_name, {})
         await commit_safely(session)
 
 

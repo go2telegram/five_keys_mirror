@@ -171,11 +171,9 @@ async def _start_full(message: Message, payload: str) -> None:
                     ref_id = None
                 if ref_id and ref_id != tg_id:
                     await users_repo.get_or_create_user(session, ref_id)
-                    existing_ref = await referrals_repo.get_by_invited(session, tg_id)
-                    if existing_ref is None:
-                        await referrals_repo.create(session, ref_id, tg_id)
+                    await referrals_repo.upsert_referral(session, ref_id, tg_id)
                     await users_repo.set_referrer(session, tg_id, ref_id)
-                    await events_repo.log(session, tg_id, "ref_join", {"referrer_id": ref_id})
+                    await events_repo.upsert(session, tg_id, "ref_join", {"referrer_id": ref_id})
 
             already_prompted = await events_repo.last_by(session, tg_id, "notify_prompted")
             await commit_safely(session)
@@ -190,7 +188,7 @@ async def _start_full(message: Message, payload: str) -> None:
 
         if not already_prompted:
             async with compat_session(session_scope) as session:
-                await events_repo.log(session, tg_id, "notify_prompted", {})
+                await events_repo.upsert(session, tg_id, "notify_prompted", {})
                 await commit_safely(session)
             await message.answer(
                 ASK_NOTIFY,
