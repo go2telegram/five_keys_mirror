@@ -11,10 +11,45 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import platform
 import subprocess
 import sys
 import time
 from typing import Any, Dict, List
+
+
+SAFE_ENV_KEYS = [
+    "CI",
+    "GITHUB_ACTION",
+    "GITHUB_ACTIONS",
+    "GITHUB_ACTOR",
+    "GITHUB_BASE_REF",
+    "GITHUB_HEAD_REF",
+    "GITHUB_JOB",
+    "GITHUB_REF",
+    "GITHUB_REF_NAME",
+    "GITHUB_REF_TYPE",
+    "GITHUB_REPOSITORY",
+    "GITHUB_REPOSITORY_OWNER",
+    "GITHUB_RUN_ATTEMPT",
+    "GITHUB_RUN_ID",
+    "GITHUB_RUN_NUMBER",
+    "GITHUB_SHA",
+    "GITHUB_WORKFLOW",
+    "RUNNER_ARCH",
+    "RUNNER_OS",
+]
+
+
+def redact_environment(env: Dict[str, str]) -> Dict[str, str]:
+    """Return a filtered mapping containing only non-sensitive keys."""
+
+    redacted: Dict[str, str] = {}
+    for key in SAFE_ENV_KEYS:
+        value = env.get(key)
+        if value:
+            redacted[key] = value
+    return redacted
 
 
 def run(cmd: str) -> Dict[str, Any]:
@@ -56,7 +91,13 @@ def main(argv: List[str] | None = None) -> int:
 
     results: List[Dict[str, Any]] = [run(cmd) for cmd in checks]
 
-    payload = {"env": dict(os.environ), "results": results}
+    metadata = {
+        "env": redact_environment(os.environ),
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+    }
+
+    payload = {"metadata": metadata, "results": results}
     (reports_dir / "ci_diagnostics.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
