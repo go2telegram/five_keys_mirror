@@ -11,6 +11,7 @@ __all__ = [
     "nav_footer",
     "prepare_cards",
     "render_product_text",
+    "reply_or_edit",
     "safe_edit_text",
     "send_product_cards",
 ]
@@ -29,6 +30,10 @@ def __getattr__(name: str) -> Any:  # pragma: no cover - simple delegation
         from .telegram import safe_edit_text  # local import to avoid circular dependency
 
         return safe_edit_text
+    if name == "reply_or_edit":
+        from .telegram import reply_or_edit  # local import to avoid circular dependency
+
+        return reply_or_edit
     if name == "nav_footer":
         from .nav import nav_footer  # local import to avoid circular dependency
 
