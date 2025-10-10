@@ -13,7 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Iterator, Mapping, Sequence
+from typing import Iterable, Iterator, Literal, Mapping, Sequence
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen, url2pathname
 
@@ -805,16 +805,21 @@ def _choose_image(slug_value: str, candidates: list[str]) -> str | None:
     return match.name if match else None
 
 
-def _strict_flag(value: bool | str | None, *, option: str) -> bool:
+StrictMode = Literal["off", "add", "on"]
+
+
+def _strict_flag(value: bool | str | None, *, option: str) -> StrictMode:
     if isinstance(value, bool):
-        return value
+        return "on" if value else "off"
     if value is None:
-        return False
+        return "off"
     normalized = str(value).strip().lower()
     if normalized in {"", "0", "false", "off", "no"}:
-        return False
-    if normalized in {"1", "true", "on", "yes", "error", "add"}:
-        return True
+        return "off"
+    if normalized == "add":
+        return "add"
+    if normalized in {"1", "true", "on", "yes", "error"}:
+        return "on"
     raise CatalogBuildError(f"Unknown value for --{option}: {value}")
 
 
@@ -894,14 +899,14 @@ def _resolve_image(
     image_files: list[str],
     image_mode: str,
     image_base: str,
-    strict: bool = False,
+    strict: StrictMode = "off",
     summary: "BuildSummary" | None = None,
 ) -> None:
     product_id = str(product["id"])
     match = _match_image(product_id, image_files)
     if not match:
         message = f"No image for {product_id}"
-        if strict:
+        if strict == "on":
             raise CatalogBuildError(message)
         logging.warning(message)
         if summary is not None:
@@ -989,11 +994,13 @@ def build_catalog(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
-    strict_descriptions_flag = _strict_flag(
+    strict_descriptions_mode = _strict_flag(
         strict_descriptions, option="strict-descriptions"
     )
     products = _dedupe_products(
-        _load_products(texts), dedupe=dedupe, strict=strict_descriptions_flag
+        _load_products(texts),
+        dedupe=dedupe,
+        strict=strict_descriptions_mode != "off",
     )
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
@@ -1008,7 +1015,7 @@ def build_catalog(
         files = _list_local_images(directory)
         image_base = _local_web_base(directory)
     summary = BuildSummary(found_descriptions=len(products), available_images=set(files))
-    strict_images_flag = _strict_flag(strict_images, option="strict-images")
+    strict_images_mode = _strict_flag(strict_images, option="strict-images")
 
     unique_ids: set[str] = set()
     normalized: list[dict[str, object]] = []
@@ -1016,7 +1023,7 @@ def build_catalog(
         product_id = str(product["id"])
         if product_id in unique_ids:
             message = f"Duplicate product id {product_id}"
-            if strict_descriptions_flag:
+            if strict_descriptions_mode != "off":
                 raise CatalogBuildError(message)
             logging.warning(message)
             continue
@@ -1032,7 +1039,7 @@ def build_catalog(
             image_files=files,
             image_mode=mode,
             image_base=image_base,
-            strict=strict_images_flag,
+            strict=strict_images_mode,
             summary=summary,
         )
         normalized.append(product)

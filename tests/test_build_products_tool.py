@@ -240,3 +240,26 @@ def test_expect_count_from_images_mismatch(tmp_path: Path) -> None:
     assert payload["found_images"] == 1
     assert payload["built"] != payload["found_images"]
     assert payload["unmatched_images"] == ["placeholder.jpg"]
+
+
+def test_strict_images_add_collects_missing_assets(tmp_path: Path) -> None:
+    descriptions_path = str(DESCRIPTIONS_PATH)
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    (images_dir / "orphan.jpg").write_bytes(b"x")
+    output = tmp_path / "products.json"
+    summary_path = tmp_path / "summary.json"
+
+    count, _ = bp.build_catalog(
+        descriptions_path=descriptions_path,
+        images_mode="local",
+        images_dir=str(images_dir),
+        output=output,
+        summary_path=summary_path,
+        strict_images="add",
+    )
+
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["built"] == count
+    assert payload["missing_images"]
+    assert "orphan.jpg" in payload["unmatched_images"]
