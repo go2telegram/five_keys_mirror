@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from app.catalog.api import product_meta
-from app.config import settings
+from app.links.service import get_register_url
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
@@ -111,7 +111,7 @@ async def _process_msd(message: Message) -> None:
         "lines": lines,
         "actions": bullets,
         "notes": notes,
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     async with compat_session(session_scope) as session:

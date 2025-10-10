@@ -5,7 +5,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.config import settings
+from app.links.service import get_register_url
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
 from app.products import GOAL_MAP, PRODUCTS
@@ -337,7 +337,7 @@ async def pick_finalize(c: CallbackQuery):
         "lines": lines,
         "actions": actions,
         "notes": notes,
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     async with compat_session(session_scope) as session:

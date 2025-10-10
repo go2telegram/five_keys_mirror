@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.catalog.api import pick_for_context
-from app.config import settings
+from app.links.service import get_register_url
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.reco import product_lines
@@ -212,7 +212,7 @@ async def _finish_quiz(c: CallbackQuery) -> None:
         "lines": lines,
         "actions": actions,
         "notes": ("Рекомендации не заменяют анализы и консультацию врача.\n" + "\n".join(summary)),
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     async with compat_session(session_scope) as session:

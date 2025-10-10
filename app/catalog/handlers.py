@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from app.catalog.loader import load_catalog
-from app.config import settings
+from app.links.service import get_register_url
 from app.storage import touch_throttle
 from app.utils import catalog_summary, safe_edit_text, send_product_cards
 
@@ -22,7 +22,7 @@ CATALOG_CALLBACK_THROTTLE = 1.5
 async def _send_catalog_menu(message: Message) -> None:
     catalog = load_catalog()
     lines = ["🛍 Каталог продуктов"]
-    if settings.velavie_url:
+    if get_register_url():
         lines.append("Закажи со скидкой прямо в каталоге.")
     summary = catalog_summary()
     if summary:
@@ -48,8 +48,8 @@ def _build_catalog_markup(catalog) -> "InlineKeyboardMarkup":
         title = product.get("title") or product.get("name") or pid
         builder.button(text=f"🛒 {title}", callback_data=f"catalog:view:{pid}")
         rows.append(1)
-    if settings.velavie_url:
-        builder.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    if get_register_url():
+        builder.button(text="🔗 Заказать со скидкой", url=get_register_url())
         rows.append(1)
     builder.button(text="⬅️ Назад", callback_data="home:main")
     builder.button(text="🏠 Домой", callback_data="home:main")

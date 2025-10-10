@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from app.catalog.overrides import apply_overrides, load_overrides
+from app.links.service import get_product_links_map
 
 CATALOG_DIR = os.path.dirname(__file__)
 CATALOG_PATH = os.path.join(CATALOG_DIR, "products.json")
@@ -128,6 +130,7 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
     ordered_ids: List[str] = []
 
     overrides = load_overrides()
+    link_overrides = get_product_links_map()
 
     for item in items:
         if not isinstance(item, dict):
@@ -136,13 +139,18 @@ def load_catalog(refresh: bool = False) -> Dict[str, Any]:
         if not isinstance(product_id, str) or not product_id:
             continue
         order_info = item.get("order") or {}
-        velavie_link = order_info.get("velavie_link")
+        canonical = product_id.strip()
+        override_url = link_overrides.get(canonical)
+        velavie_link = override_url or order_info.get("velavie_link")
         if not isinstance(velavie_link, str) or not velavie_link.strip():
             continue
 
-        canonical = product_id.strip()
         ordered_ids.append(canonical)
-        item_with_overrides = apply_overrides(item, overrides.get(canonical, {}))
+        base_copy = deepcopy(item)
+        item_with_overrides = apply_overrides(base_copy, overrides.get(canonical, {}))
+        order_block = dict(item_with_overrides.get("order") or {})
+        order_block["velavie_link"] = velavie_link.strip()
+        item_with_overrides["order"] = order_block
         by_id[canonical] = item_with_overrides
 
         aliases = item_with_overrides.get("aliases") or []

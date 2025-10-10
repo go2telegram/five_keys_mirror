@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from app.catalog.api import pick_for_context, product_meta
-from app.config import settings
+from app.links.service import get_register_url
 from app.reco import CTX, product_lines
 
 # Types ---------------------------------------------------------------------
@@ -225,7 +225,7 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
         "notes": (
             "Следи за самочувствием и корректируй норму с врачом при хронических состояниях."
         ),
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     event_payload = {
@@ -368,7 +368,7 @@ def _build_calorie_result(ctx: CalculationContext) -> CalculationResult:
         ],
         "actions": bullets,
         "notes": "Настрой рацион вместе с врачом/коучем при хронических состояниях.",
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     event_payload = {
@@ -530,7 +530,7 @@ def _build_macro_result(ctx: CalculationContext) -> CalculationResult:
         ],
         "actions": bullets,
         "notes": "Подбирай меню вместе со специалистом при хронических состояниях.",
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     event_payload = {
@@ -644,7 +644,7 @@ def _build_bmi_result(ctx: CalculationContext) -> CalculationResult:
         "lines": lines,
         "actions": bullets,
         "notes": "Если есть ЖКТ-жалобы — начни с TEO GREEN + MOBIO и режима питания.",
-        "order_url": settings.velavie_url,
+        "order_url": get_register_url(),
     }
 
     event_payload = {

@@ -98,6 +98,7 @@ def reportlab_error() -> str | None:
 
 
 from app.config import settings
+from app.links.service import get_register_url
 from app.utils.cards import prepare_cards, render_product_text
 
 FONTS_DIR = Path(__file__).parent / "fonts"
@@ -342,7 +343,7 @@ def build_pdf(
         story.append(Paragraph(notes, p_s))
         story.append(Spacer(1, 0.5 * cm))
 
-    q_url = order_url or settings.velavie_url
+    q_url = order_url or get_register_url()
     if q_url:
         story.append(_hline())
         story.append(Spacer(1, 0.3 * cm))

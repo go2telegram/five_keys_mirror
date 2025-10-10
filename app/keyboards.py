@@ -3,7 +3,7 @@ from typing import Iterable, Mapping
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.config import settings
+from app.links.service import get_register_url
 from app.feature_flags import feature_flags
 from app.products import BUY_URLS, PRODUCTS
 
@@ -167,8 +167,8 @@ def kb_goal_menu() -> InlineKeyboardMarkup:
 
 def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    if get_register_url():
+        kb.button(text="🔗 Заказать со скидкой", url=get_register_url())
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1, 2)
@@ -180,8 +180,8 @@ def kb_products_cta_home(back_cb: str) -> InlineKeyboardMarkup:
 
 def kb_products_cta_home_pdf(back_cb: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    if get_register_url():
+        kb.button(text="🔗 Заказать со скидкой", url=get_register_url())
     kb.button(text="📄 PDF-план", callback_data="report:last")
     kb.button(text="📝 Консультация", callback_data="lead:start")
     kb.button(text="⬅️ Назад", callback_data=back_cb)
@@ -215,8 +215,8 @@ def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
         kb.button(text=f"🛒 Купить {title}", url=url)
 
     kb.button(text="📄 PDF-план", callback_data="report:last")
-    if settings.velavie_url:
-        kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+    if get_register_url():
+        kb.button(text="🔗 Заказать со скидкой", url=get_register_url())
     kb.button(text="⬅️ Назад", callback_data=back_cb)
     kb.button(text="🏠 Домой", callback_data="home:main")
 
@@ -252,8 +252,8 @@ def kb_actions(
     if with_pdf:
         kb.button(text="📄 PDF-план", callback_data="report:last")
     if with_discount:
-        if settings.velavie_url:
-            kb.button(text="🔗 Заказать со скидкой", url=settings.velavie_url)
+        if get_register_url():
+            kb.button(text="🔗 Заказать со скидкой", url=get_register_url())
         else:
             kb.button(text="🔗 Заказать со скидкой", callback_data="reg:open")
     if with_consult:

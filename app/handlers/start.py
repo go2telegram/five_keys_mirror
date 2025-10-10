@@ -30,6 +30,7 @@ from app.repo import (
     users as users_repo,
 )
 from app.config import settings
+from app.links.service import get_register_url
 from app import build_info
 from app.feature_flags import feature_flags
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
@@ -198,7 +199,7 @@ async def _start_full(message: Message, payload: str) -> None:
 
 
 async def _start_registration(message: Message) -> None:
-    url = settings.velavie_url
+    url = get_register_url()
     if url:
         await message.answer(REG_TEXT, reply_markup=reg_handlers.build_reg_markup(url))
     else:
