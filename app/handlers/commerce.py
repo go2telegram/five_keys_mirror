@@ -154,6 +154,9 @@ async def _resolve_coupon(user_id: int, *, session) -> tuple[object | None, obje
         return cart, None
     coupon = await fetch_coupon(session, cart.coupon_code)
     if not is_coupon_valid(coupon):
+        cart.coupon_code = None
+        cart.coupon_meta.clear()
+        save_cart(user_id, cart)
         return cart, None
     coupon_result = await calculate_total_with_coupon(cart, coupon)
     if coupon_result is not None:
