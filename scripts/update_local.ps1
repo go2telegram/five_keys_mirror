@@ -110,7 +110,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "git reset failed." }
 
   Write-Host "Writing build info..."
-  python tools\write_build_info.py
+  python -m tools.write_build_info
   if ($LASTEXITCODE -ne 0) { throw "Failed to write build info." }
   $commitLine = Select-String -Path 'app\build_info.py' -Pattern 'GIT_COMMIT' -SimpleMatch -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($commitLine) {

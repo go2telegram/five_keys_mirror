@@ -9,7 +9,7 @@ actionable latency percentiles.
 
 Example:
 
-    python tools/stress_users.py --base-url http://localhost:5000 \
+    python -m tools.stress_users --base-url http://localhost:5000 \
         --users 750 --rate 200
 
 The script prints a short textual report with latency percentiles and

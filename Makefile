@@ -28,7 +28,7 @@ hooks:
 	@pre-commit run --all-files
 
 build-products:
-	@python tools/build_products.py build
+        @python -m tools.build_products build
 
 validate-products:
-	@python tools/build_products.py validate
+        @python -m tools.build_products validate
