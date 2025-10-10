@@ -7,11 +7,14 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from textwrap import dedent
+from urllib.parse import quote
 
 import plotly.graph_objects as go
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from plotly.io import to_html
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +24,19 @@ from app.db.models import Event, Lead
 from app.db.session import session_scope
 from app.repo import events as events_repo, leads as leads_repo
 from app.growth import attribution as growth_attribution
+from app.link_manager import (
+    active_set_name,
+    audit_actor,
+    delete_product_link,
+    export_set,
+    get_all_product_links,
+    get_register_link,
+    list_sets,
+    set_bulk_links,
+    set_product_link,
+    set_register_link,
+    switch_set,
+)
 
 app = FastAPI(title="Five Keys Admin Dashboard")
 
@@ -43,6 +59,28 @@ def _require_token(request: Request) -> None:
 
     if provided != token:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+class RegisterUpdate(BaseModel):
+    url: str = Field(..., min_length=1, description="https URL for registration")
+
+
+class ProductUpdate(BaseModel):
+    product_id: str = Field(..., min_length=1, description="Product identifier")
+    url: str = Field(..., min_length=1, description="https URL override")
+
+
+class ProductDelete(BaseModel):
+    product_id: str = Field(..., min_length=1, description="Product identifier")
+
+
+class ImportRequest(BaseModel):
+    register: str | None = None
+    products: Dict[str, str] | None = None
+
+
+class SwitchRequest(BaseModel):
+    target: str = Field(..., min_length=1, description="Target link set name")
 
 
 async def _collect_event_stats(
@@ -563,6 +601,867 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "utm_ctr": utm_total.quiz_ctr,
         "utm_cr": utm_total.premium_cr,
     }
+
+
+
+
+def _extract_admin_name(request: Request) -> str:
+    header = (request.headers.get("X-Admin") or "").strip()
+    if not header:
+        header = (request.query_params.get("admin") or "").strip()
+    if not header:
+        raise HTTPException(status_code=400, detail="Укажи администратора через X-Admin")
+    if len(header) > 128:
+        raise HTTPException(status_code=400, detail="Имя администратора слишком длинное")
+    return header
+
+
+def _auto_product_link(pid: str) -> str | None:
+    base = (settings.BASE_PRODUCT_URL or "").strip()
+    if not base:
+        return None
+    return f"{base.rstrip('/')}/{quote(pid)}"
+
+
+LINKS_PAGE_HTML = dedent("""
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Управление ссылками</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+}
+h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+.page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+}
+.page__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.header__admin {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+input[type="text"], select, textarea {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+}
+input[type="text"]:focus, select:focus, textarea:focus {
+    outline: 2px solid #38bdf8;
+    outline-offset: 0;
+}
+.panel {
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.panel__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+}
+.set-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+.panel__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.register-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.label {
+    color: #94a3b8;
+    margin-right: 6px;
+}
+.mono {
+    font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.badge--muted {
+    background: #1f2937;
+    color: #94a3b8;
+}
+.badge--accent {
+    background: #4ade80;
+    color: #0f172a;
+}
+.btn {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 14px;
+    background: #2563eb;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s ease;
+}
+.btn.secondary {
+    background: #1f2937;
+    border-color: #334155;
+}
+.btn.icon {
+    padding: 6px 10px;
+    font-size: 1rem;
+}
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.btn:not(:disabled):hover {
+    background: #1d4ed8;
+}
+.btn.secondary:not(:disabled):hover {
+    background: #273449;
+}
+.status {
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+}
+.status.hidden {
+    display: none;
+}
+.status[data-kind="error"] {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.45);
+    color: #fca5a5;
+}
+.status[data-kind="success"] {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.45);
+    color: #86efac;
+}
+.status[data-kind="info"] {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+}
+table.links-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    overflow: hidden;
+}
+table.links-table thead {
+    background: #1f2937;
+}
+table.links-table th,
+table.links-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #1e293b;
+    vertical-align: middle;
+}
+table.links-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.product-cell {
+    min-width: 240px;
+}
+.product-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.status-cell {
+    width: 90px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+.truncate {
+    max-width: 420px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.actions-cell {
+    width: 120px;
+    display: flex;
+    gap: 8px;
+}
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 50;
+}
+.modal.hidden {
+    display: none;
+}
+.modal__card {
+    background: #0f172a;
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    max-width: 520px;
+    width: 100%;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.modal__card h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+.modal__card p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+#import-text {
+    min-height: 200px;
+    resize: vertical;
+}
+.modal__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+@media (max-width: 720px) {
+    .actions-cell {
+        width: auto;
+    }
+    .truncate {
+        max-width: 220px;
+    }
+    .set-selector {
+        width: 100%;
+    }
+    .panel__actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="page__header">
+        <h1>/links</h1>
+        <div class="header__admin">
+            <label for="admin-input">Администратор</label>
+            <input id="admin-input" type="text" placeholder="Укажи имя" autocomplete="off" />
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel__row">
+            <div class="set-selector">
+                <span class="label">Активный сет:</span>
+                <span id="active-set" class="badge badge--accent">—</span>
+                <select id="set-select"></select>
+                <button id="switch-set" class="btn">🔀 Переключить сет</button>
+            </div>
+            <div class="panel__actions">
+                <button id="btn-import" class="btn secondary">📥 Импорт</button>
+                <button id="btn-export" class="btn secondary">📤 Экспорт</button>
+            </div>
+        </div>
+        <div class="register-row">
+            <div>
+                <span class="label">Регистрация:</span>
+                <span id="register-link" class="mono">—</span>
+                <span id="register-status" class="badge badge--muted">по умолчанию</span>
+            </div>
+            <div class="panel__actions">
+                <button id="edit-register" class="btn">✏️ изменить</button>
+                <button id="open-register" class="btn secondary">🔗 открыть</button>
+            </div>
+        </div>
+    </div>
+    <div id="status" class="status hidden" data-kind="info"></div>
+    <table class="links-table">
+        <thead>
+            <tr>
+                <th>Продукт</th>
+                <th>Статус</th>
+                <th>Ссылка</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody id="products-body"></tbody>
+    </table>
+</div>
+<div id="import-modal" class="modal hidden">
+    <div class="modal__card">
+        <h2>Импорт ссылок</h2>
+        <p>Вставь JSON с ключами <code>register</code> и <code>products</code>. Текущие override будут заменены.</p>
+        <textarea id="import-text" spellcheck="false" placeholder='{"register": "https://...", "products": {"id": "https://..."}}'></textarea>
+        <div class="modal__actions">
+            <button id="apply-import" class="btn">Применить</button>
+            <button id="cancel-import" class="btn secondary">Отмена</button>
+        </div>
+    </div>
+</div>
+<script>
+(() => {
+    const state = {
+        token: new URLSearchParams(window.location.search).get('token') || '',
+        activeSet: '',
+        register: '',
+        registerOverride: null,
+        sets: [],
+        products: []
+    };
+    const dom = {
+        admin: document.getElementById('admin-input'),
+        activeSet: document.getElementById('active-set'),
+        setSelect: document.getElementById('set-select'),
+        registerLink: document.getElementById('register-link'),
+        registerStatus: document.getElementById('register-status'),
+        status: document.getElementById('status'),
+        tableBody: document.getElementById('products-body'),
+        importModal: document.getElementById('import-modal'),
+        importText: document.getElementById('import-text')
+    };
+
+    dom.admin.value = localStorage.getItem('links-admin') || '';
+    const persistAdmin = () => {
+        localStorage.setItem('links-admin', dom.admin.value.trim());
+    };
+    dom.admin.addEventListener('change', persistAdmin);
+    dom.admin.addEventListener('blur', persistAdmin);
+
+    function buildUrl(path) {
+        if (!state.token) {
+            return path;
+        }
+        return path + (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(state.token);
+    }
+
+    async function fetchJson(path, options = {}) {
+        const response = await fetch(buildUrl(path), options);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.detail || payload.error || 'Запрос завершился с ошибкой');
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'ok') && !payload.ok) {
+            throw new Error(payload.error || 'Запрос завершился с ошибкой');
+        }
+        return payload;
+    }
+
+    function showStatus(kind, message) {
+        dom.status.textContent = message || '';
+        dom.status.dataset.kind = kind || '';
+        if (message) {
+            dom.status.classList.remove('hidden');
+        } else {
+            dom.status.classList.add('hidden');
+        }
+    }
+
+    function ensureAdmin() {
+        const admin = dom.admin.value.trim();
+        if (!admin) {
+            showStatus('error', 'Укажи имя администратора перед изменениями');
+            dom.admin.focus();
+            throw new Error('missing-admin');
+        }
+        if (admin.length > 128) {
+            showStatus('error', 'Имя администратора слишком длинное');
+            throw new Error('invalid-admin');
+        }
+        return admin;
+    }
+
+    async function mutate(path, method, body) {
+        const admin = ensureAdmin();
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Admin': admin
+        };
+        const options = { method, headers };
+        if (body !== undefined) {
+            options.body = JSON.stringify(body);
+        }
+        const payload = await fetchJson(path, options);
+        if (payload.message) {
+            showStatus('success', payload.message);
+        } else {
+            showStatus('', '');
+        }
+        await loadState();
+    }
+
+    function render() {
+        dom.activeSet.textContent = state.activeSet || '—';
+        dom.registerLink.textContent = state.register || '—';
+        if (state.registerOverride) {
+            dom.registerStatus.textContent = 'override';
+            dom.registerStatus.classList.remove('badge--muted');
+            dom.registerStatus.classList.add('badge--accent');
+        } else {
+            dom.registerStatus.textContent = 'по умолчанию';
+            dom.registerStatus.classList.add('badge--muted');
+            dom.registerStatus.classList.remove('badge--accent');
+        }
+
+        dom.setSelect.innerHTML = '';
+        state.sets.forEach((name) => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === state.activeSet) {
+                option.selected = true;
+            }
+            dom.setSelect.appendChild(option);
+        });
+
+        renderProducts();
+    }
+
+    function renderProducts() {
+        dom.tableBody.innerHTML = '';
+        state.products.forEach((product) => {
+            const tr = document.createElement('tr');
+
+            const nameCell = document.createElement('td');
+            nameCell.className = 'product-cell';
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'product-title';
+            titleDiv.textContent = product.title || product.id;
+            const idDiv = document.createElement('div');
+            idDiv.className = 'mono';
+            idDiv.textContent = product.id;
+            nameCell.appendChild(titleDiv);
+            nameCell.appendChild(idDiv);
+            tr.appendChild(nameCell);
+
+            const statusCell = document.createElement('td');
+            statusCell.className = 'status-cell';
+            statusCell.textContent = product.override ? 'override' : 'auto';
+            tr.appendChild(statusCell);
+
+            const linkCell = document.createElement('td');
+            linkCell.className = 'mono truncate';
+            const linkValue = product.override || product.link || '';
+            linkCell.textContent = linkValue || '—';
+            linkCell.title = linkValue;
+            tr.appendChild(linkCell);
+
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'actions-cell';
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn icon';
+            editBtn.type = 'button';
+            editBtn.textContent = '✏️';
+            editBtn.title = 'Изменить ссылку';
+            editBtn.addEventListener('click', () => editProduct(product));
+            actionsCell.appendChild(editBtn);
+
+            const openBtn = document.createElement('button');
+            openBtn.className = 'btn icon secondary';
+            openBtn.type = 'button';
+            openBtn.textContent = '🔗';
+            openBtn.title = 'Открыть ссылку';
+            openBtn.disabled = !product.link;
+            openBtn.addEventListener('click', () => openProduct(product));
+            actionsCell.appendChild(openBtn);
+
+            tr.appendChild(actionsCell);
+            dom.tableBody.appendChild(tr);
+        });
+    }
+
+    async function loadState() {
+        try {
+            const payload = await fetchJson('/links/data');
+            const data = payload.data || {};
+            state.activeSet = data.active_set || '';
+            state.register = data.register || '';
+            state.registerOverride = data.register_override || null;
+            state.sets = Array.isArray(data.sets) ? data.sets : [];
+            state.products = Array.isArray(data.products) ? data.products : [];
+            render();
+        } catch (error) {
+            const message = (error && error.message) ? error.message : 'Не удалось загрузить данные';
+            showStatus('error', message);
+        }
+    }
+
+    async function editRegister() {
+        const current = state.registerOverride || state.register || '';
+        const value = window.prompt('Новая ссылка регистрации (https://...)', current);
+        if (value === null) {
+            return;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            showStatus('error', 'Ссылка не может быть пустой');
+            return;
+        }
+        await mutate('/links/register', 'POST', { url: trimmed });
+    }
+
+    function openRegister() {
+        if (!state.register) {
+            showStatus('error', 'Нет активной ссылки регистрации');
+            return;
+        }
+        window.open(state.register, '_blank', 'noopener');
+    }
+
+    async function editProduct(product) {
+        const current = product.override || product.link || '';
+        const value = window.prompt(`Ссылка для ${product.id}`, current);
+        if (value === null) {
+            return;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            if (!product.override) {
+                showStatus('info', 'Override не изменён');
+                return;
+            }
+            if (!window.confirm(`Удалить override для ${product.id}?`)) {
+                return;
+            }
+            await mutate('/links/product', 'DELETE', { product_id: product.id });
+            return;
+        }
+        await mutate('/links/product', 'POST', { product_id: product.id, url: trimmed });
+    }
+
+    function openProduct(product) {
+        if (!product.link) {
+            showStatus('error', 'Для продукта нет ссылки');
+            return;
+        }
+        window.open(product.link, '_blank', 'noopener');
+    }
+
+    function openImportModal() {
+        dom.importText.value = '';
+        dom.importModal.classList.remove('hidden');
+        dom.importText.focus();
+    }
+
+    function closeImportModal() {
+        dom.importModal.classList.add('hidden');
+        dom.importText.value = '';
+    }
+
+    async function applyImport() {
+        const raw = dom.importText.value.trim();
+        if (!raw) {
+            showStatus('error', 'Вставь JSON перед импортом');
+            return;
+        }
+        let payload;
+        try {
+            payload = JSON.parse(raw);
+        } catch (error) {
+            showStatus('error', 'Невалидный JSON');
+            return;
+        }
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            showStatus('error', 'Ожидался объект с ключами register/products');
+            return;
+        }
+        if (!window.confirm('Применить импорт? Текущие override будут заменены.')) {
+            return;
+        }
+        const body = {};
+        if (typeof payload.register === 'string' && payload.register.trim()) {
+            body.register = payload.register.trim();
+        }
+        if (payload.products && typeof payload.products === 'object') {
+            body.products = payload.products;
+        }
+        await mutate('/links/import', 'POST', body);
+        closeImportModal();
+    }
+
+    async function exportLinks() {
+        try {
+            const payload = await fetchJson('/links/export');
+            const data = payload.data || {};
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const filename = `links-${state.activeSet || 'set'}.json`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showStatus('success', 'Экспорт готов');
+        } catch (error) {
+            const message = (error && error.message) ? error.message : 'Не удалось экспортировать ссылки';
+            showStatus('error', message);
+        }
+    }
+
+    async function switchSet() {
+        const target = dom.setSelect.value;
+        if (!target || target === state.activeSet) {
+            showStatus('info', 'Сет уже активен');
+            return;
+        }
+        if (!window.confirm(`Переключить активный сет на ${target}?`)) {
+            return;
+        }
+        await mutate('/links/switch', 'POST', { target });
+    }
+
+    document.getElementById('edit-register').addEventListener('click', editRegister);
+    document.getElementById('open-register').addEventListener('click', openRegister);
+    document.getElementById('btn-import').addEventListener('click', openImportModal);
+    document.getElementById('btn-export').addEventListener('click', exportLinks);
+    document.getElementById('switch-set').addEventListener('click', switchSet);
+    document.getElementById('apply-import').addEventListener('click', applyImport);
+    document.getElementById('cancel-import').addEventListener('click', () => {
+        closeImportModal();
+        showStatus('', '');
+    });
+    dom.importModal.addEventListener('click', (event) => {
+        if (event.target === dom.importModal) {
+            closeImportModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !dom.importModal.classList.contains('hidden')) {
+            closeImportModal();
+        }
+    });
+
+    loadState();
+})();
+</script>
+</body>
+</html>
+""")
+
+
+def _render_links_page() -> str:
+    return LINKS_PAGE_HTML
+
+
+async def _gather_links_state() -> Dict[str, Any]:
+    register_effective = await get_register_link()
+    export_payload = await export_set(None)
+    register_override = None
+    if isinstance(export_payload, dict):
+        raw_register = export_payload.get("register")
+        if isinstance(raw_register, str) and raw_register.strip():
+            register_override = raw_register.strip()
+    overrides = await get_all_product_links()
+    active = export_payload.get("set") if isinstance(export_payload, dict) else None
+    if not isinstance(active, str) or not active:
+        active = await active_set_name()
+    sets = await list_sets()
+    catalog = load_catalog()
+    ordered = catalog.get("ordered") if isinstance(catalog, dict) else None
+    ordered_ids = list(ordered) if isinstance(ordered, list) else []
+    products_meta: Dict[str, Dict[str, Any]] = {}
+    raw_products = catalog.get("products") if isinstance(catalog, dict) else {}
+    if isinstance(raw_products, dict):
+        products_meta = raw_products  # type: ignore[assignment]
+    rows: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def _resolve_title(pid: str) -> str:
+        meta = products_meta.get(pid) or {}
+        if isinstance(meta, dict):
+            for key in ("short_name", "title", "name"):
+                value = meta.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return pid
+
+    for pid in ordered_ids:
+        seen.add(pid)
+        override = overrides.get(pid)
+        link = override or _auto_product_link(pid)
+        rows.append(
+            {
+                "id": pid,
+                "title": _resolve_title(pid),
+                "override": override,
+                "link": link,
+            }
+        )
+
+    extra_ids = sorted(pid for pid in overrides.keys() if pid not in seen)
+    for pid in extra_ids:
+        override = overrides.get(pid)
+        link = override or _auto_product_link(pid)
+        rows.append(
+            {
+                "id": pid,
+                "title": _resolve_title(pid),
+                "override": override,
+                "link": link,
+            }
+        )
+
+    return {
+        "register": register_effective,
+        "register_override": register_override,
+        "active_set": active,
+        "sets": sets,
+        "products": rows,
+    }
+
+
+@app.get("/links", response_class=HTMLResponse)
+async def links_page(_: None = Depends(_require_token)) -> HTMLResponse:
+    return HTMLResponse(_render_links_page())
+
+
+@app.get("/links/data")
+async def links_data(_: None = Depends(_require_token)) -> Dict[str, Any]:
+    data = await _gather_links_state()
+    return {"ok": True, "data": data}
+
+
+@app.get("/links/export")
+async def links_export(_: None = Depends(_require_token)) -> Dict[str, Any]:
+    data = await export_set(None)
+    return {"ok": True, "data": data}
+
+
+@app.post("/links/register")
+async def links_set_register(
+    payload: RegisterUpdate,
+    request: Request,
+    _: None = Depends(_require_token),
+) -> Dict[str, Any]:
+    admin = _extract_admin_name(request)
+    try:
+        with audit_actor(admin):
+            await set_register_link(payload.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "message": "Ссылка регистрации обновлена"}
+
+
+@app.post("/links/product")
+async def links_set_product(
+    payload: ProductUpdate,
+    request: Request,
+    _: None = Depends(_require_token),
+) -> Dict[str, Any]:
+    admin = _extract_admin_name(request)
+    try:
+        with audit_actor(admin):
+            await set_product_link(payload.product_id, payload.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "message": f"Override для {payload.product_id} сохранён"}
+
+
+@app.delete("/links/product")
+async def links_delete_product_override(
+    payload: ProductDelete,
+    request: Request,
+    _: None = Depends(_require_token),
+) -> Dict[str, Any]:
+    admin = _extract_admin_name(request)
+    with audit_actor(admin):
+        await delete_product_link(payload.product_id)
+    return {"ok": True, "message": f"Override для {payload.product_id} удалён"}
+
+
+@app.post("/links/import")
+async def links_import(
+    payload: ImportRequest,
+    request: Request,
+    _: None = Depends(_require_token),
+) -> Dict[str, Any]:
+    admin = _extract_admin_name(request)
+    try:
+        with audit_actor(admin):
+            if isinstance(payload.register, str) and payload.register.strip():
+                await set_register_link(payload.register)
+            if payload.products is not None:
+                await set_bulk_links(payload.products)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "message": "Импорт применён"}
+
+
+@app.post("/links/switch")
+async def links_switch(
+    payload: SwitchRequest,
+    request: Request,
+    _: None = Depends(_require_token),
+) -> Dict[str, Any]:
+    admin = _extract_admin_name(request)
+    try:
+        with audit_actor(admin):
+            await switch_set(payload.target)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "message": f"Активный сет переключён на {payload.target}"}
 
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)

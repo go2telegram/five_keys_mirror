@@ -36,7 +36,7 @@ _LOADED_SET: str | None = None
 _REGISTER_LINK: str | None = None
 _PRODUCT_LINKS: dict[str, str] = {}
 
-_ACTOR: contextvars.ContextVar[int | None] = contextvars.ContextVar(
+_ACTOR: contextvars.ContextVar[str | int | None] = contextvars.ContextVar(
     "link_manager_actor", default=None
 )
 
@@ -59,7 +59,7 @@ __all__ = [
 
 
 @contextlib.contextmanager
-def audit_actor(admin_id: int | None):
+def audit_actor(admin_id: str | int | None):
     """Attach the acting admin id to subsequent mutations."""
 
     token = _ACTOR.set(admin_id)
@@ -405,13 +405,19 @@ async def _append_audit(
     actor = _ACTOR.get()
     entry = {
         "ts": datetime.now(timezone.utc).isoformat(),
-        "admin_id": actor,
+        "admin": actor,
         "action": action,
-        "target": target,
+        "product_id": None,
+        "register": None,
         "old": old,
         "new": new,
         "set": set_name,
     }
+
+    if target == "register":
+        entry["register"] = True
+    else:
+        entry["product_id"] = target
 
     def _write() -> None:
         _ensure_storage()
