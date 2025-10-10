@@ -424,6 +424,21 @@ def _alias_variants(slug_value: str) -> list[str]:
     return sorted(_slug_aliases(slug_value))
 
 
+def _canonical_alias_variants(slug_value: str) -> list[str]:
+    normalized = _normalize_slug_value(slug_value)
+    variants = {normalized}
+    collapsed = normalized.replace("-", "")
+    if collapsed:
+        variants.add(collapsed)
+    underscored = normalized.replace("-", "_")
+    if underscored:
+        variants.add(underscored)
+    alphanumeric = re.sub(r"[^a-z0-9]+", "", normalized)
+    if alphanumeric:
+        variants.add(alphanumeric)
+    return sorted(variant for variant in variants if variant)
+
+
 def _build_aliases(product_id: str) -> list[str]:
     return _alias_variants(product_id)
 
@@ -462,7 +477,7 @@ def _canonicalize_product_id(order_url: str, fallback_id: str) -> str:
         if product_id:
             return product_id
     alias_map = _load_catalog_alias_map()
-    for alias in _alias_variants(fallback_id):
+    for alias in _canonical_alias_variants(fallback_id):
         product_id = alias_map.get(alias.lower())
         if product_id:
             return product_id

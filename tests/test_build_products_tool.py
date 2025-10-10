@@ -94,6 +94,31 @@ def test_match_image_alias_table_precedence() -> None:
     assert other_match.name == "omega3_main.jpg"
 
 
+def test_canonicalize_product_id_requires_near_exact_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    alias_map = {
+        "nash-omega-3": "nash-omega-3",
+        "nashomega3": "nash-omega-3",
+        "nash_omega_3": "nash-omega-3",
+        "nashomega": "nash-omega-3",
+        "omega": "nash-omega-3",
+    }
+
+    if hasattr(bp._load_catalog_alias_map, "cache_clear"):
+        bp._load_catalog_alias_map.cache_clear()
+    monkeypatch.setattr(bp, "_load_catalog_alias_map", lambda: alias_map)
+
+    if hasattr(bp._load_catalog_buy_map, "cache_clear"):
+        bp._load_catalog_buy_map.cache_clear()
+    monkeypatch.setattr(bp, "_load_catalog_buy_map", lambda: {})
+    monkeypatch.setattr(bp, "_canonical_buy_url", lambda url: "")
+
+    exact = bp._canonicalize_product_id("https://shop.example.com/a", "nashomega3")
+    assert exact == "nash-omega-3"
+
+    new_slug = bp._canonicalize_product_id("https://shop.example.com/b", "nash-omega-6")
+    assert new_slug == "nash-omega-6"
+
+
 def test_slug_transliterates_yo() -> None:
     assert bp._slug("СТЁКЛА Black 96") == "stekla-black-96"
 
