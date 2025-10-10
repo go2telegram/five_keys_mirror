@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import os
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -27,10 +28,28 @@ class MetricsSnapshot:
     summary: Dict[str, Any]
 
 
+def _client_host_for_default() -> str:
+    """Return a loopback-safe host for default HTTP targets."""
+
+    host = settings.WEB_HOST
+
+    try:
+        ip = ip_address(host)
+    except ValueError:
+        # Non-IP hosts (e.g. domain names) are assumed to be routable as-is.
+        return host
+
+    if ip.is_unspecified:
+        ip = IPv6Address("::1") if ip.version == 6 else IPv4Address("127.0.0.1")
+
+    return f"[{ip.compressed}]" if ip.version == 6 else ip.compressed
+
+
 async def check_metrics_endpoint() -> MetricsSnapshot:
+    metrics_host = _client_host_for_default()
     metrics_url = os.getenv(
         "METRICS_URL",
-        f"http://{settings.WEB_HOST}:{settings.WEB_PORT}/metrics",
+        f"http://{metrics_host}:{settings.WEB_PORT}/metrics",
     )
 
     async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
@@ -103,9 +122,10 @@ async def check_metrics_endpoint() -> MetricsSnapshot:
 
 
 async def check_ping_endpoint() -> Dict[str, Any]:
+    ping_host = _client_host_for_default()
     ping_url = os.getenv(
         "PING_URL",
-        f"http://{settings.WEB_HOST}:{settings.WEB_PORT}/ping",
+        f"http://{ping_host}:{settings.WEB_PORT}/ping",
     )
 
     async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
