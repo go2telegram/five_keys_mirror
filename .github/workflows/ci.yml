@@ -37,6 +37,9 @@ jobs:
         run: python tools/head_check.py || true
       - name: Self audit (fast, non-blocking)
         run: python tools/self_audit.py --fast --no-net --out build/reports/self_audit.md || true
+      - name: Self audit (blocking on push)
+        if: github.event_name == 'push'
+        run: python tools/self_audit.py --ci --no-net --out build/reports/self_audit_final.md
       - name: Tests
         run: pytest -q
       - name: Diagnose (always)
