@@ -31,10 +31,11 @@ async def ask_external(message: Message) -> None:
 
     cached_summary = get_cached_summary(cleaned_query)
     if cached_summary:
-        await message.answer(
+        cached_text = (
             "⚡ Этот запрос уже выполнялся. Отправляю краткое резюме из кэша:\n\n"
             f"{cached_summary}"
         )
+        await message.answer(cached_text)
 
     try:
         response = await ask_external_ai(cleaned_query)
