@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_DIR: str = "logs"
 
+    RATE_LIMIT_MAX_ACTIONS: int = Field(default=6, ge=1)
+    RATE_LIMIT_WINDOW_SECONDS: float = Field(default=3.0, ge=0.1)
+
     # Партнёрские/коммерческие ссылки
     VILAVI_REF_LINK_DISCOUNT: str = ""
     VILAVI_ORDER_NO_REG: str = ""

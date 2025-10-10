@@ -88,6 +88,9 @@ class RateLimitMiddleware(BaseMiddleware):
                 bucket.popleft()
             if len(bucket) >= count:
                 retry_after = window - (now - bucket[0])
+                self._log.warning(
+                    "rate limit triggered scope=%s user=%s retry_after=%.2f", key[0], key[1], max(retry_after, 0.0)
+                )
                 return False, max(retry_after, 0.0)
             bucket.append(now)
         return True, 0.0
