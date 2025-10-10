@@ -12,6 +12,7 @@ from . import AuditContext, SectionResult, section
 
 SUMMARY_SOURCE = Path("app/catalog/mapping/build_summary.json")
 REPORT_COPY = "catalog_summary.json"
+LINKCHECK_LOG = Path("logs/catalog_linkcheck.log")
 
 
 def _load_summary(root: Path) -> dict:
@@ -29,6 +30,7 @@ def run(ctx: AuditContext) -> SectionResult:
     summary = {}
     details: list[str] = []
     status = "ok"
+    linkcheck_data: dict[str, object] | None = None
 
     if os.getenv("SELF_AUDIT_SKIP_CATALOG") == "1":
         status = "skip"
@@ -54,6 +56,39 @@ def run(ctx: AuditContext) -> SectionResult:
             status = "error"
             details.append(proc_validate.stderr.strip() or proc_validate.stdout.strip())
 
+        if not ctx.no_net and os.getenv("NO_NET") != "1":
+            link_cmd = [
+                sys.executable,
+                str(ctx.root / "tools" / "catalog_linkcheck.py"),
+                "--log",
+                str(ctx.root / LINKCHECK_LOG),
+            ]
+            proc_links = ctx.run(link_cmd)
+            stdout = proc_links.stdout.strip()
+            summary_line = stdout.splitlines()[-1] if stdout else ""
+            try:
+                linkcheck_data = json.loads(summary_line) if summary_line else {}
+            except json.JSONDecodeError:
+                linkcheck_data = {}
+            if proc_links.returncode == 1:
+                if status == "ok":
+                    status = "warn"
+                broken = linkcheck_data.get("broken") if isinstance(linkcheck_data, dict) else None
+                hint = (
+                    f"catalog_linkcheck сообщил о проблемах (broken={broken})."
+                    if broken is not None
+                    else "catalog_linkcheck сообщил о проблемах."
+                )
+                details.append(hint)
+            elif proc_links.returncode not in {0}:
+                status = "error"
+                detail = proc_links.stderr.strip() or proc_links.stdout.strip()
+                if not detail:
+                    detail = f"catalog_linkcheck завершился с кодом {proc_links.returncode}."
+                details.append(detail)
+        else:
+            linkcheck_data = {"status": "skip", "reason": "NO_NET"}
+
         summary = _load_summary(ctx.root)
         built = int(summary.get("built", summary.get("count", 0)) or 0)
         unmatched = int(summary.get("unmatched", 0) or 0)
@@ -71,10 +106,14 @@ def run(ctx: AuditContext) -> SectionResult:
     else:
         reports_path.write_text("{}\n", encoding="utf-8")
 
+    data = dict(summary)
+    if linkcheck_data is not None:
+        data["linkcheck"] = linkcheck_data
+
     return SectionResult(
         name="catalog",
         status=status,
         summary=summary_text,
         details=details,
-        data=summary,
+        data=data,
     )
