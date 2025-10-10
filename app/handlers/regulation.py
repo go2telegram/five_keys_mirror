@@ -18,8 +18,12 @@ async def regulation_status(message: Message) -> None:
 
     if not settings.ENABLE_REGULATION_LAYER:
         await message.answer(
-            "⚠️ Слой регулирования отключён.\n"
-            "Установите ENABLE_REGULATION_LAYER=true и перезапустите сервис."  # noqa: E501
+            "\n".join(
+                [
+                    "⚠️ Слой регулирования отключён.",
+                    "Установите ENABLE_REGULATION_LAYER=true и перезапустите сервис.",  # noqa: E501
+                ]
+            )
         )
         return
 
