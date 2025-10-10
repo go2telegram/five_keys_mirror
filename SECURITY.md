@@ -5,8 +5,8 @@ This project ships with automated tooling for vulnerability scanning, static ana
 ## Local workflows
 
 ```bash
-python tools/security_audit.py
-python tools/sbom_generate.py
+python -m tools.security_audit
+python -m tools.sbom_generate
 ```
 
 The audit command runs the following tools and aggregates the results into `build/reports/`:

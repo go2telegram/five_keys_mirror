@@ -9,7 +9,7 @@ The script performs the following steps:
   * Rebase onto the latest `origin/main`.
   * Resolve simple conflicts in ``app/keyboards.py``, ``app/quiz/engine.py``
     and ``app/scheduler/service.py`` using the team-approved strategy.
-  * Run ``python tools/self_audit.py --fast`` and ``pytest -q``.
+  * Run ``python -m tools.self_audit --fast`` and ``pytest -q``.
 * Collect all successfully validated branches into ``merge/train-v1.3.1``
   using fast-forward merges.
 * Generate ``build/reports/merge_train.md`` with the status for every PR.

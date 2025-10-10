@@ -165,7 +165,7 @@ if (Test-Path $catalogLinkLog) {
     Write-Check 'catalog linkcheck recent run' $false 'logs/catalog_linkcheck.log has no summary entries'
   }
 } else {
-  Write-Check 'catalog linkcheck recent run' $false 'run python tools/catalog_linkcheck.py'
+  Write-Check 'catalog linkcheck recent run' $false 'run python -m tools.catalog_linkcheck'
 }
 
 if ($env:BOT_TOKEN) {

@@ -30,8 +30,8 @@ Premium-подписка открывает личный центр с план�
 ### Быстрая сборка (online по умолчанию)
 
 ```bash
-python tools/build_products.py build
-python tools/build_products.py validate
+python -m tools.build_products build
+python -m tools.build_products validate
 ```
 
 Импортёр использует pinned SHA `1312d74492d26a8de5b8a65af38293fe6bf8ccc5` из медиарепозитория и подставляет RAW-URL вида `https://raw.githubusercontent.com/go2telegram/media/<sha>/media/products/...`. Так Telegram сразу подтянет изображения по ссылке. Параметр `--images-base` позволяет временно переключиться на другую ревизию или ветку (`main` и т.п.).
@@ -45,13 +45,13 @@ python tools/build_products.py validate
 ```bash
 export IMAGES_MODE=catalog_local
 
-python tools/build_products.py build \
+python -m tools.build_products build \
   --descriptions-path "app/catalog/descriptions" \
   --images-dir "app/static/images/products" \
   --strict-images --strict-descriptions \
   --expect-count from=images --fail-on-mismatch
 
-python tools/build_products.py validate
+python -m tools.build_products validate
 ```
 
 Можно также передать все параметры напрямую без изменения окружения.
@@ -85,7 +85,7 @@ QUIZ_IMG_BASE=.../media/quizzes
 
 ```bash
 python -m pip install -r requirements.txt
-python tools/build_products.py validate
+python -m tools.build_products validate
 pytest -q
 ```
 
@@ -106,7 +106,7 @@ pytest -q
 
 **Как нормализовать имена?**
 
-Используйте `python tools/parse_descriptions.py --descriptions-path app/catalog/descriptions --out build/descriptions.json`, чтобы увидеть, какие slug и теги получаются из текущих названий. Скрипт показывает финальные `id`, поэтому легко понять, как переименовать файлы и изображения, чтобы они совпали.
+Используйте `python -m tools.parse_descriptions --descriptions-path app/catalog/descriptions --out build/descriptions.json`, чтобы увидеть, какие slug и теги получаются из текущих названий. Скрипт показывает финальные `id`, поэтому легко понять, как переименовать файлы и изображения, чтобы они совпали.
 
 ## Требования
 

@@ -6,7 +6,7 @@
 - Users: 750 concurrent virtual users spawned at ~200 users/second
 - Flow: `/catalog` → `/tests` → `/recommend`
 - Duration: 4 minutes steady-state
-- Tool: `python tools/stress_users.py --base-url https://bot.example.com --users 750 --rate 200`
+- Tool: `python -m tools.stress_users --base-url https://bot.example.com --users 750 --rate 200`
 
 ## Results
 

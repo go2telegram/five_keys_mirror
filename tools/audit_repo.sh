@@ -21,7 +21,7 @@ for path in "${required_files[@]}"; do
   fi
 done
 
-python tools/build_products.py validate || status=1
+python -m tools.build_products validate || status=1
 
 python <<'PY' || status=1
 import json

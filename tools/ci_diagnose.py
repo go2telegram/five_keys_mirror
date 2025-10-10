@@ -94,7 +94,7 @@ def main(argv: List[str] | None = None) -> int:
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     checks = [
-        "python tools/self_audit.py --fast --no-net --out build/reports/self_audit_ci.md",
+        "python -m tools.self_audit --fast --no-net --out build/reports/self_audit_ci.md",
         "pytest -q --maxfail=1 --disable-warnings",
         "python -m compileall -q app tools || true",
     ]
