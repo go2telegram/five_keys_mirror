@@ -1,3 +1,4 @@
+import re
 from typing import Iterable, Mapping
 
 from aiogram.types import InlineKeyboardMarkup
@@ -5,7 +6,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.feature_flags import feature_flags
-from app.products import BUY_URLS, PRODUCTS
+from app.products import PRODUCTS
+from app.services.link_manager import build_order_link
 
 # ---------- Главное меню ----------
 
@@ -204,14 +206,34 @@ def kb_cancel_home() -> InlineKeyboardMarkup:
 # ---------- Кнопки покупки продуктов ----------
 
 
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(code: str) -> str:
+    slug = _SLUG_RE.sub("-", str(code or "").lower()).strip("-")
+    return slug or "product"
+
+
 def kb_buylist_pdf(back_cb: str, codes: list[str]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for code in codes:
         p = PRODUCTS.get(code)
-        url = BUY_URLS.get(code)
-        if not p or not url:
+        if not p:
             continue
         title = p.get("title", code)
+        slug = _slugify(code)
+        url = build_order_link(
+            code,
+            params={
+                "utm_source": "bot",
+                "utm_medium": "telegram",
+                "utm_campaign": "product_menu",
+                "utm_content": slug,
+            },
+            replace=True,
+        )
+        if not url:
+            continue
         kb.button(text=f"🛒 Купить {title}", url=url)
 
     kb.button(text="📄 PDF-план", callback_data="report:last")
@@ -234,17 +256,31 @@ def kb_actions(
     with_discount: bool = True,
     with_consult: bool = True,
     bundle_action: tuple[str, str] | None = None,
+    tracking: Mapping[str, str] | None = None,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     buy_buttons = 0
     cart_buttons = 0
     for card in cards:
         name = card.get("name") or card.get("code") or "Product"
-        url = card.get("order_url")
+        code = str(card.get("code") or card.get("id") or card.get("name") or "").strip()
+        slug = _slugify(code)
+        base_tracking = {
+            "utm_source": "tg_bot",
+            "utm_medium": "product_cards",
+            "utm_campaign": "product_cards",
+            "utm_content": slug,
+        }
+        if tracking:
+            for key, value in tracking.items():
+                if value:
+                    base_tracking[str(key)] = str(value)
+        url = build_order_link(code, params=base_tracking) if code else None
+        if not url:
+            url = card.get("order_url")
         if url:
             kb.button(text=f"🛒 Купить {name}", url=str(url))
             buy_buttons += 1
-        code = str(card.get("code") or card.get("id") or card.get("name") or "")
         if code:
             kb.button(text="🛒 В корзину", callback_data=f"cart:add:{code}")
             cart_buttons += 1

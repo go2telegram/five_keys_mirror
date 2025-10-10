@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
 from typing import TYPE_CHECKING
 
@@ -14,6 +14,7 @@ from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.services.upsell import soft_upsell_prompt
 from app.utils.image_resolver import resolve_media_reference
+from app.utils.nav import nav_footer
 from app.utils_media import fetch_image_as_file, precache_remote_images
 
 if TYPE_CHECKING:  # pragma: no cover - import for type hints only
@@ -22,6 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover - import for type hints only
 LOG = logging.getLogger(__name__)
 MAX_TEXT = 3500
 MAX_MEDIA = 3
+NAVIGATION_TEXT = "🏠 Главное меню • 🧪 Тесты • 🎯 Рекомендации • 🛍 Каталог"
 
 
 def _resolve_catalog_product(code: str) -> dict | None:
@@ -159,6 +161,7 @@ async def send_product_cards(
     bullets: Sequence[str] | None = None,
     back_cb: str | None = None,
     with_actions: bool = True,
+    tracking: Mapping[str, str] | None = None,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
@@ -233,12 +236,13 @@ async def send_product_cards(
             bundle_action = ("➕ Бандл в корзину", f"cart:add_bundle:{bundle_id}")
 
     markup = (
-        kb_actions(cards, back_cb=back_cb, bundle_action=bundle_action)
+        kb_actions(cards, back_cb=back_cb, bundle_action=bundle_action, tracking=tracking)
         if with_actions
         else kb_back_home(back_cb)
     )
 
     cta_markup = kb_premium_cta()
+    footer_markup = nav_footer()
 
     if len(text) > MAX_TEXT:
         midpoint = len(lines) // 2
@@ -249,10 +253,12 @@ async def send_product_cards(
         if second:
             await message.answer(second, reply_markup=markup)
         await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+        await message.answer(NAVIGATION_TEXT, reply_markup=footer_markup)
         return
 
     await message.answer(text, reply_markup=markup)
     await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+    await message.answer(NAVIGATION_TEXT, reply_markup=footer_markup)
 
 
 def catalog_summary(goal: str | None = None) -> list[str]:
