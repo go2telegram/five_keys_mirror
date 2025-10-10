@@ -138,7 +138,7 @@ async def start_safe(message: Message) -> None:
     greeting = greeting_for_user(user_id)
     await message.answer(greeting, reply_markup=kb_onboarding_entry(user_id=user_id))
 
-    asyncio.create_task(_start_full(message, payload))
+    asyncio.create_task(_start_full(message, payload), name="start:full")
 
 
 @router.message(Command("menu"))

@@ -69,7 +69,7 @@ Write-Check 'S2-start marker present' ($mainText -match 'S2-start: init_db') 'lo
 Write-Check 'S2-done marker present' ($mainText -match 'S2-done: init_db') 'log init_db completion marker'
 Write-Check 'outer middleware registered' ($mainText -match 'outer_middleware\(AuditMiddleware\(\)\)') 'call _register_audit_middleware in main.py'
 Write-Check 'S4 marker present' ($mainText -match 'S4: audit middleware registered') 'ensure startup logger prints S4'
-Write-Check 'S6 marker present' ($mainText -match "S6: allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'
+Write-Check 'S6 marker present' ($mainText -match "S6: allowed_updates=\['message', 'callback_query', 'chat_member', 'my_chat_member'\]") 'pass ALLOWED_UPDATES to start_polling'
 Write-Check 'S7 marker present' ($mainText -match 'S7: start_polling enter') 'log polling entry'
 Write-Check 'S0 marker present' ($mainText -match 'S0: startup event fired') 'include startup router logging'
 

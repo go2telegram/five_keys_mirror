@@ -79,7 +79,12 @@ except ImportError:  # pragma: no cover - optional router
     h_health = None
 
 
-ALLOWED_UPDATES = ["message", "callback_query"]
+ALLOWED_UPDATES = [
+    "message",
+    "callback_query",
+    "chat_member",
+    "my_chat_member",
+]
 
 
 log_home = logging.getLogger("home")
@@ -646,8 +651,7 @@ async def main() -> None:
         h_admin_growth.router,
     ]
 
-    routers: list[Router] = [
-        h_start.router,
+    other_routers: list[Router] = [
         h_catalog.router,
         *quiz_routers,
         *calculator_routers,
@@ -657,18 +661,18 @@ async def main() -> None:
     ]
 
     if settings.DEBUG_COMMANDS and h_health is not None:
-        routers.append(h_health.router)
+        other_routers.append(h_health.router)
 
     if settings.DEBUG_COMMANDS:
         from app.handlers import _echo_debug as h_echo
 
-        routers.append(h_echo.router)
+        other_routers.append(h_echo.router)
         startup_log.info("S5b: echo_debug router attached")
 
-    routers.append(h_callback_fallback.router)
+    other_routers.append(h_callback_fallback.router)
 
     startup_router = _create_startup_router(allowed_updates)
-    routers.insert(0, startup_router)
+    routers: list[Router] = [startup_router, h_start.router, *other_routers]
 
     capture_router_map(routers)
 
