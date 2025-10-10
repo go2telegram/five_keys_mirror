@@ -46,7 +46,7 @@ class _DummyDispatcher:
     def resolve_used_update_types(self) -> Iterable[str]:
         return set(ALLOWED_UPDATES)
 
-    async def start_polling(self, bot: Any, allowed_updates: Iterable[str]) -> None:
+    async def start_polling(self, bot: Any, allowed_updates: Iterable[str], **_kwargs: Any) -> None:
         for handler in self._startup_handlers:
             await handler.callback(bot)
 

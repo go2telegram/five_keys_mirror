@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
+import functools
 import importlib
 import ipaddress
 import logging
+import signal
 import socket
 import time
 from pathlib import Path
@@ -16,6 +18,7 @@ from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app import build_info
 from app.catalog.loader import CATALOG_SHA
@@ -93,6 +96,64 @@ SERVICE_START_TS = time.time()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 LAST_KNOWN_REVISION: str | None = None
+
+
+class ShutdownManager:
+    """Coordinate graceful shutdown triggered by OS signals."""
+
+    def __init__(self, logger: logging.Logger) -> None:
+        self._logger = logger
+        self._event = asyncio.Event()
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._signals: list[int] = []
+
+    def install(self) -> None:
+        """Register signal handlers for SIGINT/SIGTERM."""
+
+        loop = asyncio.get_running_loop()
+        self._loop = loop
+
+        for signame in ("SIGINT", "SIGTERM"):
+            signum = getattr(signal, signame)
+            try:
+                loop.add_signal_handler(
+                    signum,
+                    functools.partial(self._on_signal, signame),
+                )
+            except NotImplementedError:  # pragma: no cover - platform limitation
+                continue
+            self._signals.append(signum)
+
+    def close(self) -> None:
+        """Remove registered signal handlers."""
+
+        loop = self._loop
+        if loop is None:
+            return
+        for signum in self._signals:
+            with contextlib.suppress(RuntimeError, NotImplementedError):
+                loop.remove_signal_handler(signum)
+        self._signals.clear()
+
+    def trigger(self, reason: str = "manual") -> None:
+        """Request shutdown programmatically (used in tests)."""
+
+        if self._event.is_set():
+            return
+        self._logger.info("shutdown requested reason=%s", reason)
+        self._event.set()
+
+    async def wait(self) -> None:
+        await self._event.wait()
+
+    def is_set(self) -> bool:
+        return self._event.is_set()
+
+    def _on_signal(self, signame: str) -> None:
+        if self._event.is_set():
+            return
+        self._logger.info("shutdown requested signal=%s", signame)
+        self._event.set()
 
 _sentry_spec = importlib.util.find_spec("sentry_sdk")
 if _sentry_spec is not None:
@@ -337,9 +398,20 @@ async def _cleanup_service_resources(
         await runner.cleanup()
 
 
-async def _wait_forever() -> None:
-    event = asyncio.Event()
-    await event.wait()
+async def _wait_forever(shutdown: ShutdownManager | None = None) -> None:
+    if shutdown is None:
+        event = asyncio.Event()
+        await event.wait()
+        return
+
+    await shutdown.wait()
+
+
+async def _shutdown_clients() -> None:
+    with contextlib.suppress(Exception):
+        from app import storage_redis
+
+        await storage_redis.close()
 
 
 async def _setup_tribute_webhook() -> web.AppRunner:
@@ -554,206 +626,241 @@ async def main() -> None:
         level=_resolve_log_level(settings.LOG_LEVEL),
     )
 
-    await feature_flags.initialize()
-    startup_log.info(
-        "feature flags ready env=%s snapshot=%s",  # nosec - debug metadata only
-        feature_flags.environment(),
-        feature_flags.snapshot(),
-    )
+    shutdown = ShutdownManager(startup_log)
+    shutdown.install()
+
+    scheduler: AsyncIOScheduler | None = None
+    background_started = False
+    runner: web.AppRunner | None = None
+    site: web.BaseSite | None = None
+    dashboard_server: object | None = None
+    dashboard_task: asyncio.Task[None] | None = None
+    polling_task: asyncio.Task[None] | None = None
+    shutdown_waiter: asyncio.Task[None] | None = None
 
     t0 = time.perf_counter()
 
     def mark(tag: str) -> None:
         startup_log.info("%s (%.1f ms)", tag, (time.perf_counter() - t0) * 1000)
 
-    mark("S1: setup_logging done")
-
-    mark("S2-start: init_db")
-    revision: str | None = None
     try:
-        revision = await init_db()
-    except Exception:
-        startup_log.exception("E!: init_db failed")
-    finally:
-        LAST_KNOWN_REVISION = revision
-        mark("S2-done: init_db")
-        logging.info("current alembic version: %s", revision or "unknown")
+        await feature_flags.initialize()
+        startup_log.info(
+            "feature flags ready env=%s snapshot=%s",  # nosec - debug metadata only
+            feature_flags.environment(),
+            feature_flags.snapshot(),
+        )
+        mark("S1: setup_logging done")
 
-    bot_token = getattr(settings, "BOT_TOKEN", "") or ""
-    token_prefix = str(bot_token).lower()
-    is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith("placeholder")
-    dry_run_reason: str | None = None
-    if settings.DEV_DRY_RUN:
-        dry_run_reason = "DEV_DRY_RUN"
-    elif not bot_token:
-        dry_run_reason = "missing BOT_TOKEN"
-    elif is_placeholder_token:
-        dry_run_reason = "placeholder BOT_TOKEN"
-
-    if dry_run_reason is not None:
-        mark("S3: dev dry run mode active")
-        runner: web.AppRunner | None = None
-        site: web.BaseSite | None = None
+        mark("S2-start: init_db")
+        revision: str | None = None
         try:
-            runner, site = await _setup_service_app()
-            startup_log.warning(
-                "DEV_DRY_RUN enabled — telegram init skipped%s",
-                f" ({dry_run_reason})" if dry_run_reason else "",
+            revision = await init_db()
+        except Exception:
+            startup_log.exception("E!: init_db failed")
+        finally:
+            LAST_KNOWN_REVISION = revision
+            mark("S2-done: init_db")
+            logging.info("current alembic version: %s", revision or "unknown")
+
+        bot_token = getattr(settings, "BOT_TOKEN", "") or ""
+        token_prefix = str(bot_token).lower()
+        is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith("placeholder")
+        dry_run_reason: str | None = None
+        if settings.DEV_DRY_RUN:
+            dry_run_reason = "DEV_DRY_RUN"
+        elif not bot_token:
+            dry_run_reason = "missing BOT_TOKEN"
+        elif is_placeholder_token:
+            dry_run_reason = "placeholder BOT_TOKEN"
+
+        if dry_run_reason is not None:
+            mark("S3: dev dry run mode active")
+            try:
+                runner, site = await _setup_service_app()
+                startup_log.warning(
+                    "DEV_DRY_RUN enabled — telegram init skipped%s",
+                    f" ({dry_run_reason})" if dry_run_reason else "",
+                )
+                await _wait_forever(shutdown)
+            except asyncio.CancelledError:
+                raise
+            finally:
+                await _cleanup_service_resources(runner, site)
+                runner = None
+                site = None
+            return
+
+        bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode="HTML"),
+        )
+        dp = Dispatcher()
+        mark("S3: bot/dispatcher created")
+
+        _register_update_deduplicate_middleware(dp)
+        _register_audit_middleware(dp)
+        _register_rate_limit_middleware(dp)
+        _register_callback_middlewares(dp)
+        _register_input_validation_middleware(dp)
+        mark("S4: middlewares registered")
+        _log_startup_metadata()
+
+        allowed_updates = list(ALLOWED_UPDATES)
+
+        quiz_routers = [
+            h_quiz_menu.router,
+            quiz_engine_handlers.router,
+            h_quiz_energy.router,
+            h_quiz_deficits.router,
+            h_quiz_immunity.router,
+            h_quiz_gut.router,
+            h_quiz_sleep.router,
+            h_quiz_stress.router,
+            h_quiz_stress2.router,
+            h_quiz_skin_joint.router,
+        ]
+
+        calculator_routers = [h_calc.router, h_calc_unified.router]
+
+        recommend_routers = [
+            h_picker.router,
+            h_reg.router,
+            h_report.router,
+            h_assistant.router,
+            h_lead.router,
+            h_referral.router,
+        ]
+
+        premium_routers = [
+            h_premium_center.router,
+            h_premium.router,
+            h_profile.router,
+            h_subscription.router,
+        ]
+
+        misc_routers = [
+            h_navigator.router,
+            h_analytics.router,
+            h_notify.router,
+            h_retention.router,
+            h_commerce.router,
+            h_admin.router,
+            h_admin_links.router,
+            h_admin_audit.router,
+            h_admin_crud.router,
+            h_admin_growth.router,
+        ]
+
+        routers: list[Router] = [
+            h_start.router,
+            h_catalog.router,
+            *quiz_routers,
+            *calculator_routers,
+            *recommend_routers,
+            *premium_routers,
+            *misc_routers,
+        ]
+
+        if settings.DEBUG_COMMANDS and h_health is not None:
+            routers.append(h_health.router)
+
+        if settings.DEBUG_COMMANDS:
+            from app.handlers import _echo_debug as h_echo
+
+            routers.append(h_echo.router)
+            startup_log.info("S5b: echo_debug router attached")
+
+        routers.append(h_message_fallback.router)
+        routers.append(h_callback_fallback.router)
+
+        startup_router = _create_startup_router(allowed_updates)
+        routers.insert(0, startup_router)
+
+        capture_router_map(routers)
+
+        for router in routers:
+            dp.include_router(router)
+
+        dp.callback_query.register(home_main, F.data == "home:main")
+
+        _log_router_overview(dp, routers, allowed_updates)
+        mark(f"S5: routers attached count={len(routers)}")
+
+        mark(f"S6: allowed_updates={allowed_updates}")
+
+        scheduler = start_scheduler(bot)
+
+        try:
+            await start_background_queue(workers=2)
+        except Exception:
+            startup_log.exception("background queue start failed")
+        else:
+            background_started = True
+            mark("S6a: background queue started")
+
+        runner, site = await _setup_service_app()
+        try:
+            dashboard_server, dashboard_task = await _start_dashboard_server()
+        except Exception:
+            startup_log.exception("dashboard startup failed")
+        else:
+            if dashboard_task is None:
+                mark("S7a: dashboard skipped")
+                startup_log.info("dashboard not started (disabled)")
+            else:
+                mark("S7a: dashboard server started")
+
+        mark("S7: start_polling enter")
+        polling_task = asyncio.create_task(
+            dp.start_polling(
+                bot,
+                allowed_updates=allowed_updates,
+                handle_signals=False,
             )
-            await _wait_forever()
-        except asyncio.CancelledError:
+        )
+        shutdown_waiter = asyncio.create_task(shutdown.wait())
+        try:
+            done, _ = await asyncio.wait(
+                {polling_task, shutdown_waiter},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if shutdown_waiter in done and not polling_task.done():
+                mark("S7b: shutdown requested")
+                with contextlib.suppress(Exception):
+                    await dp.stop_polling()
+            await polling_task
+            mark("S8: start_polling exited normally")
+        except Exception:
+            startup_log.exception("E!: start_polling crashed")
             raise
         finally:
-            await _cleanup_service_resources(runner, site)
-        return
-
-    bot = Bot(
-        token=settings.BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode="HTML"),
-    )
-    dp = Dispatcher()
-    mark("S3: bot/dispatcher created")
-
-    _register_update_deduplicate_middleware(dp)
-    _register_audit_middleware(dp)
-    _register_rate_limit_middleware(dp)
-    _register_callback_middlewares(dp)
-    _register_input_validation_middleware(dp)
-    mark("S4: middlewares registered")
-    _log_startup_metadata()
-
-    allowed_updates = list(ALLOWED_UPDATES)
-
-    quiz_routers = [
-        h_quiz_menu.router,
-        quiz_engine_handlers.router,
-        h_quiz_energy.router,
-        h_quiz_deficits.router,
-        h_quiz_immunity.router,
-        h_quiz_gut.router,
-        h_quiz_sleep.router,
-        h_quiz_stress.router,
-        h_quiz_stress2.router,
-        h_quiz_skin_joint.router,
-    ]
-
-    calculator_routers = [h_calc.router, h_calc_unified.router]
-
-    recommend_routers = [
-        h_picker.router,
-        h_reg.router,
-        h_report.router,
-        h_assistant.router,
-        h_lead.router,
-        h_referral.router,
-    ]
-
-    premium_routers = [
-        h_premium_center.router,
-        h_premium.router,
-        h_profile.router,
-        h_subscription.router,
-    ]
-
-    misc_routers = [
-        h_navigator.router,
-        h_analytics.router,
-        h_notify.router,
-        h_retention.router,
-        h_commerce.router,
-        h_admin.router,
-        h_admin_links.router,
-        h_admin_audit.router,
-        h_admin_crud.router,
-        h_admin_growth.router,
-    ]
-
-    routers: list[Router] = [
-        h_start.router,
-        h_catalog.router,
-        *quiz_routers,
-        *calculator_routers,
-        *recommend_routers,
-        *premium_routers,
-        *misc_routers,
-    ]
-
-    if settings.DEBUG_COMMANDS and h_health is not None:
-        routers.append(h_health.router)
-
-    if settings.DEBUG_COMMANDS:
-        from app.handlers import _echo_debug as h_echo
-
-        routers.append(h_echo.router)
-        startup_log.info("S5b: echo_debug router attached")
-
-    routers.append(h_message_fallback.router)
-    routers.append(h_callback_fallback.router)
-
-    startup_router = _create_startup_router(allowed_updates)
-    routers.insert(0, startup_router)
-
-    capture_router_map(routers)
-
-    for router in routers:
-        dp.include_router(router)
-
-    dp.callback_query.register(home_main, F.data == "home:main")
-
-    _log_router_overview(dp, routers, allowed_updates)
-    mark(f"S5: routers attached count={len(routers)}")
-
-    mark(f"S6: allowed_updates={allowed_updates}")
-
-    start_scheduler(bot)
-
-    background_started = False
-    try:
-        await start_background_queue(workers=2)
-    except Exception:
-        startup_log.exception("background queue start failed")
-    else:
-        background_started = True
-        mark("S6a: background queue started")
-
-    runner: web.AppRunner | None = None
-    site: web.BaseSite | None = None
-    runner, site = await _setup_service_app()
-    dashboard_server: object | None = None
-    dashboard_task: asyncio.Task | None = None
-    try:
-        dashboard_server, dashboard_task = await _start_dashboard_server()
-    except Exception:
-        startup_log.exception("dashboard startup failed")
-    else:
-        if dashboard_task is None:
-            mark("S7a: dashboard skipped")
-            startup_log.info("dashboard not started (disabled)")
-        else:
-            mark("S7a: dashboard server started")
-
-    mark("S7: start_polling enter")
-    try:
-        await dp.start_polling(
-            bot,
-            allowed_updates=allowed_updates,
-        )
-        mark("S8: start_polling exited normally")
-    except Exception:
-        startup_log.exception("E!: start_polling crashed")
-        raise
+            shutdown_waiter.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await shutdown_waiter
     finally:
+        if polling_task is not None and not polling_task.done():
+            polling_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await polling_task
         mark("S9: shutdown sequence")
-        logging.info(">>> Polling stopped")
+        if polling_task is not None:
+            logging.info(">>> Polling stopped")
         await _cleanup_service_resources(runner, site)
         if background_started:
             with contextlib.suppress(Exception):
                 await stop_background_queue()
+        if scheduler is not None:
+            with contextlib.suppress(Exception):
+                await scheduler.shutdown(wait=False)
         if dashboard_server is not None and hasattr(dashboard_server, "should_exit"):
             dashboard_server.should_exit = True
         if dashboard_task is not None:
             with contextlib.suppress(asyncio.CancelledError):
                 await dashboard_task
+        await _shutdown_clients()
+        shutdown.close()
+        startup_log.info("shutdown complete")
 
 
 if __name__ == "__main__":

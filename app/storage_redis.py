@@ -17,6 +17,17 @@ async def _conn() -> redis.Redis:
     return _redis
 
 
+async def close() -> None:
+    """Close the cached Redis client (if initialized)."""
+
+    global _redis
+    if _redis is None:
+        return
+
+    await _redis.aclose()
+    _redis = None
+
+
 async def touch_throttle(user_id: int, key: str, cooldown: float) -> float:
     if user_id is None or cooldown <= 0:
         return 0.0
