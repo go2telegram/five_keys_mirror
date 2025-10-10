@@ -80,18 +80,27 @@ RUNTIME_CONFIG_DEFAULTS = {
     "MEMORY_LIMIT_MB": 768,
 }
 
+settings.RUNTIME_CONFIG = dict(RUNTIME_CONFIG_DEFAULTS)
+
+_runtime_repo = None
 try:
     from optimizer.config_tuner import JSONConfigRepository
 
     _runtime_repo = JSONConfigRepository(Path("optimizer/runtime_config.json"), RUNTIME_CONFIG_DEFAULTS)
     settings.RUNTIME_CONFIG = _runtime_repo.read()
 except Exception:
-    settings.RUNTIME_CONFIG = dict(RUNTIME_CONFIG_DEFAULTS)
+    _runtime_repo = None
 
 
 
 def get_runtime_config() -> dict[str, int]:
     """Return the latest configuration selected by the optimizer."""
-
+    if _runtime_repo is not None:
+        try:
+            latest = _runtime_repo.read()
+        except Exception:
+            latest = dict(RUNTIME_CONFIG_DEFAULTS)
+        settings.RUNTIME_CONFIG = dict(latest)
+        return dict(latest)
     return dict(getattr(settings, "RUNTIME_CONFIG", RUNTIME_CONFIG_DEFAULTS))
 
