@@ -74,9 +74,12 @@ def _alembic_head_revision_sync(db_url: str) -> str | None:
     return script.get_current_head()
 
 
+_DB_URL = settings.DB_URL
+_ensure_sqlite_dir(_DB_URL)
+
 try:
     async_engine = create_async_engine(
-        settings.DB_URL,
+        _DB_URL,
         echo=False,
         pool_pre_ping=True,
     )
