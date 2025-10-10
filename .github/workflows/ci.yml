@@ -40,8 +40,7 @@ jobs:
         continue-on-error: true
         run: python tools/self_audit.py --fast --no-net --out build/reports/self_audit.md || true
       - name: Tests
-        continue-on-error: true
-        run: pytest -q || true
+        run: pytest -q
       - name: Diagnose (always run)
         if: always()
         run: python tools/ci_diagnose.py || true
