@@ -94,6 +94,11 @@ async def dispatch_due_tips(bot: Bot, *, limit: int = 64) -> int:
             if tip is None:
                 await commit_safely(session)
                 continue
+            try:
+                await send_daily_tip(bot, user_id, tip.text)
+            except Exception:  # pragma: no cover - network errors should not abort loop
+                await session.rollback()
+                continue
             await events_repo.log(
                 session,
                 user_id,
@@ -108,10 +113,6 @@ async def dispatch_due_tips(bot: Bot, *, limit: int = 64) -> int:
                 tip_id=tip.id,
             )
             await commit_safely(session)
-        try:
-            await send_daily_tip(bot, user_id, tip.text)
-        except Exception:  # pragma: no cover - network errors should not abort loop
-            continue
         sent += 1
     return sent
 
