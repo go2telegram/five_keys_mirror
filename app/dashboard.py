@@ -980,6 +980,16 @@ table.links-table tbody tr:last-child td {
         importText: document.getElementById('import-text')
     };
 
+    if (state.token) {
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.has('token')) {
+            currentUrl.searchParams.delete('token');
+            const cleanedSearch = currentUrl.searchParams.toString();
+            const newUrl = `${currentUrl.pathname}${cleanedSearch ? `?${cleanedSearch}` : ''}${currentUrl.hash}`;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    }
+
     dom.admin.value = localStorage.getItem('links-admin') || '';
     const persistAdmin = () => {
         localStorage.setItem('links-admin', dom.admin.value.trim());
@@ -1164,7 +1174,7 @@ table.links-table tbody tr:last-child td {
             showStatus('error', 'Нет активной ссылки регистрации');
             return;
         }
-        window.open(state.register, '_blank', 'noopener');
+        window.open(state.register, '_blank', 'noopener,noreferrer');
     }
 
     async function editProduct(product) {
@@ -1193,7 +1203,7 @@ table.links-table tbody tr:last-child td {
             showStatus('error', 'Для продукта нет ссылки');
             return;
         }
-        window.open(product.link, '_blank', 'noopener');
+        window.open(product.link, '_blank', 'noopener,noreferrer');
     }
 
     function openImportModal() {
