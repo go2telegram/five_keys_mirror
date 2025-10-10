@@ -4,6 +4,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 from app.config import settings
+from app.metrics import mark_app_ready, metrics_handler, metrics_middleware
 from app.scheduler.service import start_scheduler
 
 # существующие роутеры
@@ -31,7 +32,38 @@ from app.handlers import tribute_webhook as h_tw
 from app.handlers import referral as h_referral
 
 
+def create_web_app() -> web.Application:
+    app_web = web.Application(middlewares=[metrics_middleware])
+    app_web.router.add_get("/ping", ping)
+    app_web.router.add_get("/metrics", metrics_handler)
+    app_web.router.add_post(settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
+    return app_web
+
+
+async def ping(_: web.Request) -> web.Response:
+    return web.json_response({"status": "ok"})
+
+
+async def start_web_server() -> web.AppRunner:
+    app_web = create_web_app()
+    runner = web.AppRunner(app_web)
+    await runner.setup()
+    site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
+    await site.start()
+    mark_app_ready()
+    print(
+        f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
+    return runner
+
+
 async def main():
+    await start_web_server()
+
+    if settings.SMOKE_TEST:
+        print("Smoke test mode enabled; skipping bot startup.")
+        while True:
+            await asyncio.sleep(3600)
+
     bot = Bot(token=settings.BOT_TOKEN,
               default=DefaultBotProperties(parse_mode="HTML"))
     dp = Dispatcher()
@@ -58,17 +90,6 @@ async def main():
     dp.include_router(h_referral.router)
 
     start_scheduler(bot)
-
-    # aiohttp сервер для Tribute
-    app_web = web.Application()
-    app_web.router.add_post(
-        settings.TRIBUTE_WEBHOOK_PATH, h_tw.tribute_webhook)
-    runner = web.AppRunner(app_web)
-    await runner.setup()
-    site = web.TCPSite(runner, host=settings.WEB_HOST, port=settings.WEB_PORT)
-    print(
-        f"Webhook server at http://{settings.WEB_HOST}:{settings.WEB_PORT}{settings.TRIBUTE_WEBHOOK_PATH}")
-    await site.start()
 
     print("Bot is running…")
     await dp.start_polling(bot)

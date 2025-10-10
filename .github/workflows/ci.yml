@@ -24,4 +24,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Smoke test
-        run: HEALTH_PORT=8080 nohup python run.py & sleep 2 && bash tools/smoke.sh
+        env:
+          BOT_TOKEN: "000:dummy-smoke-token"
+          ADMIN_ID: "1"
+          SMOKE_TEST: "1"
+          HEALTH_PORT: "8080"
+        run: |
+          nohup python run.py &
+          sleep 2
+          bash tools/smoke.sh
