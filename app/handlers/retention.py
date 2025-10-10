@@ -146,9 +146,10 @@ async def journey_tracker_sleep(callback: CallbackQuery) -> None:
     async with compat_session(session_scope) as session:
         await events_repo.log(session, callback.from_user.id, "journey_sleep_cta", {})
         await commit_safely(session)
-    await callback.message.answer(
-        "Чтобы отслеживать сон, используй команду <code>/track_sleep 7</code> или поделись фактическими часами."
-    )
+    if callback.message:
+        await callback.message.answer(
+            "📲 Чтобы включить трекер сна, используй команду <code>/track_sleep 7</code> или введи своё количество часов."
+        )
 
 
 @router.callback_query(F.data == "journey:premium_plan")
@@ -159,6 +160,67 @@ async def journey_premium_plan(callback: CallbackQuery) -> None:
     async with compat_session(session_scope) as session:
         await events_repo.log(session, callback.from_user.id, "journey_premium_cta", {})
         await commit_safely(session)
-    await callback.message.answer(
-        "💎 Премиум даёт еженедельные планы, трекеры и поддержку. Оформить подписку можно в разделе /premium."
-    )
+    if callback.message:
+        await callback.message.answer(
+            "💡 Чтобы получить Премиум-план, перейди в раздел /premium — там доступно оформление подписки."
+        )
+
+
+@router.callback_query(F.data.regexp(r"^journey_sleep:(excellent|ok|bad)$"))
+async def journey_sleep_feedback(callback: CallbackQuery) -> None:
+    if callback.from_user is None:
+        return
+
+    _, _, state = callback.data.partition(":") if callback.data else (None, None, None)
+    responses = {
+        "excellent": "Класс! Продолжаем режим: 7–8 часов, тёмная спальня, магний по необходимости.",
+        "ok": "Хорошо! Для стабильности: 10 минут дневного света утром, магний/глицин вечером.",
+        "bad": (
+            "Окей, работаем точечно: без кофе после 14:00, 20 минут без экрана перед сном, тёплый душ. "
+            "Готов прислать персональный план? /ai_plan"
+        ),
+    }
+    reply = responses.get(state)
+
+    async with compat_session(session_scope) as session:
+        await events_repo.log(
+            session,
+            callback.from_user.id,
+            "journey_sleep_response",
+            {"state": state},
+        )
+        await commit_safely(session)
+
+    await callback.answer("Спасибо!")
+    if reply and callback.message:
+        await callback.message.answer(reply)
+
+
+@router.callback_query(F.data.regexp(r"^journey_stress:(low|medium|high)$"))
+async def journey_stress_feedback(callback: CallbackQuery) -> None:
+    if callback.from_user is None:
+        return
+
+    _, _, level = callback.data.partition(":") if callback.data else (None, None, None)
+    responses = {
+        "low": "Отлично! Закрепим: 3×8 дыханий 1–2 раза в день.",
+        "medium": "Окей. Дыхание 4-7-8, 10-мин прогулка, магний после ужина по необходимости.",
+        "high": (
+            "Сочувствую. Попробуй короткую релаксацию (2 минуты дыхания), снизь стимуляторы, и я соберу мягкий план. "
+            "/ai_plan"
+        ),
+    }
+    reply = responses.get(level)
+
+    async with compat_session(session_scope) as session:
+        await events_repo.log(
+            session,
+            callback.from_user.id,
+            "journey_stress_response",
+            {"level": level},
+        )
+        await commit_safely(session)
+
+    await callback.answer("Принято")
+    if reply and callback.message:
+        await callback.message.answer(reply)
