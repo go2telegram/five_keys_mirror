@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Iterable, Sequence
 
@@ -15,6 +16,7 @@ from app.catalog.loader import load_catalog, product_by_alias, product_by_id
 from app.keyboards import kb_actions, kb_back_home, kb_premium_cta
 from app.link_manager import get_product_link, get_register_link
 from app.services.upsell import soft_upsell_prompt
+from app.utils.idempotency import idempotency_registry, make_idempotency_key
 from app.utils.image_resolver import resolve_media_reference
 from app.utils_media import fetch_image_as_file, precache_remote_images
 
@@ -208,116 +210,139 @@ async def send_product_cards(
     back_cb: str | None = None,
     with_actions: bool = True,
     utm_category: str | None = None,
+    idempotency_key: str | None = None,
 ) -> None:
     """Render product cards for chat or callback targets."""
 
-    cards = prepare_cards(products, ctx)
+    user = getattr(target, "from_user", None)
+    user_id = getattr(user, "id", None)
+    computed_key = idempotency_key or make_idempotency_key("cards", user_id, ctx or title)
 
-    message = target.message if isinstance(target, CallbackQuery) else target
-    if isinstance(target, CallbackQuery):
-        await target.answer()
+    token = None
+    if computed_key:
+        token = await idempotency_registry.acquire(computed_key)
+        if not token.is_owner:
+            if isinstance(target, CallbackQuery):
+                with contextlib.suppress(Exception):
+                    await target.answer()
+            await token.wait()
+            return
 
-    if not cards:
-        await message.answer(
-            "Каталог временно недоступен. Попробуйте позже или свяжитесь с консультантом.",
-            reply_markup=kb_back_home(back_cb=back_cb),
-        )
-        return
+    async def _render() -> None:
+        cards = prepare_cards(products, ctx)
 
-    media = MediaGroupBuilder(caption=None)
-    remote_refs: list[str] = []
-    for img in _collect_media(cards):
-        resolved = resolve_media_reference(img)
-        if not resolved:
-            continue
-        if isinstance(resolved, str):
-            remote_refs.append(resolved)
-            fetched = await fetch_image_as_file(resolved)
-            if not fetched:
-                LOG.warning("send_product_cards: failed to fetch remote media %s", resolved)
+        message = target.message if isinstance(target, CallbackQuery) else target
+        if isinstance(target, CallbackQuery):
+            await target.answer()
+
+        if not cards:
+            await message.answer(
+                "Каталог временно недоступен. Попробуйте позже или свяжитесь с консультантом.",
+                reply_markup=kb_back_home(back_cb=back_cb),
+            )
+            return
+
+        media = MediaGroupBuilder(caption=None)
+        remote_refs: list[str] = []
+        for img in _collect_media(cards):
+            resolved = resolve_media_reference(img)
+            if not resolved:
                 continue
-            media.add_photo(media=fetched)
-            continue
-        media.add_photo(media=resolved)
+            if isinstance(resolved, str):
+                remote_refs.append(resolved)
+                fetched = await fetch_image_as_file(resolved)
+                if not fetched:
+                    LOG.warning("send_product_cards: failed to fetch remote media %s", resolved)
+                    continue
+                media.add_photo(media=fetched)
+                continue
+            media.add_photo(media=resolved)
 
-    if remote_refs:
-        precache_remote_images(remote_refs)
-    try:
-        built = media.build()
-    except Exception:  # pragma: no cover - defensive guard for aiogram internals
-        built = []
-    if built:
+        if remote_refs:
+            precache_remote_images(remote_refs)
         try:
-            await message.answer_media_group(built)
-        except Exception:  # noqa: BLE001 - prefer to continue with text fallback
-            LOG.exception("send_media_group failed")
+            built = media.build()
+        except Exception:  # pragma: no cover - defensive guard for aiogram internals
+            built = []
+        if built:
+            try:
+                await message.answer_media_group(built)
+            except Exception:  # noqa: BLE001 - prefer to continue with text fallback
+                LOG.exception("send_media_group failed")
 
-    lines: list[str] = [f"<b>{title}</b>"]
-    if headline:
-        lines.extend(["", headline])
-    if bullets:
-        lines.extend(["", "Что можно сделать уже сегодня:"])
-        lines.extend([f"• {item}" for item in bullets])
-    lines.append("")
-    lines.append("Поддержка:")
-    lines.append("")
-
-    category = utm_category or ctx or "catalog"
-    register_link = await get_register_link()
-
-    for card in cards:
-        header, card_bullets = render_product_text(card, ctx)
-        lines.append(header)
-        for item in card_bullets:
-            lines.append(f"  · {item}")
+        lines: list[str] = [f"<b>{title}</b>"]
+        if headline:
+            lines.extend(["", headline])
+        if bullets:
+            lines.extend(["", "Что можно сделать уже сегодня:"])
+            lines.extend([f"• {item}" for item in bullets])
+        lines.append("")
+        lines.append("Поддержка:")
         lines.append("")
 
-    for card in cards:
-        code = str(card.get("code") or card.get("id") or "").strip()
-        link = await build_order_link(code or None, category)
-        if link:
-            card["order_url"] = link
-        else:
-            card.pop("order_url", None)
+        category = utm_category or ctx or "catalog"
+        register_link = await get_register_link()
 
-    text = "\n".join(lines).strip()
-    bundle_action = None
-    try:
-        upsell_text, bundle_id = await soft_upsell_prompt([card.get("code", "") for card in cards])
-    except Exception:  # pragma: no cover - soft failure
-        LOG.exception("soft_upsell_prompt failed")
-        upsell_text, bundle_id = None, None
-    if upsell_text:
-        lines.extend(["", upsell_text])
-        if bundle_id is not None:
-            bundle_action = ("➕ Бандл в корзину", f"cart:add_bundle:{bundle_id}")
+        for card in cards:
+            header, card_bullets = render_product_text(card, ctx)
+            lines.append(header)
+            for item in card_bullets:
+                lines.append(f"  · {item}")
+            lines.append("")
 
-    markup = (
-        kb_actions(
-            cards,
-            back_cb=back_cb,
-            bundle_action=bundle_action,
-            discount_url=register_link,
+        for card in cards:
+            code = str(card.get("code") or card.get("id") or "").strip()
+            link = await build_order_link(code or None, category)
+            if link:
+                card["order_url"] = link
+            else:
+                card.pop("order_url", None)
+
+        text = "\n".join(lines).strip()
+        bundle_action = None
+        try:
+            upsell_text, bundle_id = await soft_upsell_prompt([card.get("code", "") for card in cards])
+        except Exception:  # pragma: no cover - soft failure
+            LOG.exception("soft_upsell_prompt failed")
+            upsell_text, bundle_id = None, None
+        if upsell_text:
+            lines.extend(["", upsell_text])
+            if bundle_id is not None:
+                bundle_action = ("➕ Бандл в корзину", f"cart:add_bundle:{bundle_id}")
+
+        markup = (
+            kb_actions(
+                cards,
+                back_cb=back_cb,
+                bundle_action=bundle_action,
+                discount_url=register_link,
+            )
+            if with_actions
+            else kb_back_home(back_cb)
         )
-        if with_actions
-        else kb_back_home(back_cb)
-    )
 
-    cta_markup = kb_premium_cta()
+        cta_markup = kb_premium_cta()
 
-    if len(text) > MAX_TEXT:
-        midpoint = len(lines) // 2
-        first = "\n".join(lines[:midpoint]).strip()
-        second = "\n".join(lines[midpoint:]).strip()
-        if first:
-            await message.answer(first)
-        if second:
-            await message.answer(second, reply_markup=markup)
+        if len(text) > MAX_TEXT:
+            midpoint = len(lines) // 2
+            first = "\n".join(lines[:midpoint]).strip()
+            second = "\n".join(lines[midpoint:]).strip()
+            if first:
+                await message.answer(first)
+            if second:
+                await message.answer(second, reply_markup=markup)
+            await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+            return
+
+        await message.answer(text, reply_markup=markup)
         await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+
+    if token is None:
+        await _render()
         return
 
-    await message.answer(text, reply_markup=markup)
-    await message.answer("💎 Получить больше функций в Премиум", reply_markup=cta_markup)
+    async with token:
+        await _render()
 
 
 def catalog_summary(goal: str | None = None) -> list[str]:
