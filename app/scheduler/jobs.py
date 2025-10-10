@@ -285,14 +285,28 @@ async def process_retention_journeys(bot: Bot) -> None:
         sent_entries: list = []
         for entry in due:
             if entry.journey == "sleep_checkin":
-                text = retention_messages.format_sleep_journey_message()
+                text = (
+                    f"{retention_messages.format_sleep_journey_message()}\n\n"
+                    "📲 Включить трекер сна (/track_sleep <часы>)"
+                )
                 kb = InlineKeyboardBuilder()
-                kb.button(text="🔔 включить трекер сна", callback_data="journey:tracker_sleep")
+                kb.button(text="Отлично", callback_data="journey_sleep:excellent")
+                kb.button(text="Нормально", callback_data="journey_sleep:ok")
+                kb.button(text="Плохо", callback_data="journey_sleep:bad")
+                kb.button(text="📲 Включить трекер сна", callback_data="journey:tracker_sleep")
+                kb.adjust(3, 1)
                 markup = kb.as_markup()
             elif entry.journey == "stress_relief":
-                text = retention_messages.format_stress_journey_message()
+                text = (
+                    f"{retention_messages.format_stress_journey_message()}\n\n"
+                    "💡 Хочу Премиум-план (/premium)"
+                )
                 kb = InlineKeyboardBuilder()
-                kb.button(text="💎 Премиум-план", callback_data="journey:premium_plan")
+                kb.button(text="Низкий", callback_data="journey_stress:low")
+                kb.button(text="Средний", callback_data="journey_stress:medium")
+                kb.button(text="Высокий", callback_data="journey_stress:high")
+                kb.button(text="💡 Хочу Премиум-план", callback_data="journey:premium_plan")
+                kb.adjust(3, 1)
                 markup = kb.as_markup()
             else:
                 continue

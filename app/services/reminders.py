@@ -62,12 +62,8 @@ class ReminderPlanner:
         return schedule
 
     def water_message(self, consumed_ml: int, target_ml: int | None = None) -> str:
-        target = target_ml or self._config.water_goal_ml
-        remaining = max(target - consumed_ml, 0)
-        return (
-            "💧 Пора пить воду!\n"
-            f"Прогресс: {consumed_ml}/{target} мл. Осталось {remaining} мл."
-        )
+        _ = consumed_ml, target_ml  # values kept for compatibility with callers
+        return "💧 Глоток воды — маленький шаг к большой энергии."
 
     # ---- Sleep -----------------------------------------------------------------
 
