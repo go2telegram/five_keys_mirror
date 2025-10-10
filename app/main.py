@@ -74,6 +74,7 @@ from app.middlewares import (
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
+from app.utils.telegram_session import FloodWaitRetrySession
 from app.router_map import capture_router_map
 
 try:
@@ -447,14 +448,22 @@ def _register_rate_limit_middleware(dp: Dispatcher) -> RateLimitMiddleware:
     """Register rate limiting middleware for incoming messages."""
 
     rate_middleware = RateLimitMiddleware(
-        default_limit=(10, 30.0),
+        default_limit=(
+            settings.RATE_LIMIT_MAX_ACTIONS,
+            float(settings.RATE_LIMIT_WINDOW_SECONDS),
+        ),
         command_limits={
             "recommend": (3, 30.0),
             "tests": (3, 30.0),
         },
     )
     dp.message.middleware(rate_middleware)
-    startup_log.info("S4b: rate limit middleware registered")
+    dp.callback_query.middleware(rate_middleware)
+    startup_log.info(
+        "S4b: rate limit middleware registered limit=%s/%ss",
+        settings.RATE_LIMIT_MAX_ACTIONS,
+        settings.RATE_LIMIT_WINDOW_SECONDS,
+    )
     return rate_middleware
 
 
@@ -610,6 +619,7 @@ async def main() -> None:
     bot = Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode="HTML"),
+        session=FloodWaitRetrySession(),
     )
     dp = Dispatcher()
     mark("S3: bot/dispatcher created")
