@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
 
     ENABLE_META_POLICY_AI: bool = True
+    POLICY_METRICS_TOKEN: str | None = None
 
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""

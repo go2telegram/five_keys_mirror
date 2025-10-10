@@ -99,12 +99,43 @@ async def main():
             )
         return web.json_response(policy_engine.get_status())
 
+    def _extract_metrics_token(request: web.Request) -> str | None:
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            scheme, _, token = auth_header.partition(" ")
+            if scheme.lower() == "bearer" and token:
+                return token.strip()
+
+        header_token = request.headers.get("X-Policy-Metrics-Token")
+        if header_token:
+            return header_token.strip()
+
+        query_token = request.query.get("token")
+        if query_token:
+            return query_token.strip()
+
+        return None
+
     async def update_metrics(request: web.Request) -> web.Response:
         if not settings.ENABLE_META_POLICY_AI:
             return web.json_response(
                 {"enabled": False, "message": "Meta policy AI disabled"},
                 status=503,
             )
+
+        shared_secret = settings.POLICY_METRICS_TOKEN
+        if not shared_secret:
+            return web.json_response(
+                {
+                    "enabled": False,
+                    "error": "Metrics updates require POLICY_METRICS_TOKEN configuration",
+                },
+                status=503,
+            )
+
+        token = _extract_metrics_token(request)
+        if token != shared_secret:
+            return web.json_response({"error": "Unauthorized"}, status=401)
 
         try:
             payload = await request.json()
