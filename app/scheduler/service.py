@@ -67,7 +67,7 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     scheduler.add_job(
         _log_heartbeat,
-        trigger=IntervalTrigger(seconds=60),
+        trigger=IntervalTrigger(minutes=settings.HEARTBEAT_INTERVAL_MINUTES),
         name="heartbeat",
         misfire_grace_time=30,
         coalesce=True,
@@ -145,7 +145,11 @@ async def _log_heartbeat() -> None:
 
     loop = asyncio.get_running_loop()
     pending = sum(1 for task in asyncio.all_tasks(loop) if not task.done())
-    logging.getLogger("heartbeat").info("heartbeat alive tz=%s pending_tasks=%s", settings.TIMEZONE, pending)
+    logging.getLogger("heartbeat").info(
+        "HEARTBEAT ok tz=%s pending_tasks=%s",
+        settings.TIMEZONE,
+        pending,
+    )
 
 
 def _parse_weekly_spec(spec: str | None) -> CronTrigger:

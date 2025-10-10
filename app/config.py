@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     # Мониторинг/алерты
     SENTRY_DSN: str | None = None
     SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
+    HEARTBEAT_INTERVAL_MINUTES: int = Field(default=5, ge=1, le=60)
 
     # Админ-панель / FastAPI dashboard
     DASHBOARD_ENABLED: bool = True
