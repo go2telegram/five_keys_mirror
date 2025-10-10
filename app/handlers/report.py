@@ -1,4 +1,5 @@
 # app/handlers/report.py
+import contextlib
 import logging
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from app.keyboards import kb_back_home
 from app.pdf_report import build_pdf, ensure_reportlab
 from app.repo import events as events_repo
 from app.storage import commit_safely, get_last_plan
+from app.utils.idempotency import idempotency_registry, make_idempotency_key
 
 router = Router()
 
@@ -63,6 +65,7 @@ def _compose_pdf(plan: dict) -> bytes | None:
 
 @router.callback_query(F.data.in_({"report:last", "pdf:last"}))
 async def pdf_last_cb(c: CallbackQuery):
+    plan: dict | None = None
     async with compat_session(session_scope) as session:
         plan = await get_last_plan(session, c.from_user.id)
         if plan:
@@ -80,20 +83,34 @@ async def pdf_last_cb(c: CallbackQuery):
             reply_markup=kb_back_home(),
         )
         return
-    await c.answer()
-    pdf_bytes = _compose_pdf(plan)
-    if not pdf_bytes:
-        await c.message.answer(
-            "Генератор PDF недоступен на этой сборке.",
-            reply_markup=kb_back_home(),
-        )
+
+    key = make_idempotency_key("pdf", c.from_user.id, "last")
+    token = await idempotency_registry.acquire(key)
+    if not token.is_owner:
+        with contextlib.suppress(Exception):
+            await c.answer("Готовим PDF…")
+        await token.wait()
         return
-    filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-    await c.message.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
+
+    async with token:
+        await c.answer()
+        pdf_bytes = _compose_pdf(plan)
+        if not pdf_bytes:
+            await c.message.answer(
+                "Генератор PDF недоступен на этой сборке.",
+                reply_markup=kb_back_home(),
+            )
+            return
+        filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        await c.message.answer_document(
+            BufferedInputFile(pdf_bytes, filename=filename),
+            caption="Готово! 📄 Ваш PDF-план.",
+        )
 
 
 @router.message(Command("pdf"))
 async def pdf_cmd(m: Message):
+    plan: dict | None = None
     async with compat_session(session_scope) as session:
         plan = await get_last_plan(session, m.from_user.id)
         if plan:
@@ -107,9 +124,20 @@ async def pdf_cmd(m: Message):
     if not plan:
         await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
         return
-    pdf_bytes = _compose_pdf(plan)
-    if not pdf_bytes:
-        await m.answer("Генератор PDF недоступен на этой сборке.")
+
+    key = make_idempotency_key("pdf", m.from_user.id, "cmd")
+    token = await idempotency_registry.acquire(key)
+    if not token.is_owner:
+        await token.wait()
         return
-    filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-    await m.answer_document(BufferedInputFile(pdf_bytes, filename=filename), caption="Готово! 📄 Ваш PDF-план.")
+
+    async with token:
+        pdf_bytes = _compose_pdf(plan)
+        if not pdf_bytes:
+            await m.answer("Генератор PDF недоступен на этой сборке.")
+            return
+        filename = f"plan_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        await m.answer_document(
+            BufferedInputFile(pdf_bytes, filename=filename),
+            caption="Готово! 📄 Ваш PDF-план.",
+        )

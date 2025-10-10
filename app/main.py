@@ -69,6 +69,7 @@ from app.middlewares import (
     CallbackTraceMiddleware,
     InputValidationMiddleware,
     RateLimitMiddleware,
+    UpdateDeduplicateMiddleware,
 )
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
@@ -422,6 +423,15 @@ async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]
     return server, task
 
 
+def _register_update_deduplicate_middleware(dp: Dispatcher) -> UpdateDeduplicateMiddleware:
+    """Register middleware that filters duplicate updates."""
+
+    deduplicate = UpdateDeduplicateMiddleware()
+    dp.update.outer_middleware(deduplicate)
+    startup_log.info("S4a: update deduplicate middleware registered")
+    return deduplicate
+
+
 def _register_audit_middleware(dp: Dispatcher) -> AuditMiddleware:
     """Register the audit middleware on every dispatcher layer."""
 
@@ -604,6 +614,7 @@ async def main() -> None:
     dp = Dispatcher()
     mark("S3: bot/dispatcher created")
 
+    _register_update_deduplicate_middleware(dp)
     _register_audit_middleware(dp)
     _register_rate_limit_middleware(dp)
     _register_callback_middlewares(dp)
