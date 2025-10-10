@@ -133,6 +133,41 @@ if (Test-Path $errLog) {
   Write-Host ("errors.log size: {0} bytes" -f $size)
 }
 
+$catalogLinkLog = Join-Path $logDir 'catalog_linkcheck.log'
+if (Test-Path $catalogLinkLog) {
+  $summaries = @()
+  foreach ($line in Get-Content $catalogLinkLog -Encoding UTF8 -ErrorAction SilentlyContinue) {
+    if (-not $line) { continue }
+    try {
+      $entry = $line | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+      continue
+    }
+    if ($entry.kind -eq 'summary') {
+      $summaries += $entry
+    }
+  }
+  if ($summaries.Count -gt 0) {
+    $latest = $summaries[-1]
+    $status = ($latest.status | Out-String).Trim()
+    $broken = 0
+    $total = 0
+    if ($latest.PSObject.Properties.Name -contains 'broken') {
+      [void][int]::TryParse(($latest.broken | Out-String).Trim(), [ref]$broken)
+    }
+    if ($latest.PSObject.Properties.Name -contains 'total') {
+      [void][int]::TryParse(($latest.total | Out-String).Trim(), [ref]$total)
+    }
+    $hint = "status={0} broken={1} total={2}" -f $status, $broken, $total
+    $passed = ($status -eq 'ok' -and $broken -eq 0)
+    Write-Check 'catalog linkcheck recent run' $passed $hint
+  } else {
+    Write-Check 'catalog linkcheck recent run' $false 'logs/catalog_linkcheck.log has no summary entries'
+  }
+} else {
+  Write-Check 'catalog linkcheck recent run' $false 'run python tools/catalog_linkcheck.py'
+}
+
 if ($env:BOT_TOKEN) {
   try {
     $resp = Invoke-WebRequest -UseBasicParsing -Uri ("https://api.telegram.org/bot{0}/getWebhookInfo" -f $env:BOT_TOKEN)
