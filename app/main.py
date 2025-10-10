@@ -43,6 +43,7 @@ from app.handlers import (
     premium_center as h_premium_center,
     profile as h_profile,
     retention as h_retention,
+    message_fallback as h_message_fallback,
     quiz_deficits as h_quiz_deficits,
     quiz_energy as h_quiz_energy,
     quiz_gut as h_quiz_gut,
@@ -66,6 +67,7 @@ from app.middlewares import (
     AuditMiddleware,
     CallbackDebounceMiddleware,
     CallbackTraceMiddleware,
+    InputValidationMiddleware,
     RateLimitMiddleware,
 )
 from app.repo import events as events_repo
@@ -458,6 +460,14 @@ def _register_callback_middlewares(dp: Dispatcher) -> None:
     )
 
 
+def _register_input_validation_middleware(dp: Dispatcher) -> InputValidationMiddleware:
+    validator = InputValidationMiddleware()
+    dp.message.middleware(validator)
+    dp.callback_query.middleware(validator)
+    startup_log.info("S4d: input validation middleware registered")
+    return validator
+
+
 def _log_startup_metadata() -> None:
     startup_log.info(
         "build: branch=%s commit=%s time=%s",
@@ -597,6 +607,7 @@ async def main() -> None:
     _register_audit_middleware(dp)
     _register_rate_limit_middleware(dp)
     _register_callback_middlewares(dp)
+    _register_input_validation_middleware(dp)
     mark("S4: middlewares registered")
     _log_startup_metadata()
 
@@ -665,6 +676,7 @@ async def main() -> None:
         routers.append(h_echo.router)
         startup_log.info("S5b: echo_debug router attached")
 
+    routers.append(h_message_fallback.router)
     routers.append(h_callback_fallback.router)
 
     startup_router = _create_startup_router(allowed_updates)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from app.catalog.api import pick_for_context, product_meta
@@ -92,17 +93,20 @@ class CalculatorDefinition:
 
 def _parse_float(text: str) -> float:
     value = text.replace(",", ".").strip()
-    if not value:
+    if not value or len(value) > 32:
         raise ValueError
-    number = float(value)
-    if not (number == number):  # check for NaN
+    try:
+        number = Decimal(value)
+    except InvalidOperation as exc:  # pragma: no cover - defensive
+        raise ValueError from exc
+    if not number.is_finite():
         raise ValueError
-    return number
+    return float(number)
 
 
 def _parse_int(text: str) -> int:
     value = text.strip()
-    if not value or not value.isdigit():
+    if not value or not value.isdigit() or len(value) > 6:
         raise ValueError
     return int(value)
 
