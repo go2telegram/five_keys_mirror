@@ -1,0 +1,86 @@
+{
+  "inline_keyboard": [
+    [
+      {
+        "callback_data": "menu:tests",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Тесты и диагностика",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "pick:menu",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Персональные рекомендации",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "catalog:menu",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Каталог",
+        "url": null,
+        "web_app": null
+      }
+    ],
+    [
+      {
+        "callback_data": "menu:premium",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Премиум-доступ",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "profile:open",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Профиль",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "menu:help",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Помощь",
+        "url": null,
+        "web_app": null
+      }
+    ]
+  ]
+}
