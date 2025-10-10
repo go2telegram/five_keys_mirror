@@ -299,6 +299,7 @@ def _register_rate_limit_middleware(dp: Dispatcher) -> RateLimitMiddleware:
         },
     )
     dp.message.middleware(rate_middleware)
+    dp.callback_query.middleware(rate_middleware)
     startup_log.info("S4b: rate limit middleware registered")
     return rate_middleware
 
