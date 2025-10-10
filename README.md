@@ -26,9 +26,7 @@ git switch main && git pull --ff-only
 ```bash
 python tools/build_products.py build \
   --descriptions-path "app/catalog/descriptions" \
-  --images-dir "app/catalog/images/products" \
-  --strict-images add --strict-descriptions add \
-  --expect-count from=images --fail-on-mismatch
+  --images-dir "app/catalog/images/products"
 
 python tools/build_products.py validate
 ```
@@ -40,14 +38,13 @@ python tools/build_products.py validate
 ```bash
 python tools/build_products.py build \
   --descriptions-url https://github.com/go2telegram/media/tree/main/descriptions \
-  --images-base https://raw.githubusercontent.com/go2telegram/media/main/media/products \
-  --strict-images add --strict-descriptions add \
-  --expect-count from=images --fail-on-mismatch
+  --images-base https://raw.githubusercontent.com/go2telegram/media/main/media/products
 
 python tools/build_products.py validate
 ```
 
-`--strict-* add` заставляет импортёр автоматически фиксировать новые артефакты в `build_summary.json` и падать, если что-то потеряно. `--expect-count from=images --fail-on-mismatch` гарантирует, что количество собранных продуктов будет равно количеству картинок.
+Импортёр всегда сохраняет подробности проверки в `build_summary.json`. Если какое-то описание или изображение не сопоставлено,
+файл содержит секции `missing_*` и `unmatched_*`, а `validate` подтвердит статус каталога.
 
 ### Отчётность и контроль «38/38»
 
