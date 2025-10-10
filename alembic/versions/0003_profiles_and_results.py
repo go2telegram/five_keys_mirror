@@ -5,8 +5,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision = "0002_profiles_and_results"
-down_revision = "0001_init_core_tables"
+revision = "0003_profiles_and_results"
+down_revision = "0002_add_referral_user_fk"
 branch_labels = None
 depends_on = None
 
