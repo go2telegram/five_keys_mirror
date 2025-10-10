@@ -78,7 +78,11 @@ class RetentionManager:
                         )
                     )
 
-        if self.premium_threshold is not None and not state.has_premium:
+        if (
+            self.premium_threshold is not None
+            and not state.has_premium
+            and state.last_energy_test is not None
+        ):
             if _should_trigger(state.last_energy_test, self.premium_threshold, now):
                 if _should_send_again(state.last_pushes.get(self.FLOW_PREMIUM), state.last_energy_test, now):
                     pushes.append(
