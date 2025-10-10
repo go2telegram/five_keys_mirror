@@ -19,6 +19,8 @@ from typing import Iterable, Iterator, Mapping, Sequence
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen, url2pathname
 
+from tools.catalog_build import CatalogValidationError, validate_catalog_payload
+
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -1092,7 +1094,12 @@ def validate_catalog(path: Path | None = None) -> int:
         raise CatalogBuildError(f"Cannot read catalog file {target}: {exc}") from exc
     except json.JSONDecodeError as exc:  # pragma: no cover
         raise CatalogBuildError(f"Catalog file {target} is not valid JSON") from exc
-    products = data.get("products")
+    try:
+        validated = validate_catalog_payload(data)
+    except CatalogValidationError as exc:
+        raise CatalogBuildError(str(exc)) from exc
+
+    products = validated.get("products")
     if not isinstance(products, list) or not products:
         raise CatalogBuildError("Catalog must contain a non-empty 'products' list")
     seen: set[str] = set()
