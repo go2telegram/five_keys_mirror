@@ -10,6 +10,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
+import app.handlers.quiz_sleep  # noqa: F401 -- registers custom result hooks
+
 from app.quiz.engine import answer_callback, load_quiz, start_quiz
 
 
