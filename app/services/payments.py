@@ -109,7 +109,9 @@ class TelegramPremiumGateway:
                 payload_hash=signature,
             )
             base_payload["order_id"] = order.id
+            signature = sign_payload(base_payload)
             base_payload["signature"] = signature
+            order.payload_hash = signature
             await orders_repo.attach_payload(session, order, base_payload)
             await commit_safely(session)
 
