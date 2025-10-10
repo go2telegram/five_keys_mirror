@@ -203,6 +203,17 @@ async def _setup_tribute_webhook() -> web.AppRunner:
     return await _setup_service_app()
 
 
+def _log_dashboard_start_failure(task: asyncio.Task[object], logger: logging.Logger) -> None:
+    if not task.done():
+        return
+    try:
+        task.result()
+    except Exception:  # pragma: no cover - surface original cause
+        logger.exception("dashboard server failed to start")
+    else:  # pragma: no cover - graceful but premature exit
+        logger.error("dashboard server exited before signalling startup")
+
+
 async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]:
     if not settings.DASHBOARD_ENABLED:
         return None, None
@@ -233,10 +244,35 @@ async def _start_dashboard_server() -> tuple[object | None, asyncio.Task | None]
     server = uvicorn_module.Server(config)
     task = asyncio.create_task(server.serve())
     started = getattr(server, "started", None)
-    if isinstance(started, asyncio.Event):
-        await started.wait()
-    else:  # pragma: no cover - fallback for older uvicorn
-        await asyncio.sleep(0)
+    start_waiter: asyncio.Task[None] | None = None
+
+    startup_logger = logging.getLogger("startup")
+
+    try:
+        if isinstance(started, asyncio.Event):
+            start_waiter = asyncio.create_task(started.wait())
+            done, _ = await asyncio.wait(
+                {task, start_waiter}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if task in done:
+                # The server task completed before signalling startup; treat as failure.
+                _log_dashboard_start_failure(task, startup_logger)
+                return None, None
+            # Startup event triggered, ensure server task is still alive.
+            if task.done():
+                _log_dashboard_start_failure(task, startup_logger)
+                return None, None
+        else:  # pragma: no cover - fallback for older uvicorn
+            await asyncio.sleep(0)
+            if task.done():
+                _log_dashboard_start_failure(task, startup_logger)
+                return None, None
+    finally:
+        if start_waiter is not None and not start_waiter.done():
+            start_waiter.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await start_waiter
+
     logging.getLogger("startup").info(
         "dashboard server running at http://%s:%s/admin/dashboard",
         settings.DASHBOARD_HOST,
