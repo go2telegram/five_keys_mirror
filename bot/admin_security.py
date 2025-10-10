@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from html import escape
 from typing import Any
 
 from aiogram import Router
@@ -14,23 +15,32 @@ from security.monitor import security_monitor
 router = Router(name="security_admin")
 
 
+def _escape(value: Any) -> str:
+    """Return a safe HTML representation of arbitrary metadata."""
+
+    return escape(str(value), quote=False)
+
+
 def _format_event(event: dict[str, Any]) -> str:
     ts = datetime.fromtimestamp(event["timestamp"]).strftime("%H:%M:%S")
     meta = event.get("metadata") or {}
     details = []
     if "ip" in meta:
-        details.append(f"IP: {meta['ip']}")
+        details.append(f"IP: {_escape(meta['ip'])}")
     if "path" in meta:
-        details.append(f"path={meta['path']}")
+        details.append(f"path={_escape(meta['path'])}")
     if "status" in meta:
-        details.append(f"status={meta['status']}")
+        details.append(f"status={_escape(meta['status'])}")
     if "pattern" in meta:
-        details.append(f"pattern={meta['pattern']}")
+        details.append(f"pattern={_escape(meta['pattern'])}")
     if "count" in meta:
-        details.append(f"count={meta['count']}")
+        details.append(f"count={_escape(meta['count'])}")
     meta_str = (" | ".join(details)) if details else ""
     suffix = f" — {meta_str}" if meta_str else ""
-    return f"[{ts}] {event['event_type']} ({event['severity']}) — {event['description']}{suffix}"
+    event_type = _escape(event.get("event_type", ""))
+    severity = _escape(event.get("severity", ""))
+    description = _escape(event.get("description", ""))
+    return f"[{ts}] {event_type} ({severity}) — {description}{suffix}"
 
 
 def _is_admin(message: Message) -> bool:
