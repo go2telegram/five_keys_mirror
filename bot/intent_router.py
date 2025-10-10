@@ -10,6 +10,7 @@ from app.config import settings
 from app.handlers import lead as lead_handler
 from app.handlers import report as report_handler
 from app.keyboards import kb_goal_menu, kb_main
+from app.storage import SESSIONS
 from nlp.intents import Intent, IntentClassifier, IntentStatistics
 
 router = Router(name="intent_router")
@@ -43,6 +44,12 @@ async def intents_admin(m: Message) -> None:
 async def route_by_intent(m: Message, state: FSMContext) -> None:
     """Classify the incoming message and trigger the matching flow."""
     if not settings.ENABLE_INTENT_UNDERSTANDING:
+        return
+
+    user = m.from_user
+    if user and SESSIONS.was_recently_active(user.id):
+        # Another router has just processed the message (e.g. calculator
+        # flows that rely on SESSIONS). Avoid sending a duplicate reply.
         return
 
     text = m.text or ""
