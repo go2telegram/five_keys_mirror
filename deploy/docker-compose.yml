@@ -8,6 +8,7 @@ services:
     environment:
       DEV_DRY_RUN: "1"
       LOG_LEVEL: "INFO"
+      SERVICE_HOST: "0.0.0.0"
     ports:
       - "8080:8080"
     volumes:
