@@ -151,14 +151,17 @@ async def home_main(c: CallbackQuery) -> None:
     )
     try:
         from app.handlers.start import greeting_for_user  # local import to avoid cycles
+        from app.i18n import resolve_locale
         from app.keyboards import kb_main
+        from app.texts import Texts
 
         if c.message is None:
             log_home.warning("home:main called without message")
             return
 
         user_id = getattr(c.from_user, "id", None)
-        greeting = greeting_for_user(user_id)
+        texts = Texts(resolve_locale(getattr(c.from_user, "language_code", None)))
+        greeting = greeting_for_user(user_id, texts)
 
         try:
             await safe_edit_text(c.message, greeting, kb_main(user_id=user_id))

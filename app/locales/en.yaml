@@ -1,4 +1,53 @@
 recommend:
-  full_prompt: "Want a bonus plan? Tap the button below for the extended version."
+  full_prompt: "Want a bonus plan? Tap the button below to get an extended version."
 content_center:
-  welcome: "Pick a quiz and question to update text."
+  welcome: "Pick a quiz and question to edit the copy."
+common:
+  welcome: "Hi there 👋 I'm the Five Keys bot.\n\nI can help you:\n• check your energy and immunity,\n• calculate key health metrics,\n• pick products for your goal.\n\nWhere should we start?"
+  ask_notify: "Want 1–2 gentle reminders per week?\nChecklists, mini-challenges and helpful facts. No spam."
+  notify_on: "Great! I'll send 1–2 short reminders per week. You can disable them anytime."
+  notify_off: "Okay, no reminders for now. If you change your mind, send /start to enable them again."
+  registration:
+    prompt: "Want Velavie discounts and bonuses?\nRegistration takes about a minute 👇"
+    unavailable: "The registration link is not available yet. Please contact your curator or try again later."
+    button: "🎁 Go to registration"
+  throttle_in_progress: "The command is already running, please try again later."
+  premium_welcome: "Welcome to the Premium Center 💎\n👉 /premium_center"
+  admin_only: "This command is available to admins only."
+  panel_busy: "The panel is already open, please try again later."
+  version:
+    header: "🤖 Current bot version:"
+    branch: "branch: {value}"
+    commit: "commit: {value}"
+    build_time: "build_time: {value}"
+nav:
+  greeting:
+    classic: "👋 Hi! I'm your personal guide to energy, health and Vilavi products.\n💡 Want to learn about your energy potential and how to boost it?\n🚀 Take a mini test — it only takes 60 seconds."
+    fresh: "👋 Hi! This is Five Keys in a new format.\nI'll help you evaluate energy levels, pick products and collect helpful materials.\n📊 Start with an express check-up or jump straight to personal recommendations.\n🧭 The navigator below has curated articles and streams."
+  onboarding:
+    confirmation:
+      classic: "Awesome! Let's see what can really improve your results 💪"
+      fresh: "Great! Preparing a refreshed selection and materials ✨"
+  returning_prompt:
+    classic: "Ready to show updated recommendations. Tap the button below to continue."
+    fresh: "Ready to share fresh recommendations, checklists and materials. Pick an action below 👇"
+  recommend:
+    goal_prompt: "Tell me your goal and I'll suggest products:"
+  menu:
+    tests: "Pick a test or calculator:"
+    premium: "💎 Premium access — choose an action:"
+    help: "ℹ️ <b>Help</b>\nQuestions about tests, products or subscriptions? Type them in chat — the team will reply within a business day.\nYou can also open “🎯 Personal recommendations” to get a consultation."
+  admin:
+    panel_help: "🛠 Admin panel\nUse the commands:\n• /stats — key metrics\n• /leads — latest leads\n• /leads_csv 500 — export leads\n• /reg — open registration"
+quiz:
+  no_quizzes: "No quizzes are available yet. Check back soon!"
+  not_found: "Quiz not found. Try /tests to see the list."
+  timeout: "⏳ The break was too long. Shall we restart the quiz?"
+  enter_name: "Specify the quiz name, for example: <code>/test energy</code>."
+  button_unrecognized: "Button not recognized"
+calc:
+  buttons:
+    back: "⬅️ Back"
+    repeat: "🔁 Repeat"
+    home: "🏠 Main menu"
+  premium_cta: "💎 Get the full AI plan"

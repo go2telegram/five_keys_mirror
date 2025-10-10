@@ -21,6 +21,8 @@ from app.handlers.quiz_common import send_product_cards
 from app.link_manager import get_register_link
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
+from app.i18n import resolve_locale
+from app.texts import Texts
 from app.utils import safe_edit_text
 from app.utils.premium_cta import send_premium_cta
 
@@ -55,7 +57,12 @@ def _ensure_session(user_id: int, slug: str) -> SessionData:
     return SESSIONS[user_id]
 
 
-def _step_keyboard(slug: str, step: Step, allow_back: bool) -> InlineKeyboardBuilder:
+def _texts_from_user(user) -> Texts:
+    language = getattr(user, "language_code", None)
+    return Texts(resolve_locale(language))
+
+
+def _step_keyboard(slug: str, step: Step, allow_back: bool, texts: Texts) -> InlineKeyboardBuilder:
     kb = InlineKeyboardBuilder()
     layout: list[int] = []
 
@@ -68,13 +75,17 @@ def _step_keyboard(slug: str, step: Step, allow_back: bool) -> InlineKeyboardBui
             layout.append(1)
 
     if allow_back:
-        kb.button(text="⬅️ Назад", callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:back")
+        kb.button(
+            text=texts.calc.back(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:back"
+        )
         layout.append(1)
 
-    kb.button(text="🔁 Повторить", callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:repeat")
+    kb.button(
+        text=texts.calc.repeat(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:repeat"
+    )
     layout.append(1)
 
-    kb.button(text="🏠 Главное меню", callback_data="home:main")
+    kb.button(text=texts.calc.home(), callback_data="home:main")
     layout.append(1)
 
     if not layout:
@@ -92,7 +103,14 @@ async def _send_step(
 ) -> None:
     index = int(session.get("step_index", 0))
     step = definition.steps[index]
-    markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
+    if isinstance(target, CallbackQuery):
+        user = target.from_user
+    else:
+        user = target.from_user
+    texts = _texts_from_user(user)
+    markup = _step_keyboard(
+        definition.slug, step, allow_back=index > 0, texts=texts
+    ).as_markup()
 
     if isinstance(target, CallbackQuery):
         message = target.message
@@ -122,6 +140,7 @@ async def _finish(
         data = {}
 
     user = target.from_user
+    texts = _texts_from_user(user)
     context = CalculationContext(data=data, user_id=user.id, username=getattr(user, "username", None))
     result: CalculationResult = definition.build_result(context)
     discount_link = await get_register_link()
@@ -149,7 +168,7 @@ async def _finish(
         utm_category=f"calc_{definition.slug}",
     )
     slug = getattr(definition, "slug", "unknown")
-    await send_premium_cta(target, "💎 Получить полный план (AI)", source=f"calc:{slug}")
+    await send_premium_cta(target, texts.calc.premium_cta(), source=f"calc:{slug}")
     SESSIONS.pop(user.id, None)
 
 
@@ -163,14 +182,20 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
     try:
         value = step.parser(text)
     except ValueError:
-        markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
+        texts = _texts_from_user(message.from_user)
+        markup = _step_keyboard(
+            definition.slug, step, allow_back=index > 0, texts=texts
+        ).as_markup()
         await message.answer(f"{step.error}\n\n{step.prompt}", reply_markup=markup)
         return
 
     for validator in step.validators:
         error = validator(value)
         if error:
-            markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
+            texts = _texts_from_user(message.from_user)
+            markup = _step_keyboard(
+                definition.slug, step, allow_back=index > 0, texts=texts
+            ).as_markup()
             await message.answer(f"{error}\n\n{step.prompt}", reply_markup=markup)
             return
 
