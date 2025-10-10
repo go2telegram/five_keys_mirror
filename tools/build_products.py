@@ -568,14 +568,27 @@ def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str,
     }
 
     def _ensure_item(key: str, value: str) -> None:
+        last_index: int | None = None
+        last_non_empty_index: int | None = None
         for index, (existing_key, existing_value) in enumerate(query_items):
             if existing_key != key:
                 continue
+            last_index = index
             if existing_value:
-                return
-            query_items[index] = (existing_key, value)
+                last_non_empty_index = index
+
+        if last_non_empty_index is not None:
+            keep_index = last_non_empty_index
+        elif last_index is not None:
+            keep_index = last_index
+            query_items[keep_index] = (key, value)
+        else:
+            query_items.append((key, value))
             return
-        query_items.append((key, value))
+
+        for index in range(len(query_items) - 1, -1, -1):
+            if index != keep_index and query_items[index][0] == key:
+                del query_items[index]
 
     for key, default_value in utm_defaults.items():
         _ensure_item(key, default_value)
