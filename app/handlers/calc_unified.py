@@ -166,15 +166,21 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         return
 
     text = message.text or ""
+    user = message.from_user
+    user_id = getattr(user, "id", None)
+    username = getattr(user, "username", None)
+
     try:
         value = step.parser(text)
     except ValueError:
         markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
         await message.answer(f"{step.error}\n\n{step.prompt}", reply_markup=markup)
         async with compat_session(session_scope) as db:
+            if user_id is not None:
+                await users_repo.get_or_create_user(db, user_id, username)
             await calculator_results_repo.log_error(
                 db,
-                message.from_user.id,
+                user_id,
                 definition.slug,
                 step=step.key,
                 raw_value=text,
@@ -189,9 +195,11 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
             markup = _step_keyboard(definition.slug, step, allow_back=index > 0).as_markup()
             await message.answer(f"{error}\n\n{step.prompt}", reply_markup=markup)
             async with compat_session(session_scope) as db:
+                if user_id is not None:
+                    await users_repo.get_or_create_user(db, user_id, username)
                 await calculator_results_repo.log_error(
                     db,
-                    message.from_user.id,
+                    user_id,
                     definition.slug,
                     step=step.key,
                     raw_value=text,
