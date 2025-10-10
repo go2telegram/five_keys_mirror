@@ -49,7 +49,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($exitCode -eq 0) {
-    $upstreamRef = git rev-parse --abbrev-ref --symbolic-full-name @{u}
+    $upstreamRef = git rev-parse --abbrev-ref --symbolic-full-name '@{u}'
     if ($LASTEXITCODE -eq 0) {
         $upstreamRef = $upstreamRef.Trim()
         if ($requireCiMarker) {
