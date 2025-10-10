@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import errno
 import importlib
+import ipaddress
 import logging
 import socket
 import time
@@ -204,6 +205,34 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
+def _doctor_host_for_checks(host: str | None) -> str:
+    """Return the host that local doctor/metrics checks should query."""
+
+    raw = (host or "").strip()
+    if not raw:
+        return "127.0.0.1"
+
+    if raw.startswith("[") and raw.endswith("]"):
+        candidate = raw[1:-1].strip()
+    else:
+        candidate = raw
+
+    if not candidate:
+        return "127.0.0.1"
+
+    try:
+        ip = ipaddress.ip_address(candidate)
+    except ValueError:
+        return candidate
+
+    if ip.is_unspecified:
+        return "127.0.0.1"
+
+    if ip.version == 6:
+        return f"[{ip.compressed}]"
+    return ip.compressed
+
+
 def _collect_migration_files() -> list[str]:
     versions_dir = PROJECT_ROOT / "alembic" / "versions"
     try:
@@ -285,9 +314,10 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
         else:
             raise
 
+    check_host = _doctor_host_for_checks(bound_host)
     log.info(
         "Service server at http://%s:%s (webhook=%s)",
-        bound_host,
+        check_host,
         bound_port,
         settings.TRIBUTE_WEBHOOK_PATH if settings.RUN_TRIBUTE_WEBHOOK else "disabled",
     )
