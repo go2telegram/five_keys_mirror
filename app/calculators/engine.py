@@ -231,6 +231,7 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
     event_payload = {
         "calc": "water",
         "total": total,
+        "liters": total,
         "glasses": glasses,
         "weight": weight,
         "activity": activity,
@@ -378,8 +379,10 @@ def _build_calorie_result(ctx: CalculationContext) -> CalculationResult:
         "weight": weight,
         "height": height,
         "activity": factor_key,
+        "factor": factor,
         "goal": goal,
         "bmr": base,
+        "base": base,
         "tdee": tdee,
         "target": target,
     }
