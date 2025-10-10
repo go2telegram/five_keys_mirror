@@ -102,7 +102,7 @@ async def execute_step(
         step=step.name,
         status_code=response.status_code,
         latency_ms=elapsed,
-        error=None if response.status_code < 500 else f"HTTP {response.status_code}",
+        error=None if response.status_code < 400 else f"HTTP {response.status_code}",
     )
 
 
