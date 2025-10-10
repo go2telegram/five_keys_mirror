@@ -9,7 +9,7 @@ import importlib
 import logging
 import time
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
@@ -57,6 +57,10 @@ try:
     from app.handlers import health as h_health
 except ImportError:  # pragma: no cover - optional router
     h_health = None
+
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    from app.config import Settings
 
 
 ALLOWED_UPDATES = ["message", "callback_query"]
@@ -178,6 +182,40 @@ async def _handle_metrics(_: web.Request) -> web.Response:
     return web.Response(text="\n".join(lines) + "\n", content_type="text/plain")
 
 
+def _resolve_service_bind(cfg: "Settings" | None = None) -> tuple[str, int]:
+    """Return host/port for the health service respecting legacy settings."""
+
+    cfg = cfg or settings
+    fields_set = getattr(cfg, "model_fields_set", set())
+
+    host = cfg.SERVICE_HOST
+    port = cfg.HEALTH_PORT
+
+    if "SERVICE_HOST" not in fields_set:
+        if cfg.RUN_TRIBUTE_WEBHOOK or "WEB_HOST" in fields_set:
+            host = cfg.WEB_HOST
+
+    if "HEALTH_PORT" not in fields_set:
+        legacy_port: int | None = None
+        if cfg.RUN_TRIBUTE_WEBHOOK:
+            if "TRIBUTE_PORT" in fields_set:
+                legacy_port = cfg.TRIBUTE_PORT
+            elif "WEB_PORT" in fields_set:
+                legacy_port = cfg.WEB_PORT
+            else:
+                legacy_port = cfg.TRIBUTE_PORT
+        else:
+            if "WEB_PORT" in fields_set:
+                legacy_port = cfg.WEB_PORT
+            elif "TRIBUTE_PORT" in fields_set:
+                legacy_port = cfg.TRIBUTE_PORT
+
+        if legacy_port is not None:
+            port = legacy_port
+
+    return host, port
+
+
 async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
     app_web = web.Application()
     app_web.router.add_get("/ping", _handle_ping)
@@ -187,8 +225,7 @@ async def _setup_service_app() -> tuple[web.AppRunner, web.BaseSite]:
 
     runner = web.AppRunner(app_web)
     await runner.setup()
-    host = settings.SERVICE_HOST
-    port = settings.HEALTH_PORT
+    host, port = _resolve_service_bind()
     log = logging.getLogger("startup")
 
     bound_host = host
