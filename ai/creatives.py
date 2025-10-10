@@ -195,13 +195,19 @@ async def generate_creatives(
         f"Тема: {theme.strip()}.",
         f"Количество вариантов: {count}.",
         f"Формат: {format_label}.",
-        guide["prompt"],
         "Каждый креатив должен включать: заголовок (title), основной текст (text), CTA (cta).",
         "CTA делай конкретным действием. Весь текст (text + CTA) ≤ 2200 символов.",
         "Пиши на русском языке.",
         "Не повторяйся — каждый вариант должен раскрывать тему с новой стороны.",
         "Верни JSON формата {\"creatives\": [{\"title\": ..., \"text\": ..., \"cta\": ...}, ...]} без дополнительных пояснений.",
     ]
+
+    guide_prompt = guide["prompt"]
+    if isinstance(guide_prompt, (list, tuple)):
+        prompt_lines.extend(str(line) for line in guide_prompt)
+    else:
+        prompt_lines.append(str(guide_prompt))
+
     if audience_line:
         prompt_lines.insert(1, f"ЦА: {audience_line}.")
     if tone_line:
