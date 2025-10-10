@@ -294,6 +294,10 @@ def evaluate_running_experiments(total_tests: int) -> List[Dict[str, object]]:
         if not analysis:
             continue
         if analysis.get("p_corrected", 1.0) > 0.05:
+            complete_experiment(experiment, None)
+            analysis["experiment"] = experiment
+            analysis["winner"] = None
+            results.append(analysis)
             continue
         if analysis["lift_abs"] > 0:
             winner = analysis["challenger"]["variant"]
