@@ -8,6 +8,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.i18n import resolve_locale
+from app.texts import Texts
+
 from .engine import (
     QuizCallbackPayload,
     answer_callback,
@@ -25,8 +28,9 @@ router = Router()
 @router.message(Command("tests"))
 async def command_tests(message: Message) -> None:
     quizzes = list_quizzes()
+    texts = Texts(resolve_locale(getattr(message.from_user, "language_code", None)))
     if not quizzes:
-        await message.answer("Пока нет доступных тестов. Загляни позже!")
+        await message.answer(texts.quiz.no_quizzes())
         return
 
     kb = InlineKeyboardBuilder()
@@ -47,15 +51,16 @@ async def command_tests(message: Message) -> None:
 
 @router.message(Command("test"))
 async def command_test(message: Message, command: CommandObject, state: FSMContext) -> None:
+    texts = Texts(resolve_locale(getattr(message.from_user, "language_code", None)))
     if not command.args:
-        await message.answer("Укажи название теста, например: <code>/test energy</code>.")
+        await message.answer(texts.quiz.enter_name())
         return
 
     name = command.args.strip().split()[0].lower()
     try:
         load_quiz(name)
     except FileNotFoundError:
-        await message.answer("Тест не найден. Попробуй /tests чтобы увидеть список.")
+        await message.answer(texts.quiz.not_found())
         return
 
     await start_quiz(message, state, name)
@@ -64,8 +69,9 @@ async def command_test(message: Message, command: CommandObject, state: FSMConte
 @router.callback_query(F.data.startswith("quiz:"))
 async def quiz_callbacks(call: CallbackQuery, state: FSMContext) -> None:
     payload: QuizCallbackPayload | None = parse_callback_data(call.data)
+    texts = Texts(resolve_locale(getattr(call.from_user, "language_code", None)))
     if not payload:
-        await call.answer("Кнопка не распознана", show_alert=True)
+        await call.answer(texts.quiz.button_unrecognized(), show_alert=True)
         return
 
     if payload.kind == "answer":

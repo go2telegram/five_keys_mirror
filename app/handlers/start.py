@@ -34,7 +34,7 @@ from app.config import settings
 from app import build_info
 from app.feature_flags import feature_flags
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
-from app.texts import ASK_NOTIFY, NOTIFY_OFF, NOTIFY_ON, REG_TEXT
+from app.texts import Texts
 from app.utils import safe_edit_text
 from app.link_manager import get_register_link
 
@@ -49,36 +49,14 @@ log_start = logging.getLogger("start")
 
 router = Router(name="start")
 
-GREETING_CLASSIC = (
-    "👋 Привет!\n"
-    "Я — твой личный гид по энергии, здоровью и продуктам Vilavi.\n"
-    "💡 Хочешь узнать, какой у тебя энергетический потенциал и как его увеличить?\n"
-    "🚀 Пройди мини-тест — всего 60 секунд."
-)
-
-GREETING_FRESH = (
-    "👋 Привет! Это Five Keys в новом формате.\n"
-    "Я помогу оценить уровень энергии, подобрать продукты и собрать полезные материалы.\n"
-    "📊 Начни с экспресс-диагностики или сразу переходи к персональным рекомендациям.\n"
-    "🧭 В навигаторе ниже — подборка статей и эфиров."
-)
-
-ONBOARDING_CONFIRMATION_CLASSIC = "Класс! Сейчас покажу, что может реально улучшить твои результаты 💪"
-ONBOARDING_CONFIRMATION_FRESH = "Отлично! Уже готовлю обновлённую подборку и материалы ✨"
-MENU_HELP_TEXT = (
-    "ℹ️ <b>Помощь</b>\n"
-    "Есть вопросы по тестам, продуктам или подписке? Напиши их прямо в чат — команда ответит в течение рабочего дня.\n"
-    "Можно также выбрать раздел «🎯 Персональные рекомендации» и получить консультацию."
-)
-
-RETURNING_PROMPT_CLASSIC = "Готов показать обновлённые рекомендации. Нажми кнопку ниже, чтобы продолжить."
-RETURNING_PROMPT_FRESH = (
-    "Готов показать свежие рекомендации, чек-листы и материалы. Выбирай действие ниже 👇"
-)
-
 START_THROTTLE_SECONDS = 3.0
 ADMIN_PANEL_THROTTLE = 5.0
 ADMIN_ROLE = "admin"
+
+
+def _texts_for_user(language_code: str | None) -> Texts:
+    locale = resolve_locale(language_code)
+    return Texts(locale)
 
 
 def _is_admin(user_id: int | None) -> bool:
@@ -94,22 +72,22 @@ def _is_admin(user_id: int | None) -> bool:
     return has_role(user_id, ADMIN_ROLE)
 
 
-def greeting_for_user(user_id: int | None) -> str:
+def greeting_for_user(user_id: int | None, texts: Texts) -> str:
     if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
-        return GREETING_FRESH
-    return GREETING_CLASSIC
+        return texts.nav.greeting_fresh()
+    return texts.nav.greeting_classic()
 
 
-def _confirmation_for_user(user_id: int | None) -> str:
+def _confirmation_for_user(user_id: int | None, texts: Texts) -> str:
     if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
-        return ONBOARDING_CONFIRMATION_FRESH
-    return ONBOARDING_CONFIRMATION_CLASSIC
+        return texts.nav.onboarding_confirmation_fresh()
+    return texts.nav.onboarding_confirmation_classic()
 
 
-def _returning_prompt(user_id: int | None) -> str:
+def _returning_prompt(user_id: int | None, texts: Texts) -> str:
     if feature_flags.is_enabled("FF_NEW_ONBOARDING", user_id=user_id):
-        return RETURNING_PROMPT_FRESH
-    return RETURNING_PROMPT_CLASSIC
+        return texts.nav.returning_prompt_fresh()
+    return texts.nav.returning_prompt_classic()
 
 
 @router.message(CommandStart())
@@ -123,10 +101,12 @@ async def start_safe(message: Message) -> None:
     if _is_admin(user_id):
         log_start.debug("START admin detected uid=%s", user_id)
 
+    texts = _texts_for_user(getattr(message.from_user, "language_code", None))
+
     remaining = touch_throttle(user_id, "start:command", START_THROTTLE_SECONDS)
     if remaining > 0:
         log_start.info("START throttled uid=%s remaining=%.2f", user_id, remaining)
-        await message.answer("Команда уже выполняется, попробуйте позже.")
+        await message.answer(texts.common.throttle_in_progress())
         return
 
     log_start.info(
@@ -135,18 +115,19 @@ async def start_safe(message: Message) -> None:
         getattr(message.from_user, "username", None),
     )
 
-    greeting = greeting_for_user(user_id)
+    greeting = greeting_for_user(user_id, texts)
     await message.answer(greeting, reply_markup=kb_onboarding_entry(user_id=user_id))
 
-    asyncio.create_task(_start_full(message, payload))
+    asyncio.create_task(_start_full(message, payload, texts.locale))
 
 
 @router.message(Command("menu"))
 async def command_menu(message: Message) -> None:
-    await message.answer(GREETING, reply_markup=kb_main())
+    texts = _texts_for_user(getattr(message.from_user, "language_code", None))
+    await message.answer(texts.common.welcome(), reply_markup=kb_main())
 
 
-async def _start_full(message: Message, payload: str) -> None:
+async def _start_full(message: Message, payload: str, locale: str) -> None:
     """Execute the database-heavy part of the /start flow in the background."""
 
     try:
@@ -183,37 +164,42 @@ async def _start_full(message: Message, payload: str) -> None:
         async with compat_session(session_scope) as session:
             is_premium, _ = await subscriptions_repo.is_active(session, tg_id)
             await commit_safely(session)
+        texts = Texts(locale)
+
         if is_premium:
-            await message.answer("Добро пожаловать в Premium-центр 💎\n👉 /premium_center")
+            await message.answer(texts.common.premium_welcome())
 
         if not already_prompted:
             async with compat_session(session_scope) as session:
                 await events_repo.upsert(session, tg_id, "notify_prompted", {})
                 await commit_safely(session)
             await message.answer(
-                ASK_NOTIFY,
+                texts.common.ask_notify(),
                 reply_markup=kb_yes_no("notify:yes", "notify:no"),
             )
 
         if is_new_user:
-            await _start_registration(message)
+            await _start_registration(message, texts)
         else:
-            await _prompt_recommendations(message)
+            await _prompt_recommendations(message, texts)
     except Exception:  # noqa: BLE001 - log unexpected issues without breaking /start
         logger.exception("start_full failed")
 
 
-async def _start_registration(message: Message) -> None:
+async def _start_registration(message: Message, texts: Texts) -> None:
     url = await get_register_link()
     if url:
-        await message.answer(REG_TEXT, reply_markup=reg_handlers.build_reg_markup(url))
+        await message.answer(
+            texts.common.registration_prompt(),
+            reply_markup=reg_handlers.build_reg_markup(url, texts),
+        )
     else:
-        await message.answer(REG_TEXT)
+        await message.answer(texts.common.registration_prompt())
 
 
-async def _prompt_recommendations(message: Message) -> None:
+async def _prompt_recommendations(message: Message, texts: Texts) -> None:
     user_id = getattr(message.from_user, "id", None)
-    prompt = _returning_prompt(user_id)
+    prompt = _returning_prompt(user_id, texts)
     await message.answer(prompt, reply_markup=kb_recommendation_prompt(user_id=user_id))
 
 
@@ -221,7 +207,8 @@ async def _prompt_recommendations(message: Message) -> None:
 async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None), texts))
     await start_quiz(c, state, "energy")
 
 
@@ -229,16 +216,18 @@ async def onboarding_energy(c: CallbackQuery, state: FSMContext) -> None:
 async def onboarding_recommend(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
-        await c.message.answer("Расскажи мне цель — подберу продукты:", reply_markup=kb_goal_menu())
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None), texts))
+        await c.message.answer(texts.nav.recommend_goal_prompt(), reply_markup=kb_goal_menu())
 
 
 @router.callback_query(F.data == "onboard:recommend_full")
 async def onboarding_recommend_full(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
-        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None)))
-        locale = resolve_locale(getattr(c.from_user, "language_code", None))
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
+        await c.message.answer(_confirmation_for_user(getattr(c.from_user, "id", None), texts))
+        locale = texts.locale
         user_id = getattr(c.from_user, "id", "anon")
         ab_copy = select_copy(
             None,
@@ -262,9 +251,10 @@ async def onboarding_register(c: CallbackQuery) -> None:
 async def menu_tests(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
         await safe_edit_text(
             c.message,
-            "Выбирай тест или калькулятор:",
+            texts.nav.menu_tests(),
             kb_quiz_menu(),
         )
 
@@ -273,9 +263,10 @@ async def menu_tests(c: CallbackQuery) -> None:
 async def menu_premium(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
         await safe_edit_text(
             c.message,
-            "💎 Премиум-доступ — выбери действие:",
+            texts.nav.menu_premium(),
             kb_premium_info_actions(),
         )
 
@@ -284,61 +275,55 @@ async def menu_premium(c: CallbackQuery) -> None:
 async def menu_help(c: CallbackQuery) -> None:
     await c.answer()
     if c.message:
-        await safe_edit_text(c.message, MENU_HELP_TEXT, kb_back_home())
+        texts = _texts_for_user(getattr(c.from_user, "language_code", None))
+        await safe_edit_text(c.message, texts.nav.menu_help(), kb_back_home())
 
 
 @router.callback_query(F.data == "notify:yes")
 async def notify_yes(c: CallbackQuery):
     await c.answer()
+    texts = _texts_for_user(getattr(c.from_user, "language_code", None))
     async with compat_session(session_scope) as session:
         await events_repo.log(session, c.from_user.id, "notify_on", {})
         await commit_safely(session)
-    await safe_edit_text(c.message, NOTIFY_ON)
+    await safe_edit_text(c.message, texts.common.notify_on())
 
 
 @router.callback_query(F.data == "notify:no")
 async def notify_no(c: CallbackQuery):
     await c.answer()
+    texts = _texts_for_user(getattr(c.from_user, "language_code", None))
     async with compat_session(session_scope) as session:
         await events_repo.log(session, c.from_user.id, "notify_off", {})
         await commit_safely(session)
-    await safe_edit_text(c.message, NOTIFY_OFF)
+    await safe_edit_text(c.message, texts.common.notify_off())
 
 
 @router.message(Command("version"))
 async def version_command(message: Message) -> None:
     user_id = getattr(message.from_user, "id", None)
+    texts = _texts_for_user(getattr(message.from_user, "language_code", None))
     if not _is_admin(user_id):
-        await message.answer("Команда доступна только администраторам.")
+        await message.answer(texts.common.admin_only())
         return
 
-    lines = [
-        "🤖 Текущая версия бота:",
-        f"branch: {getattr(build_info, 'GIT_BRANCH', 'unknown')}",
-        f"commit: {getattr(build_info, 'GIT_COMMIT', 'unknown')}",
-        f"build_time: {getattr(build_info, 'BUILD_TIME', 'unknown')}",
-    ]
-    await message.answer("\n".join(lines))
+    branch = getattr(build_info, "GIT_BRANCH", "unknown")
+    commit = getattr(build_info, "GIT_COMMIT", "unknown")
+    build_time = getattr(build_info, "BUILD_TIME", "unknown")
+    await message.answer(texts.common.version_report(branch, commit, build_time))
 
 
 @router.message(Command("panel"))
 async def panel_command(message: Message) -> None:
     user_id = getattr(message.from_user, "id", None)
+    texts = _texts_for_user(getattr(message.from_user, "language_code", None))
     if not _is_admin(user_id):
-        await message.answer("Команда доступна только администраторам.")
+        await message.answer(texts.common.admin_only())
         return
 
     remaining = touch_throttle(user_id, "admin:panel", ADMIN_PANEL_THROTTLE)
     if remaining > 0:
-        await message.answer("Панель уже открыта, попробуйте позже.")
+        await message.answer(texts.common.panel_busy())
         return
 
-    lines = [
-        "🛠 Админ-панель",
-        "Используй команды:",
-        "• /stats — ключевые метрики",
-        "• /leads — последние лиды",
-        "• /leads_csv 500 — выгрузка лидов",
-        "• /reg — открыть регистрацию",
-    ]
-    await message.answer("\n".join(lines))
+    await message.answer(texts.nav.admin_panel_help())
