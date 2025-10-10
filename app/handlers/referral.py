@@ -24,6 +24,7 @@ def _ensure_ref_fields(uid: int):
     u.setdefault("ref_conversions", 0)
     u.setdefault("ref_users", set())
     u.setdefault("ref_channel", _CHANNELS[0])
+    u.setdefault("ref_channels", {})
 
 
 async def _dashboard(bot, uid: int, *, channel: str | None = None):

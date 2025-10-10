@@ -5,6 +5,7 @@ from aiogram.filters import CommandStart
 from app.texts import WELCOME, ASK_NOTIFY, NOTIFY_ON, NOTIFY_OFF
 from app.keyboards import kb_main, kb_yes_no
 from app.storage import USERS, save_event
+from growth.referrals import decode_start_payload, log_referral_event, ReferralValidationError
 
 router = Router()
 
@@ -17,6 +18,7 @@ def _ensure_ref_fields(uid: int):
     u.setdefault("ref_joins", 0)
     u.setdefault("ref_conversions", 0)
     u.setdefault("ref_users", set())
+    u.setdefault("ref_channels", {})
 
 
 @router.message(CommandStart())
@@ -31,20 +33,43 @@ async def start(message: Message):
     _ensure_ref_fields(tg_id)
 
     # --- обработка реферального кода ---
-    if payload.startswith("ref_"):
+    if payload:
         try:
-            ref_id = int(payload.split("_", 1)[1])
-        except Exception:
-            ref_id = None
-        if ref_id and ref_id != tg_id:
-            _ensure_ref_fields(ref_id)
-            if tg_id not in USERS[ref_id]["ref_users"]:
-                USERS[ref_id]["ref_clicks"] += 1
-            if USERS[tg_id].get("referred_by") is None:
-                USERS[tg_id]["referred_by"] = ref_id
-                USERS[ref_id]["ref_users"].add(tg_id)
-                USERS[ref_id]["ref_joins"] += 1
-            save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id})
+            ref_code, channel = decode_start_payload(payload)
+        except ReferralValidationError:
+            ref_code = None
+            channel = None
+        if ref_code:
+            try:
+                ref_id = int(ref_code)
+            except Exception:
+                ref_id = None
+            if ref_id and ref_id != tg_id:
+                _ensure_ref_fields(ref_id)
+                referred_first_time = tg_id not in USERS[ref_id]["ref_users"]
+                if referred_first_time:
+                    USERS[ref_id]["ref_clicks"] += 1
+                    log_referral_event(
+                        "click",
+                        referrer_id=ref_id,
+                        referred_id=tg_id,
+                        channel=channel,
+                        metadata={"source": "start"},
+                    )
+                if USERS[tg_id].get("referred_by") is None:
+                    USERS[tg_id]["referred_by"] = ref_id
+                    USERS[tg_id]["referred_channel"] = channel
+                    USERS[ref_id]["ref_users"].add(tg_id)
+                    USERS[ref_id]["ref_joins"] += 1
+                    USERS[ref_id]["ref_channels"][tg_id] = channel
+                    log_referral_event(
+                        "join",
+                        referrer_id=ref_id,
+                        referred_id=tg_id,
+                        channel=channel,
+                        metadata={"source": "start"},
+                    )
+                save_event(tg_id, ref_id, "ref_join", {"ref_by": ref_id, "channel": channel})
 
     await message.answer(WELCOME, reply_markup=kb_main())
 

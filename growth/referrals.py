@@ -14,6 +14,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional
 from urllib.parse import urlencode
 
+_PAYLOAD_PREFIX = "ref_"
+_PAYLOAD_CHANNEL_MARKER = "__src_"
+
 _ALLOWED_SRC_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_-.")
 _DEFAULT_CHANNEL = "organic"
 
@@ -61,19 +64,46 @@ def _normalise_channel(channel: Optional[str]) -> str:
     return channel
 
 
+def _encode_start_payload(ref_code: str, channel: str) -> str:
+    return f"{_PAYLOAD_PREFIX}{ref_code}{_PAYLOAD_CHANNEL_MARKER}{channel}" if channel else f"{_PAYLOAD_PREFIX}{ref_code}"
+
+
+def _decode_start_payload(raw: str) -> tuple[str, str]:
+    if not raw or not raw.startswith(_PAYLOAD_PREFIX):
+        raise ReferralValidationError("Missing referral payload")
+
+    remainder = raw[len(_PAYLOAD_PREFIX) :]
+    channel = _DEFAULT_CHANNEL
+    if _PAYLOAD_CHANNEL_MARKER in remainder:
+        remainder, _, channel_raw = remainder.partition(_PAYLOAD_CHANNEL_MARKER)
+        channel = _normalise_channel(channel_raw)
+
+    clean_ref = remainder.strip()
+    if not clean_ref:
+        raise ReferralValidationError("Empty referral code is not allowed")
+    if len(clean_ref) > 64:
+        raise ReferralValidationError("Referral code is too long")
+    return clean_ref, channel
+
+
 def generate_referral_link(bot_username: str, ref_code: str, channel: Optional[str] = None) -> str:
-    """Compose a shareable referral link with validated utm parameters."""
+    """Compose a shareable referral link using the Telegram start payload."""
 
     channel = _normalise_channel(channel)
     clean_code = str(ref_code).strip()
     if not clean_code:
         raise ReferralValidationError("Empty referral code is not allowed")
-    query = urlencode({"ref": clean_code, "src": channel})
+    payload = _encode_start_payload(clean_code, channel if channel != _DEFAULT_CHANNEL else "")
+    query = urlencode({"start": payload})
     return f"https://t.me/{bot_username}?{query}"
 
 
 def validate_payload(payload: Mapping[str, str]) -> tuple[str, str]:
     """Validate raw query parameters coming from Telegram deep-linking."""
+
+    start_payload = payload.get("start")
+    if start_payload:
+        return _decode_start_payload(start_payload)
 
     ref = payload.get("ref")
     src = payload.get("src")
@@ -86,6 +116,12 @@ def validate_payload(payload: Mapping[str, str]) -> tuple[str, str]:
     if len(clean_ref) > 64:
         raise ReferralValidationError("Referral code is too long")
     return clean_ref, channel
+
+
+def decode_start_payload(raw: str) -> tuple[str, str]:
+    """Public helper to interpret `/start` deep-link payloads."""
+
+    return _decode_start_payload(raw)
 
 
 def log_referral_event(

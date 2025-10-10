@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 
 from app.config import settings
 from app.storage import USERS
+from growth.bonuses import award_referral_bonus
+from growth.referrals import log_referral_event
 
 # --- уведомления ---
 from aiogram import Bot
@@ -90,6 +92,34 @@ async def tribute_webhook(request: web.Request) -> web.Response:
                 USERS.setdefault(ref_by, {}).setdefault("ref_conversions", 0)
                 USERS[ref_by]["ref_conversions"] += 1
                 if LOG: print(f"[TRIBUTE] ref conversion: user={user_id} by={ref_by}")
+
+                channel = (
+                    USERS.get(ref_by, {})
+                    .get("ref_channels", {})
+                    .get(user_id)
+                    or USERS.get(user_id, {}).get("referred_channel")
+                )
+                log_referral_event(
+                    "conversion",
+                    referrer_id=ref_by,
+                    referred_id=user_id,
+                    channel=channel,
+                    metadata={
+                        "source": "tribute",
+                        "subscription": sub_name,
+                        "plan": plan,
+                    },
+                )
+                award_referral_bonus(
+                    referrer_id=ref_by,
+                    referred_id=user_id,
+                    channel=channel,
+                    metadata={
+                        "source": "tribute",
+                        "subscription": sub_name,
+                        "plan": plan,
+                    },
+                )
 
             if NOTIFY:
                 await _notify_user(user_id, plan)
