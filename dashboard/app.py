@@ -39,7 +39,20 @@ ENABLE_GLOBAL_DASHBOARD = (
 STREAMLIT_PORT = int(os.getenv("GLOBAL_DASHBOARD_PORT", "8500"))
 STREAMLIT_BASE_PATH = os.getenv("GLOBAL_DASHBOARD_BASE_PATH", "admin")
 BACKEND_PORT = int(os.getenv("GLOBAL_DASHBOARD_BACKEND_PORT", "8700"))
-TELEGRAM_OAUTH_TOKEN = os.getenv("TELEGRAM_OAUTH_TOKEN", "demo-admin-token")
+_DEFAULT_TELEGRAM_TOKEN = "demo-admin-token"
+
+
+def _load_dashboard_token() -> str:
+    token = os.getenv("TELEGRAM_OAUTH_TOKEN")
+    if token and token.strip() and token != _DEFAULT_TELEGRAM_TOKEN:
+        return token
+    raise SystemExit(
+        "TELEGRAM_OAUTH_TOKEN must be explicitly set to a non-default value before the "
+        "global dashboard can start."
+    )
+
+
+TELEGRAM_OAUTH_TOKEN = _load_dashboard_token()
 
 
 def _ensure_enabled() -> None:
