@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from aiogram import F, Router
+from aiogram.exceptions import SkipHandler
 from aiogram.types import CallbackQuery
 
 from app.handlers import (
@@ -36,8 +37,8 @@ async def launch_quiz_from_tests_menu(callback: CallbackQuery) -> None:
     _, _, slug = data.partition(":")
 
     if slug == "menu":
-        # The menu itself is handled in the navigator; nothing to do here.
-        return
+        # Allow the navigator to handle rendering the tests menu.
+        raise SkipHandler
 
     handler = _TEST_HANDLERS.get(slug)
     if handler is None:
