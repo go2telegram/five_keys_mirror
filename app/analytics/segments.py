@@ -239,7 +239,10 @@ def persist(mapping: dict[int, str]) -> None:
                 pipe.hset("segments:users", mapping)
             else:
                 pipe.delete("segments:users")
-            pipe.hset("segments:summary", {k: str(v) for k, v in summary.items()})
+            if summary:
+                pipe.hset("segments:summary", {k: str(v) for k, v in summary.items()})
+            else:
+                pipe.delete("segments:summary")
             pipe.set("segments:updated_at", updated_at.isoformat())
             pipe.execute()
         except Exception:
@@ -289,6 +292,9 @@ def persist(mapping: dict[int, str]) -> None:
                         )
                         conn.execute(stmt)
                     else:
+                        conn.execute(
+                            delete(table).where(table.c.user_id.in_(list(mapping.keys())))
+                        )
                         conn.execute(insert(table), rows)
                 if rows:
                     conn.execute(
