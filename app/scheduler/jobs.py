@@ -6,15 +6,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import func, or_, select
 
 from app.config import settings
 from app.db.models import Event, Lead, Subscription
 from app.db.session import session_scope
 from app.repo import events as events_repo, retention as retention_repo
+from app.retention import journeys as journeys_logic, tips as tips_logic
 from app.services.reminders import ReminderConfig, ReminderPlanner
-from app.services import retention_logic, retention_messages
+from app.services import retention_logic
 from app.utils_openai import ai_generate
 
 _analytics_log = logging.getLogger("scheduler.analytics")
@@ -53,18 +53,16 @@ async def send_daily_tips(bot: Bot) -> None:
     async with session_scope() as session:
         settings = await retention_repo.list_tip_candidates(session)
         for setting in settings:
-            tz = retention_logic.ensure_timezone(setting.timezone)
-            local_now = now.astimezone(tz)
-            if not retention_logic.should_send_tip(local_now, setting.tips_time, setting.last_tip_sent_at):
+            local_now = tips_logic.local_now(now, setting.timezone)
+            if not tips_logic.should_send_tip(local_now, setting.tips_time, setting.last_tip_sent_at):
                 continue
             tip = await retention_repo.pick_tip(session, exclude_id=setting.last_tip_id)
             if tip is None:
                 continue
-            text = retention_messages.format_tip_message(tip.text)
-            kb = InlineKeyboardBuilder()
-            kb.button(text="👍 Полезно", callback_data=f"tips:like:{tip.id}")
+            text = tips_logic.clean_tip_text(tip.text)
+            markup = tips_logic.tip_keyboard(tip.id)
             try:
-                await bot.send_message(setting.user_id, text, reply_markup=kb.as_markup())
+                await bot.send_message(setting.user_id, text, reply_markup=markup)
             except Exception:
                 continue
             await retention_repo.update_tip_log(session, setting, tip=tip, sent_at=now)
@@ -199,7 +197,7 @@ async def send_water_reminders(bot: Bot) -> None:
     async with session_scope() as session:
         settings = await retention_repo.list_water_candidates(session)
         for setting in settings:
-            tz = retention_logic.ensure_timezone(setting.timezone)
+            tz = tips_logic.ensure_timezone(setting.timezone)
             local_now = now.astimezone(tz)
             if setting.water_window_end <= setting.water_window_start:
                 continue
@@ -211,6 +209,31 @@ async def send_water_reminders(bot: Bot) -> None:
             if weight is None:
                 weight = await retention_repo.latest_weight_from_events(session, setting.user_id)
                 await retention_repo.update_weight(session, setting, weight)
+            if weight is None:
+                if setting.water_last_sent_date != local_now.date():
+                    try:
+                        await bot.send_message(
+                            setting.user_id,
+                            "💧 Чтобы посчитать норму воды, добавь свой вес через команду /register.",
+                        )
+                    except Exception:
+                        pass
+                    else:
+                        await events_repo.log(
+                            session,
+                            setting.user_id,
+                            "water_weight_prompt",
+                            {},
+                        )
+                await retention_repo.record_water_progress(
+                    session,
+                    setting,
+                    goal_ml=setting.water_goal_ml,
+                    reminders=0,
+                    sent_date=local_now.date(),
+                    sent_count=0,
+                )
+                continue
 
             goal_ml = retention_logic.water_goal_from_weight(weight)
             reminder_count = retention_logic.water_reminders_from_weight(weight)
@@ -284,18 +307,10 @@ async def process_retention_journeys(bot: Bot) -> None:
         due = await retention_repo.pending_journeys(session, now=now, limit=100)
         sent_entries: list = []
         for entry in due:
-            if entry.journey == "sleep_checkin":
-                text = retention_messages.format_sleep_journey_message()
-                kb = InlineKeyboardBuilder()
-                kb.button(text="🔔 включить трекер сна", callback_data="journey:tracker_sleep")
-                markup = kb.as_markup()
-            elif entry.journey == "stress_relief":
-                text = retention_messages.format_stress_journey_message()
-                kb = InlineKeyboardBuilder()
-                kb.button(text="💎 Премиум-план", callback_data="journey:premium_plan")
-                markup = kb.as_markup()
-            else:
+            text = journeys_logic.format_message(entry.journey)
+            if not text:
                 continue
+            markup = journeys_logic.keyboard(entry.journey)
 
             try:
                 await bot.send_message(entry.user_id, text, reply_markup=markup)

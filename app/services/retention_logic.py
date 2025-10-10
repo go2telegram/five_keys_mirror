@@ -3,14 +3,12 @@ from __future__ import annotations
 import datetime as dt
 from zoneinfo import ZoneInfo
 
+from app.retention import tips as tips_logic
+
 
 def ensure_timezone(tz_name: str | None) -> ZoneInfo:
-    try:
-        if tz_name:
-            return ZoneInfo(tz_name)
-    except Exception:
-        pass
-    return ZoneInfo("UTC")
+    """Backward-compatible proxy to :func:`app.retention.tips.ensure_timezone`."""
+    return tips_logic.ensure_timezone(tz_name)
 
 
 def ensure_aware(moment: dt.datetime) -> dt.datetime:
@@ -20,12 +18,7 @@ def ensure_aware(moment: dt.datetime) -> dt.datetime:
 
 
 def should_send_tip(now_local: dt.datetime, send_time: dt.time, last_sent: dt.datetime | None) -> bool:
-    if now_local.time() < send_time:
-        return False
-    if last_sent is None:
-        return True
-    last_sent = ensure_aware(last_sent).astimezone(now_local.tzinfo or dt.timezone.utc)
-    return last_sent.date() < now_local.date()
+    return tips_logic.should_send_tip(now_local, send_time, last_sent)
 
 
 def water_goal_from_weight(weight: float | None) -> int:

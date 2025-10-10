@@ -27,6 +27,7 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.retention import journeys as journeys_logic
 from app.middlewares import (
     is_callback_trace_enabled,
     set_callback_trace_enabled,
@@ -123,14 +124,30 @@ async def retention_report(message: Message) -> None:
         sent = await events_repo.stats(session, name="daily_tip_sent", since=since)
         clicks = await events_repo.stats(session, name="daily_tip_click", since=since)
         click_users = await retention_repo.count_tip_click_users(session, since=since)
+        followups = await retention_repo.followup_conversion_stats(session, since=since)
 
     ctr = (clicks / sent * 100.0) if sent else 0.0
+    followup_lines: list[str] = []
+    labels = {
+        journeys_logic.SLEEP_JOURNEY: "Сон",
+        journeys_logic.STRESS_JOURNEY: "Стресс",
+    }
+    for key, label in labels.items():
+        stats = followups.get(key, {"sent": 0, "cta": 0})
+        sent_j = stats.get("sent", 0)
+        cta = stats.get("cta", 0)
+        rate = (cta / sent_j * 100.0) if sent_j else 0.0
+        followup_lines.append(f"• {label}: {cta}/{sent_j} ({rate:.1f}%)")
+    followup_block = "\n".join(followup_lines) if followup_lines else "• нет данных"
+
     await message.answer(
         "📈 Retention-отчёт\n"
         f"Советы включены у: {tip_enabled}\n"
         f"Отправлено за 24ч: {sent}\n"
         f"Кликов за 24ч: {clicks} (уникальных: {click_users})\n"
-        f"CTR: {ctr:.1f}%",
+        f"CTR: {ctr:.1f}%\n"
+        "Follow-up:\n"
+        f"{followup_block}",
     )
 
 

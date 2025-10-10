@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db.models import DailyTip, Event, RetentionJourney, RetentionSetting
+from app.retention import journeys as journeys_logic
 
-_DEFAULT_TZ = settings.TIMEZONE or "UTC"
+_DEFAULT_TZ = settings.TIMEZONE or "Europe/Moscow"
 
 
 async def get_or_create_settings(
@@ -202,3 +203,39 @@ async def count_tip_click_users(session: AsyncSession, since: dt.datetime | None
     result = await session.execute(stmt)
     value = result.scalar_one()
     return int(value or 0)
+
+
+async def count_journeys_sent(
+    session: AsyncSession, journey: str, since: dt.datetime | None = None
+) -> int:
+    stmt = select(func.count(RetentionJourney.id)).where(
+        RetentionJourney.journey == journey,
+        RetentionJourney.sent_at.is_not(None),
+    )
+    if since is not None:
+        stmt = stmt.where(RetentionJourney.sent_at >= since)
+    result = await session.execute(stmt)
+    value = result.scalar_one()
+    return int(value or 0)
+
+
+async def count_journey_cta_events(
+    session: AsyncSession, event_name: str, since: dt.datetime | None = None
+) -> int:
+    stmt = select(func.count(Event.id)).where(Event.name == event_name)
+    if since is not None:
+        stmt = stmt.where(Event.ts >= since)
+    result = await session.execute(stmt)
+    value = result.scalar_one()
+    return int(value or 0)
+
+
+async def followup_conversion_stats(
+    session: AsyncSession, since: dt.datetime | None = None
+) -> dict[str, dict[str, int]]:
+    stats: dict[str, dict[str, int]] = {}
+    for journey, event_name in journeys_logic.JOURNEY_CTA_EVENTS.items():
+        sent = await count_journeys_sent(session, journey, since)
+        cta = await count_journey_cta_events(session, event_name, since)
+        stats[journey] = {"sent": sent, "cta": cta}
+    return stats
