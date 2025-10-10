@@ -99,8 +99,18 @@ async def feature_flags_all() -> dict[str, bool]:
     raw = await client.hgetall(FEATURE_FLAGS_KEY)
     result: dict[str, bool] = {}
     for key, value in raw.items():
-        normalized = str(value).strip().lower()
-        result[str(key)] = normalized in {"1", "true", "yes", "on"}
+        if isinstance(key, (bytes, bytearray, memoryview)):
+            key_str = key.decode("utf-8", "ignore")
+        else:
+            key_str = str(key)
+
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            value_str = value.decode("utf-8", "ignore")
+        else:
+            value_str = str(value)
+
+        normalized = value_str.strip().lower()
+        result[key_str] = normalized in {"1", "true", "yes", "on"}
     return result
 
 
