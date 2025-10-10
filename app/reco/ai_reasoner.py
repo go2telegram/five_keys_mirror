@@ -19,9 +19,15 @@ from app.repo.calculators import get_user_calcs
 from app.repo.quiz_results import get_user_quiz_results
 from app.repo.user_profile import get_user_profile
 from app.utils.cards import build_order_link
+from app.utils_openai import ai_generate
 
 _PROMPTS_DIR = Path("app/reco/prompts")
 _AI_PLAN_MODEL = os.getenv("AI_PLAN_MODEL", "gpt-4o-mini")
+_AI_PLAN_SYSTEM_PROMPT = (
+    "Ты — заботливый, практичный ассистент по образу жизни и нутри-поддержке. "
+    "Работаешь только с данными пользователя и каталога продуктов. Стиль — кратко, "
+    "дружелюбно и полезно, без медицинских диагнозов."
+)
 
 
 def _json_default(value):  # noqa: ANN001 - helper for json dumps
@@ -107,7 +113,7 @@ async def build_ai_plan(user_id: int, horizon: str = "7d") -> str:
     ]
     tags = sorted({tag for item in catalog_subset for tag in item.get("tags", []) if tag})
 
-    rendered = template.render(
+    prompt = template.render(
         profile=profile or {},
         quizzes=quizzes or [],
         calculators=calculators or [],
@@ -116,9 +122,8 @@ async def build_ai_plan(user_id: int, horizon: str = "7d") -> str:
         model=_AI_PLAN_MODEL,
     )
 
-    # Placeholder: the rendered prompt is returned for offline tests.
-    # Real deployment should call the LLM and return its response instead.
-    return rendered
+    response = await ai_generate(prompt, sys=_AI_PLAN_SYSTEM_PROMPT)
+    return response
 
 
 _TAG_TIPS: dict[str, str] = {
