@@ -29,7 +29,8 @@ async def _edit_text_if_changed(
 ) -> None:
     if message is None:
         return
-    if message.text != new_text or not _markups_equal(message.reply_markup, new_markup):
+    current_text = message.html_text if message.html_text is not None else message.text
+    if current_text != new_text or not _markups_equal(message.reply_markup, new_markup):
         await message.edit_text(new_text, reply_markup=new_markup)
 
 
