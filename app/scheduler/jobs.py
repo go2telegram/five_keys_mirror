@@ -159,7 +159,7 @@ async def send_retention_reminders(bot: Bot) -> None:
         for uid in sent_start:
             await events_repo.log(session, uid, "retention_test_nudge", {})
         for uid in sent_premium:
-        await events_repo.log(session, uid, "retention_premium_nudge", {})
+            await events_repo.log(session, uid, "retention_premium_nudge", {})
         await session.commit()
 
 
