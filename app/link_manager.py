@@ -18,6 +18,12 @@ from urllib.parse import quote, urlsplit
 import httpx
 
 from app.config import settings
+from app.http_client import (
+    AsyncCircuitBreaker,
+    CircuitBreakerOpenError,
+    async_http_client,
+    request_with_retries,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -38,6 +44,13 @@ _PRODUCT_LINKS: dict[str, str] = {}
 
 _ACTOR: contextvars.ContextVar[str | int | None] = contextvars.ContextVar(
     "link_manager_actor", default=None
+)
+
+_PING_CIRCUIT_BREAKER = AsyncCircuitBreaker(
+    max_failures=settings.HTTP_CIRCUIT_BREAKER_MAX_FAILURES,
+    base_delay=settings.HTTP_CIRCUIT_BREAKER_BASE_DELAY,
+    max_delay=settings.HTTP_CIRCUIT_BREAKER_MAX_DELAY,
+    name="link-ping",
 )
 
 __all__ = [
@@ -389,8 +402,21 @@ def _schedule_ping(url: str) -> None:
 
 async def _ping_url(url: str) -> None:
     try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-            await client.head(url)
+        async with async_http_client(follow_redirects=True) as client:
+            await request_with_retries(
+                "HEAD",
+                url,
+                client=client,
+                circuit_breaker=_PING_CIRCUIT_BREAKER,
+                retries=settings.HTTP_RETRY_ATTEMPTS,
+                backoff_factor=settings.HTTP_RETRY_BACKOFF_INITIAL,
+                backoff_max=settings.HTTP_RETRY_BACKOFF_MAX,
+                retry_statuses=settings.HTTP_RETRY_STATUS_CODES,
+            )
+    except CircuitBreakerOpenError:
+        LOG.warning("link_manager: circuit open for HEAD %s", url)
+    except httpx.HTTPError as exc:
+        LOG.warning("link_manager: HEAD %s failed: %s", url, exc)
     except Exception:  # noqa: BLE001 - network failures are not fatal
         LOG.warning("link_manager: HEAD %s failed", url)
 
