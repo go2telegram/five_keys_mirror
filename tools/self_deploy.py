@@ -154,7 +154,7 @@ def _load_metrics(source: Optional[str]) -> Dict[str, Any]:
             try:
                 return json.loads(env_metrics)
             except json.JSONDecodeError:
-                print("[warn] Failed to parse METRICS_DATA, falling back to defaults", file=sys.stderr)
+                raise ValueError("Invalid METRICS_DATA JSON")
         return default_metrics
     path = Path(source)
     if path.exists():
