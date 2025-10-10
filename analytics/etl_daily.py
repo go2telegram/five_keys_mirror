@@ -82,9 +82,15 @@ def _load_into_clickhouse(records: Sequence[EventRecord], table: str = DEFAULT_T
 
     with httpx.Client(base_url=CLICKHOUSE_URL, timeout=30.0) as client:
         _ensure_clickhouse_database(client, table=table)
-        payload = "\n".join(
-            json.dumps(record.to_row(), ensure_ascii=False, sort_keys=True) for record in records
-        )
+        payload_rows = []
+        for record in records:
+            row = record.to_row()
+            ts = row.get("ts")
+            if isinstance(ts, datetime):
+                row = dict(row)
+                row["ts"] = ts.isoformat()
+            payload_rows.append(json.dumps(row, ensure_ascii=False, sort_keys=True))
+        payload = "\n".join(payload_rows)
         response = client.post(
             "/",
             params={"query": f"INSERT INTO {table} FORMAT JSONEachRow"},
