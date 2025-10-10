@@ -327,8 +327,9 @@ async def premium_center_edit_goals(c: CallbackQuery) -> None:
 async def premium_center_goal_toggle(c: CallbackQuery) -> None:
     if await _deny_if_not_premium(c):
         return
-    parts = (c.data or "").split(":", 2)
-    goal = parts[-1] if len(parts) == 3 else ""
+    data = c.data or ""
+    parts = data.rsplit(":", 1)
+    goal = parts[-1] if len(parts) == 2 else ""
     current = set(_load_goal_state(c.from_user.id))
     if goal in current:
         current.remove(goal)
