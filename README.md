@@ -2,6 +2,14 @@
 
 Ассистент Telegram для MITO-сообщества. Бот собирает заявки, выдаёт рекомендации и управляет подписками.
 
+## One-liner dev up
+
+```bash
+bash tools/dev_up.sh --dry
+bash tools/dev_up.sh --prod --bot-token="123:AA..." --health-port=8080
+bash tools/dev_up.sh --links --base-register="https://vilavi.com/reg/NEWID" --dry
+```
+
 ## Premium-центр
 
 Premium-подписка открывает личный центр с планами и трекером привычек. Основные команды:
