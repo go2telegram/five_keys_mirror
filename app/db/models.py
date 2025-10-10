@@ -131,6 +131,7 @@ class Referral(Base):
         Index("ix_ref_user", "user_id"),
         Index("ix_ref_invited", "invited_id"),
         Index("ix_ref_conv", "converted_at"),
+        UniqueConstraint("user_id", "invited_id", name="uq_referrals_user_invited"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

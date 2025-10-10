@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Referral
 
 
-async def create(session: AsyncSession, referrer_id: int, invited_id: int) -> Referral:
+async def upsert_referral(session: AsyncSession, referrer_id: int, invited_id: int) -> Referral:
+    """Create a referral record if missing, otherwise return the existing one."""
+
+    stmt = select(Referral).where(Referral.user_id == referrer_id, Referral.invited_id == invited_id)
+    result = await session.execute(stmt)
+    referral = result.scalar_one_or_none()
+    if referral is not None:
+        return referral
+
     referral = Referral(
         user_id=referrer_id,
         invited_id=invited_id,
@@ -17,6 +25,13 @@ async def create(session: AsyncSession, referrer_id: int, invited_id: int) -> Re
     )
     session.add(referral)
     await session.flush()
+    return referral
+
+
+async def create(session: AsyncSession, referrer_id: int, invited_id: int) -> Referral:
+    """Backward-compatible helper delegating to :func:`upsert_referral`."""
+
+    referral = await upsert_referral(session, referrer_id, invited_id)
     return referral
 
 

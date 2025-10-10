@@ -41,6 +41,53 @@ async def log(session: AsyncSession, user_id: Optional[int], name: str, meta: Op
     return event
 
 
+async def upsert(
+    session: AsyncSession,
+    user_id: Optional[int],
+    name: str,
+    meta: Optional[Dict[str, Any]] = None,
+) -> Event:
+    """Ensure a single event per ``(user_id, name)`` combination."""
+
+    stmt = (
+        select(Event)
+        .where(Event.user_id == user_id, Event.name == name)
+        .order_by(Event.id.asc())
+        .limit(1)
+    )
+    try:
+        result = await session.execute(stmt)
+    except (OperationalError, ProgrammingError) as exc:
+        if _is_missing_table_error(exc):
+            return Event(user_id=user_id, name=name, meta=meta or {}, ts=datetime.now(timezone.utc))
+        raise
+
+    event = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    payload = meta or {}
+    if event is None:
+        event = Event(user_id=user_id, name=name, meta=payload, ts=now)
+        session.add(event)
+    else:
+        event.meta = payload
+        event.ts = now
+
+    try:
+        await session.flush()
+    except (OperationalError, ProgrammingError) as exc:
+        if not _is_missing_table_error(exc):
+            raise
+        rollback = getattr(session, "rollback", None)
+        if callable(rollback):
+            result = rollback()
+            if inspect.isawaitable(result):
+                try:
+                    await result
+                except Exception:  # pragma: no cover
+                    pass
+    return event
+
+
 async def last_by(session: AsyncSession, user_id: int, name: str) -> Optional[Event]:
     stmt = select(Event).where(Event.user_id == user_id, Event.name == name).order_by(Event.ts.desc()).limit(1)
     try:

@@ -75,13 +75,13 @@ async def tips_toggle(message: Message, command: CommandObject) -> None:
         setting = await retention_repo.get_or_create_settings(session, message.from_user.id)
         if action.startswith("on"):
             await retention_repo.set_tips_enabled(session, message.from_user.id, True)
-            await events_repo.log(session, message.from_user.id, "daily_tip_on", {})
+            await events_repo.upsert(session, message.from_user.id, "daily_tip_on", {})
             await commit_safely(session)
             await message.answer("🔔 Советы включены. Следующий придёт в привычное время.")
             return
         if action.startswith("off"):
             await retention_repo.set_tips_enabled(session, message.from_user.id, False)
-            await events_repo.log(session, message.from_user.id, "daily_tip_off", {})
+            await events_repo.upsert(session, message.from_user.id, "daily_tip_off", {})
             await commit_safely(session)
             await message.answer("🔕 Советы выключены. Включить снова: /tips on")
             return

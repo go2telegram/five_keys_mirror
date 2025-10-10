@@ -3,9 +3,10 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Base
+from app.db.models import Base, Event
 from app.repo import events, leads, referrals, subscriptions, users
 
 os.environ.setdefault("BOT_TOKEN", "test-token")
@@ -88,8 +89,11 @@ def test_subscriptions_set_plan():
 def test_referrals():
     async def _test():
         async with SessionManager() as session:
-            await referrals.create(session, referrer_id=10, invited_id=20)
-            await referrals.create(session, referrer_id=10, invited_id=21)
+            first = await referrals.upsert_referral(session, referrer_id=10, invited_id=20)
+            duplicate = await referrals.upsert_referral(session, referrer_id=10, invited_id=20)
+            assert first.id == duplicate.id
+
+            await referrals.upsert_referral(session, referrer_id=10, invited_id=21)
             await session.commit()
 
             invited, converted = await referrals.stats_for_referrer(session, 10)
@@ -163,5 +167,27 @@ def test_events_notify():
             recipients = await events.notify_recipients(session)
             assert 1 in recipients
             assert 2 not in recipients
+
+    run(_test())
+
+
+def test_events_upsert_idempotent():
+    async def _test():
+        async with SessionManager() as session:
+            created = await events.upsert(session, 1, "notify_on", {"status": "on"})
+            await session.commit()
+
+            updated = await events.upsert(session, 1, "notify_on", {"status": "still_on"})
+            await session.commit()
+
+            assert created.id == updated.id
+
+            total_stmt = select(func.count(Event.id))
+            total = await session.execute(total_stmt)
+            assert total.scalar_one() == 1
+
+            latest = await events.last_by(session, 1, "notify_on")
+            assert latest is not None
+            assert latest.meta == {"status": "still_on"}
 
     run(_test())
