@@ -186,8 +186,8 @@ async def cmd_import_links(message: Message, command: CommandObject) -> None:
         _PENDING_IMPORT.pop(admin_id, None)
         await message.answer(
             "✅ Импорт применён\n"
-            f"Сет: <b>{result['set']}</b>\n"
-            f"Регистрация: {result['register'] or '—'}\n"
+            f"Сет: <b>{html.escape(result['set'])}</b>\n"
+            f"Регистрация: {html.escape(result['register']) if result['register'] else '—'}\n"
             f"Overrides: {len(result['products'])}",
             parse_mode="HTML",
         )
@@ -224,23 +224,27 @@ async def handle_import_payload(message: Message) -> None:
         await message.answer(f"⚠️ {exc}")
         return
 
-    payload = {"register": result["register"], "products": result["products"]}
+    payload: dict[str, Any] = {"products": result["products"]}
+    if result.get("register_in_payload"):
+        payload["register"] = result["register"]
     warnings = result.get("warnings") or []
     _PENDING_IMPORT[admin_id] = PendingImport(set=result["set"], payload=payload, warnings=warnings)
 
-    preview_lines = [f"Сет: <b>{result['set']}</b>"]
-    preview_lines.append(f"Регистрация: {result['register'] or '—'}")
+    preview_lines = [f"Сет: <b>{html.escape(result['set'])}</b>"]
+    preview_lines.append(
+        f"Регистрация: {html.escape(result['register']) if result['register'] else '—'}"
+    )
     preview_lines.append(f"Overrides: {len(result['products'])}")
     sample = list(result["products"].items())[:5]
     if sample:
         preview_lines.append("Пример:")
         for pid, url in sample:
-            preview_lines.append(f"• {pid}: {url}")
+            preview_lines.append(f"• {html.escape(pid)}: {html.escape(url)}")
     if warnings:
         preview_lines.append("")
         preview_lines.append("⚠️ Предупреждения:")
         for warn in warnings:
-            preview_lines.append(f"- {warn}")
+            preview_lines.append(f"- {html.escape(warn)}")
     preview_lines.append("")
     preview_lines.append("Отправь /import_links apply чтобы применить или /import_links cancel")
     await message.answer("\n".join(preview_lines), parse_mode="HTML")
