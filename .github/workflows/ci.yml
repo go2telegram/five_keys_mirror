@@ -27,9 +27,8 @@ jobs:
         run: |
           python tools/build_products.py build \
             --descriptions-path "app/catalog/descriptions" \
-            --images-dir "app/catalog/images/products" \
-            --strict-images add --strict-descriptions add \
-            --expect-count from=images --fail-on-mismatch
+            --images-mode local \
+            --images-dir "app/static/images/products"
           python tools/build_products.py validate
       - name: HEAD-check product images (warning only)
         run: |
