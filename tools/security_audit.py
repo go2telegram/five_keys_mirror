@@ -15,28 +15,25 @@ def run_command(command: str) -> subprocess.CompletedProcess:
 def collect_reports() -> Dict[str, Any]:
     results: Dict[str, Any] = {}
     results["pip_audit"] = run_command("pip-audit -r requirements.txt -f json").stdout or "[]"
-    results["safety"] = run_command(
-        "safety check --full-report -r requirements.txt --json"
-    ).stdout or "[]"
+    results["safety"] = run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
     results["bandit"] = run_command("bandit -q -r app -f json").stdout or "{}"
     # gitleaks exit code is non-zero when leaks are found; ignore to allow summary generation
-    results["gitleaks"] = run_command(
-        "gitleaks detect --no-git -f json --redact || true"
-    ).stdout or "[]"
+    results["gitleaks"] = run_command("gitleaks detect --no-git -f json --redact || true").stdout or "[]"
     return results
 
 
 def write_reports(results: Dict[str, Any]) -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    (REPORTS_DIR / "security_audit.json").write_text(
-        json.dumps(results, ensure_ascii=False, indent=2)
-    )
+    (REPORTS_DIR / "security_audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2))
+    gitleaks_payload = results.get("gitleaks", "")
+    gitleaks_has_leaks = '"leaks":' in gitleaks_payload if isinstance(gitleaks_payload, str) else bool(gitleaks_payload)
+
     summary = (
         "## Security audit\n\n"
         f"- pip-audit: {'issues' if results['pip_audit'] != '[]' else 'none'}\n"
         f"- safety: {'issues' if results['safety'] != '[]' else 'none'}\n"
         f"- bandit: {'issues' if results['bandit'] != '{}' else 'none'}\n"
-        f"- gitleaks: {'issues' if '"leaks":' in results['gitleaks'] else 'none'}\n"
+        f"- gitleaks: {'issues' if gitleaks_has_leaks else 'none'}\n"
     )
     (REPORTS_DIR / "security_audit.md").write_text(summary)
     return summary
