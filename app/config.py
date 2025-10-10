@@ -48,6 +48,19 @@ class Settings(BaseSettings):
     # Прокси (если нужно)
     HTTP_PROXY_URL: str | None = None
 
+    # HTTP клиенты
+    HTTP_TIMEOUT_CONNECT: float = 3.0
+    HTTP_TIMEOUT_READ: float = 15.0
+    HTTP_TIMEOUT_WRITE: float = 15.0
+    HTTP_TIMEOUT_TOTAL: float = 30.0
+    HTTP_RETRY_ATTEMPTS: int = 2
+    HTTP_RETRY_BACKOFF_INITIAL: float = 0.5
+    HTTP_RETRY_BACKOFF_MAX: float = 8.0
+    HTTP_RETRY_STATUS_CODES: tuple[int, ...] = (500, 502, 503, 504)
+    HTTP_CIRCUIT_BREAKER_MAX_FAILURES: int = 5
+    HTTP_CIRCUIT_BREAKER_BASE_DELAY: float = 1.0
+    HTTP_CIRCUIT_BREAKER_MAX_DELAY: float = 30.0
+
     # OpenAI (если используешь ассистента)
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE: str = "https://api.openai.com/v1"
