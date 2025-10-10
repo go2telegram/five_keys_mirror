@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
-from typing import Any
+from typing import Any, Mapping
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
@@ -34,6 +36,72 @@ def _collect_core_products(limit: int = 38) -> list[str]:
     catalog = load_catalog()
     ordered = catalog.get("ordered") or []
     return list(ordered)[:limit]
+
+
+def _format_links_csv(register: str | None, products: Mapping[str, str]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["type", "id", "url"])
+    writer.writerow(["register", "", register or ""])
+    for product_id in sorted(products):
+        url = products[product_id]
+        writer.writerow(["product", product_id, url])
+    return buffer.getvalue()
+
+
+def _parse_links_payload(raw: str) -> tuple[str | None, dict[str, str]]:
+    stripped = raw.lstrip()
+    if stripped.startswith("{"):
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:  # pragma: no cover - re-raised below
+            raise ValueError("Невалидный JSON") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("Ожидался объект с полями register/products")
+        register = payload.get("register")
+        products_raw: Any = payload.get("products")
+        products = products_raw if isinstance(products_raw, dict) else {}
+        cleaned: dict[str, str] = {}
+        for pid, url in products.items():
+            product_id = str(pid).strip()
+            link = str(url).strip()
+            if product_id and link:
+                cleaned[product_id] = link
+        register_value = register.strip() if isinstance(register, str) and register.strip() else None
+        return register_value, cleaned
+
+    buffer = io.StringIO(raw)
+    reader = csv.DictReader(buffer)
+    required = {"type", "id", "url"}
+    header = {
+        (name or "").strip().lower()
+        for name in reader.fieldnames or []
+        if name is not None
+    }
+    if not header or not required.issubset(header):
+        raise ValueError("CSV должен содержать колонки type,id,url")
+
+    register_link: str | None = None
+    products: dict[str, str] = {}
+    for row in reader:
+        if not isinstance(row, dict):
+            continue
+        entry_type = (row.get("type") or "").strip().lower()
+        if entry_type == "register":
+            url = (row.get("url") or "").strip()
+            if url:
+                register_link = url
+            continue
+        if entry_type != "product":
+            continue
+        product_id = (row.get("id") or "").strip()
+        url = (row.get("url") or "").strip()
+        if product_id and url:
+            products[product_id] = url
+
+    if register_link is None and not products:
+        raise ValueError("CSV не содержит данных для импорта")
+    return register_link, products
 
 
 @router.message(Command("set_register"))
@@ -129,8 +197,21 @@ async def cmd_switch_links(message: Message, command: CommandObject) -> None:
 @router.message(Command("export_links"))
 @admin_only
 async def cmd_export_links(message: Message, command: CommandObject) -> None:
-    target = (command.args or "").strip() or None
+    raw_args = command.args or ""
+    parts = [part for part in raw_args.split() if part]
+    fmt = "json"
+    target: str | None = None
+    for part in parts:
+        lowered = part.lower()
+        if lowered in {"json", "csv"}:
+            fmt = lowered
+        elif target is None:
+            target = part
     data = await export_set(target)
+    if fmt == "csv":
+        csv_payload = _format_links_csv(data.get("register"), data.get("products", {}))
+        await message.answer(f"<pre>{csv_payload}</pre>", parse_mode="HTML")
+        return
     payload = json.dumps(data, ensure_ascii=False, indent=2)
     await message.answer(f"<pre>{payload}</pre>", parse_mode="HTML")
 
@@ -163,16 +244,10 @@ async def handle_import_payload(message: Message) -> None:
 async def _apply_import(message: Message, raw: str) -> None:
     admin_id = message.from_user.id if message.from_user else None
     try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        await message.answer("⚠️ Невалидный JSON")
+        register, products = _parse_links_payload(raw)
+    except ValueError as exc:
+        await message.answer(f"⚠️ {exc}")
         return
-    if not isinstance(payload, dict):
-        await message.answer("⚠️ Ожидался объект с полями register/products")
-        return
-    register = payload.get("register")
-    products_raw: Any = payload.get("products")
-    products = products_raw if isinstance(products_raw, dict) else {}
     try:
         with audit_actor(admin_id):
             if register:

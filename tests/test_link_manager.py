@@ -7,6 +7,7 @@ import pytest
 from app import link_manager
 from app.config import settings
 from app.utils.cards import build_order_link
+from app.handlers import admin_links
 
 
 @pytest.fixture(autouse=True)
@@ -115,3 +116,59 @@ async def test_build_order_link_adds_utms(tmp_path, tmp_path_factory, _isolate_l
     assert params_existing["utm_medium"] == ["recommend"]
     assert params_existing["utm_campaign"] == ["recommend"]
     assert params_existing["utm_content"] == ["item-2"]
+
+
+def test_parse_links_payload_json():
+    register, products = admin_links._parse_links_payload(
+        json.dumps(
+            {
+                "register": " https://example.com/register ",
+                "products": {" a ": " https://shop.example/a "},
+            }
+        )
+    )
+    assert register == "https://example.com/register"
+    assert products == {"a": "https://shop.example/a"}
+
+
+def test_parse_links_payload_csv():
+    csv_payload = "\n".join(
+        [
+            "type,id,url",
+            "register,,https://example.com/register",
+            "product,alpha,https://shop.example/alpha",
+            "product,beta,",
+        ]
+    )
+    register, products = admin_links._parse_links_payload(csv_payload)
+    assert register == "https://example.com/register"
+    assert products == {"alpha": "https://shop.example/alpha"}
+
+
+def test_format_links_csv_sorted_output():
+    csv_payload = admin_links._format_links_csv(
+        "https://example.com/register",
+        {"beta": "https://shop.example/beta", "alpha": "https://shop.example/alpha"},
+    )
+    lines = [line.strip() for line in csv_payload.strip().splitlines()]
+    assert lines[0] == "type,id,url"
+    assert lines[1] == "register,,https://example.com/register"
+    assert lines[2] == "product,alpha,https://shop.example/alpha"
+    assert lines[3] == "product,beta,https://shop.example/beta"
+
+
+@pytest.mark.asyncio
+async def test_import_links_from_csv_roundtrip(
+    _isolate_link_manager, monkeypatch, tmp_path, tmp_path_factory, **_
+):
+    csv_payload = admin_links._format_links_csv(
+        "https://demo.example/register",
+        {"demo": "https://shop.example/demo"},
+    )
+    register, products = admin_links._parse_links_payload(csv_payload)
+    with link_manager.audit_actor(5):
+        if register:
+            await link_manager.set_register_link(register)
+        await link_manager.set_bulk_links(products)
+    assert await link_manager.get_register_link() == "https://demo.example/register"
+    assert await link_manager.get_product_link("demo") == "https://shop.example/demo"

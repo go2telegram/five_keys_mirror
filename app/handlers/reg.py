@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.config import settings
 from app.keyboards import kb_back_home
 from app.texts import REG_TEXT, REG_TEXT_UNAVAILABLE
 from app.utils import safe_edit_text
