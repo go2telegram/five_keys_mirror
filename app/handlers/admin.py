@@ -1,9 +1,12 @@
 # app/handlers/admin.py
-from aiogram import Router
-from aiogram.types import Message, BufferedInputFile
-from aiogram.filters import Command
-from io import StringIO
+"""Administrative handlers for bot commands."""
+
 from datetime import datetime
+from io import StringIO
+
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.types import BufferedInputFile, Message
 
 from app.config import settings
 from app.catalog.loader import load_products
