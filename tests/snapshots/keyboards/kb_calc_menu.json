@@ -1,0 +1,103 @@
+{
+  "inline_keyboard": [
+    [
+      {
+        "callback_data": "calc:msd",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "MSD идеальный вес",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "calc:bmi",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "ИМТ",
+        "url": null,
+        "web_app": null
+      }
+    ],
+    [
+      {
+        "callback_data": "calc:water",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Водный баланс",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "calc:kcal",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Калории (BMR/TDEE)",
+        "url": null,
+        "web_app": null
+      }
+    ],
+    [
+      {
+        "callback_data": "calc:macros",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "БЖУ",
+        "url": null,
+        "web_app": null
+      }
+    ],
+    [
+      {
+        "callback_data": "menu:tests",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Назад",
+        "url": null,
+        "web_app": null
+      },
+      {
+        "callback_data": "home:main",
+        "callback_game": null,
+        "copy_text": null,
+        "login_url": null,
+        "pay": null,
+        "switch_inline_query": null,
+        "switch_inline_query_chosen_chat": null,
+        "switch_inline_query_current_chat": null,
+        "text": "Домой",
+        "url": null,
+        "web_app": null
+      }
+    ]
+  ]
+}
