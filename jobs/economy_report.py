@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import datetime as dt
+from zoneinfo import ZoneInfo
+
 from aiogram import Bot
 
 from app.config import settings
@@ -25,7 +27,8 @@ async def send_daily_economy_report(bot: Bot, *, day: dt.date | None = None) -> 
     if not settings.ENABLE_GLOBAL_ECONOMY:
         return
 
-    summary = service.get_turnover_summary(day)
+    tz = ZoneInfo(settings.TZ)
+    summary = service.get_turnover_summary(day, tz=tz)
     metrics = service.get_metrics()
 
     text = (

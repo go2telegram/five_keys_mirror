@@ -173,10 +173,19 @@ def iter_ledger(start: Optional[dt.datetime] = None, end: Optional[dt.datetime] 
         yield tx
 
 
-def get_turnover_summary(day: Optional[dt.date] = None) -> dict:
-    day = day or dt.datetime.utcnow().date()
-    start = dt.datetime.combine(day, dt.time.min)
-    end = start + dt.timedelta(days=1)
+def get_turnover_summary(
+    day: Optional[dt.date] = None, *, tz: Optional[dt.tzinfo] = None
+) -> dict:
+    if tz is not None:
+        target_day = day or dt.datetime.now(tz).date()
+        start_local = dt.datetime.combine(target_day, dt.time.min, tzinfo=tz)
+        end_local = start_local + dt.timedelta(days=1)
+        start = start_local.astimezone(dt.timezone.utc).replace(tzinfo=None)
+        end = end_local.astimezone(dt.timezone.utc).replace(tzinfo=None)
+    else:
+        target_day = day or dt.datetime.utcnow().date()
+        start = dt.datetime.combine(target_day, dt.time.min)
+        end = start + dt.timedelta(days=1)
 
     earned = 0
     spent = 0
@@ -192,7 +201,7 @@ def get_turnover_summary(day: Optional[dt.date] = None) -> dict:
 
     net = earned - spent
     return {
-        "day": day.isoformat(),
+        "day": target_day.isoformat(),
         "earned": earned,
         "spent": spent,
         "net": net,
