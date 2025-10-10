@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import statistics
 import time
@@ -16,6 +17,8 @@ import httpx
 
 from app.config import settings
 from app.utils_openai import ai_generate
+
+logger = logging.getLogger(__name__)
 
 PROM_LINE_RE = re.compile(
     r"^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)(?:\{(?P<labels>[^}]*)\})?\s+(?P<value>[-+]?(?:\d+\.?\d*|\d*\.\d+)(?:[eE][-+]?\d+)?)"
@@ -106,12 +109,16 @@ class DiagnosticAssistant:
         prompt = self._build_doctor_prompt(snapshot)
 
         if settings.OPENAI_API_KEY:
-            response = await ai_generate(prompt, sys=(
-                "Ты — SRE инженер. Кратко проанализируй данные за последние 24 часа. "
-                "Ответь насыщенно цифрами, но не более чем в двух абзацах."
-            ))
-            if response and not response.startswith("⚠️"):
-                return response
+            try:
+                response = await ai_generate(prompt, sys=(
+                    "Ты — SRE инженер. Кратко проанализируй данные за последние 24 часа. "
+                    "Ответь насыщенно цифрами, но не более чем в двух абзацах."
+                ))
+            except Exception as exc:  # pragma: no cover - network failures
+                logger.warning("AI generation failed for doctor TLDR: %s", exc)
+            else:
+                if response and not response.startswith("⚠️"):
+                    return response
 
         return self._fallback_doctor(snapshot)
 
@@ -120,11 +127,15 @@ class DiagnosticAssistant:
         prompt = self._build_suggest_prompt(snapshot)
 
         if settings.OPENAI_API_KEY:
-            response = await ai_generate(prompt, sys=(
-                "Ты — опытный инженер эксплуатации. Предложи точные действия."
-            ))
-            if response and not response.startswith("⚠️"):
-                return response
+            try:
+                response = await ai_generate(prompt, sys=(
+                    "Ты — опытный инженер эксплуатации. Предложи точные действия."
+                ))
+            except Exception as exc:  # pragma: no cover - network failures
+                logger.warning("AI generation failed for suggest fixes: %s", exc)
+            else:
+                if response and not response.startswith("⚠️"):
+                    return response
 
         return self._fallback_suggest(snapshot)
 
