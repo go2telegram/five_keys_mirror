@@ -16,10 +16,11 @@ def _format_results(results: Sequence[SearchResult]) -> str:
     lines: list[str] = []
     for idx, item in enumerate(results, 1):
         score_pct = max(0.0, min(1.0, item.score)) * 100
-        lines.append(
+        entry = (
             f"{idx}. <b>{item.title}</b> — {item.snippet}\n"
             f"<code>{item.path}</code> · {item.source} · {score_pct:.0f}%"
         )
+        lines.append(entry)
     return "\n\n".join(lines)
 
 
