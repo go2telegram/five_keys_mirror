@@ -570,15 +570,15 @@ def _resolve_image(
     image_base: str,
 ) -> None:
     product_id = str(product["id"])
+    aliases = _build_aliases(product_id)
+    if aliases:
+        product["aliases"] = aliases
+
     match = _match_image(product_id, image_files)
     if not match:
         logging.warning("No image for %s", product_id)
         product["available"] = False
         return
-    if match.alias is not None and match.alias != product_id:
-        aliases = _build_aliases(product_id)
-        if aliases:
-            product["aliases"] = aliases
     image_name = match.name
     if image_mode == "remote":
         base = image_base if image_base.endswith("/") else image_base + "/"
