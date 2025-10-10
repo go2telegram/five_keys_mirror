@@ -107,14 +107,14 @@ def kb_nav_category(cat_key: str):
 def kb_nav_tests():
     kb = InlineKeyboardBuilder()
     tests = [
-        ("⚡ Энергия", "energy"),
-        ("😴 Сон", "sleep"),
-        ("😰 Стресс", "stress"),
-        ("🛡️ Иммунитет", "immunity"),
-        ("🦠 ЖКТ", "gut"),
+        ("⚡ Энергия", "energy", "tests"),
+        ("😴 Сон", "sleep", "quiz"),
+        ("😰 Стресс", "stress", "quiz"),
+        ("🛡️ Иммунитет", "immunity", "quiz"),
+        ("🦠 ЖКТ", "gut", "quiz"),
     ]
-    for title, slug in tests:
-        kb.button(text=title, callback_data=f"tests:{slug}")
+    for title, slug, prefix in tests:
+        kb.button(text=title, callback_data=f"{prefix}:{slug}")
     kb.button(text="⬅️ Назад", callback_data="nav:root")
     kb.button(text="🏠 Домой", callback_data="home:main")
     kb.adjust(1)
