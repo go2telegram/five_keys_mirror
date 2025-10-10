@@ -22,10 +22,28 @@ IMAGES_DIR = Path("app/static/images/products")
             "https://example.com/a path/?q=знач",
             "https://example.com/a%20path/?q=%D0%B7%D0%BD%D0%B0%D1%87",
         ),
+        (
+            "https://example.com/%D0%A2/path?q=a%20b",
+            "https://example.com/%D0%A2/path?q=a+b",
+        ),
     ],
 )
 def test_quote_url_normalizes_path_and_query(raw: str, expected: str) -> None:
     assert bp.quote_url(raw) == expected
+
+
+def test_missing_order_url_surfaces_error() -> None:
+    text = "\n".join(
+        [
+            "Продукт X",
+            "Описание продукта",
+            "Ссылка для заказа: отсутствует",
+        ]
+    )
+    blocks = bp._split_blocks(text, origin="test.txt")
+    assert len(blocks) == 1
+    with pytest.raises(bp.CatalogBuildError, match="Missing order URL"):
+        bp._parse_block(blocks[0])
 
 
 def test_choose_image_fallbacks() -> None:

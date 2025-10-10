@@ -88,7 +88,7 @@ def quote_url(url: str) -> str:
     """Percent-encode the path and query components of a URL."""
 
     parts = urlsplit(url)
-    path = quote(parts.path)
+    path = quote(parts.path, safe="/%")
     query = urlencode(parse_qsl(parts.query, keep_blank_values=True))
     return urlunsplit((parts.scheme, parts.netloc, path, query, parts.fragment))
 
@@ -299,7 +299,7 @@ def _split_blocks(text: str, *, origin: str) -> list[ProductBlock]:
         else:
             buffer.append(line)
         i += 1
-    return [block for block in blocks if block.lines and block.url]
+    return [block for block in blocks if block.lines]
 
 
 def _split_sentences(text: str) -> list[str]:
