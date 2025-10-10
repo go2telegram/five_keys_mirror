@@ -333,7 +333,7 @@ def get_daily_trends(*, conn: sqlite3.Connection | None = None, days: int = 30) 
             for row in conn.execute(
                 """
                 SELECT substr(conversions.occurred_at, 1, 10) AS day,
-                       COUNT(*) AS conversions,
+                       COUNT(DISTINCT conversions.external_id) AS conversions,
                        SUM(payouts.amount) AS revenue
                 FROM conversions
                 LEFT JOIN payouts ON payouts.conversion_id = conversions.external_id
