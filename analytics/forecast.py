@@ -140,7 +140,7 @@ def _forecast(model: HoltWintersResultsWrapper, history: pd.DataFrame, days: int
     forecast_index = pd.date_range(
         start=history["date"].iloc[-1] + pd.Timedelta(days=1), periods=days, freq="D"
     )
-    preds = model.forecast(days)
+    preds = np.asarray(model.forecast(days), dtype=float)
     residuals = model.resid
     sigma = float(np.std(residuals, ddof=1)) if len(residuals) > 1 else 0.0
     interval = 1.96 * sigma
@@ -148,9 +148,9 @@ def _forecast(model: HoltWintersResultsWrapper, history: pd.DataFrame, days: int
     forecast_df = pd.DataFrame(
         {
             "date": forecast_index,
-            "prediction": preds.values,
-            "lower": np.maximum(preds.values - interval, 0.0),
-            "upper": preds.values + interval,
+            "prediction": preds,
+            "lower": np.maximum(preds - interval, 0.0),
+            "upper": preds + interval,
         }
     )
 
