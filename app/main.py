@@ -50,7 +50,7 @@ async def main():
     dp.include_router(h_reg.router)
     dp.include_router(h_assistant.router)
     dp.include_router(h_admin.router)
-    dp.include_router(h_admin_diplomacy.router)
+    dp.include_router(h_admin_diplomacy)
     dp.include_router(h_navigator.router)
     dp.include_router(h_notify.router)
     dp.include_router(h_report.router)
