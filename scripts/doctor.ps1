@@ -1,6 +1,10 @@
-param()
+param(
+  [switch]$FixCrLf
+)
 
 $ErrorActionPreference = 'Stop'
+
+$script:DoctorCheckResults = @()
 
 function Write-Check {
   param(
@@ -8,6 +12,12 @@ function Write-Check {
     [bool]$Condition,
     [string]$Hint = ''
   )
+  $result = [pscustomobject]@{
+    Label = $Label
+    Passed = [bool]$Condition
+    Hint = $Hint
+  }
+  $script:DoctorCheckResults += $result
   if ($Condition) {
     Write-Host ("[OK] {0}" -f $Label) -ForegroundColor Green
   } else {
@@ -63,15 +73,20 @@ foreach ($file in $requiredFiles) {
 }
 
 $mainContent = Get-Content 'app/main.py' -Encoding UTF8 -ErrorAction SilentlyContinue
-$mainText = $mainContent -join "`n"
+$mainText = [string]::Join("`n", $mainContent)
 Write-Check 'S1 marker present' ($mainText -match 'S1: setup_logging done') 'ensure setup marker is logged'
 Write-Check 'S2-start marker present' ($mainText -match 'S2-start: init_db') 'log init_db start marker'
 Write-Check 'S2-done marker present' ($mainText -match 'S2-done: init_db') 'log init_db completion marker'
-Write-Check 'outer middleware registered' ($mainText -match 'outer_middleware\(AuditMiddleware\(\)\)') 'call _register_audit_middleware in main.py'
+Write-Check 'S3 marker present' ($mainText -match 'S3: bot/dispatcher created') 'log dispatcher creation marker'
+Write-Check 'audit middleware registration invoked' ($mainText -match '_register_audit_middleware\(dp\)') 'call _register_audit_middleware in main.py'
 Write-Check 'S4 marker present' ($mainText -match 'S4: audit middleware registered') 'ensure startup logger prints S4'
-Write-Check 'S6 marker present' ($mainText -match "S6: allowed_updates=\['message', 'callback_query'\]") 'pass ALLOWED_UPDATES to start_polling'
+Write-Check 'S6 marker present' ($mainText -match 'S6: allowed_updates=') 'pass ALLOWED_UPDATES to start_polling'
 Write-Check 'S7 marker present' ($mainText -match 'S7: start_polling enter') 'log polling entry'
 Write-Check 'S0 marker present' ($mainText -match 'S0: startup event fired') 'include startup router logging'
+Write-Check 'allowed updates constant configured' ($mainText -match 'ALLOWED_UPDATES\s*=\s*\[\s*"message"\s*,\s*"callback_query"\s*\]') 'define ALLOWED_UPDATES for polling'
+Write-Check 'audit middleware covers message updates' ($mainText -match 'dp\.message\.middleware\(audit_middleware\)') 'attach audit middleware to message handler'
+Write-Check 'audit middleware covers callback updates' ($mainText -match 'dp\.callback_query\.middleware\(audit_middleware\)') 'attach audit middleware to callback handler'
+Write-Check 'audit middleware covers raw updates' ($mainText -match 'dp\.update\.outer_middleware\(audit_middleware\)') 'attach audit middleware to dispatcher update handler'
 
 $psFiles = Get-ChildItem 'scripts' -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue
 foreach ($ps in $psFiles) {
@@ -85,7 +100,22 @@ foreach ($ps in $psFiles) {
       }
     }
   }
-  Write-Check ("CRLF check: {0}" -f $ps.Name) (-not $hasLfOnly) "rewrite the file with CRLF endings"
+  if ($hasLfOnly -and $FixCrLf) {
+    try {
+      $content = Get-Content $ps.FullName -Raw -Encoding UTF8
+      $normalized = $content -replace "`r?`n", "`r`n"
+      $encoding = New-Object System.Text.UTF8Encoding($false)
+      [IO.File]::WriteAllText($ps.FullName, $normalized, $encoding)
+      $hasLfOnly = $false
+    } catch {
+      Write-Host ("[WARN] failed to rewrite {0}: {1}" -f $ps.Name, $_.Exception.Message) -ForegroundColor Yellow
+    }
+  }
+  $hint = "rewrite the file with CRLF endings"
+  if (-not $FixCrLf) {
+    $hint += " (run: pwsh -File scripts/doctor.ps1 -FixCrLf)"
+  }
+  Write-Check ("CRLF check: {0}" -f $ps.Name) (-not $hasLfOnly) $hint
 }
 
 $logDir = 'logs'
@@ -116,3 +146,17 @@ if ($env:BOT_TOKEN) {
 }
 
 Write-Host "=== doctor finished ==="
+
+$failedChecks = $script:DoctorCheckResults | Where-Object { -not $_.Passed }
+if (-not $failedChecks -or $failedChecks.Count -eq 0) {
+  Write-Host "VERDICT: OK" -ForegroundColor Green
+} else {
+  Write-Host ("VERDICT: FAIL ({0} issues)" -f $failedChecks.Count) -ForegroundColor Red
+  $fixes = $failedChecks | Where-Object { $_.Hint }
+  if ($fixes.Count -gt 0) {
+    Write-Host "Fix suggestions:" -ForegroundColor Yellow
+    foreach ($fix in $fixes) {
+      Write-Host (" - {0}: {1}" -f $fix.Label, $fix.Hint)
+    }
+  }
+}
