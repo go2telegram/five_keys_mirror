@@ -7,7 +7,7 @@ def format_tip_message(text: str) -> str:
 
 
 def format_sleep_journey_message() -> str:
-    return "🌙 Как прошёл твой сон? Выбери, как ближе к правде."
+    return "🌙 Как прошёл твой сон? Отметь в трекере, как ближе к правде."
 
 
 def format_stress_journey_message() -> str:
