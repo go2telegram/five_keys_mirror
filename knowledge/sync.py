@@ -269,9 +269,12 @@ class KnowledgeSyncService:
 
     def _resolve_path(self, rel_path: str) -> Path:
         rel = Path(rel_path)
-        full_path = (self.index_dir / rel).resolve()
-        if not str(full_path).startswith(str(self.index_dir.resolve())):
-            raise ValueError("Invalid index path")
+        base_dir = self.index_dir.resolve()
+        full_path = (base_dir / rel).resolve()
+        try:
+            full_path.relative_to(base_dir)
+        except ValueError as exc:
+            raise ValueError("Invalid index path") from exc
         return full_path
 
     @staticmethod
