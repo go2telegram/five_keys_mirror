@@ -260,3 +260,42 @@ class RetentionJourney(Base):
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     payload: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
+
+
+class LinkSet(Base):
+    __tablename__ = "link_sets"
+    __table_args__ = (UniqueConstraint("slug", name="uq_link_sets_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    registration_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    entries: Mapped[list["LinkEntry"]] = relationship(
+        back_populates="link_set", cascade="all, delete-orphan"
+    )
+
+
+class LinkEntry(Base):
+    __tablename__ = "link_entries"
+    __table_args__ = (
+        UniqueConstraint("set_id", "product_id", name="uq_link_entries_product"),
+        Index("ix_link_entries_set_id", "set_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    set_id: Mapped[int] = mapped_column(Integer, ForeignKey("link_sets.id", ondelete="CASCADE"))
+    product_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    link_set: Mapped[LinkSet] = relationship(back_populates="entries")

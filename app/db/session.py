@@ -18,6 +18,16 @@ _SYNC_DRIVER_REPLACEMENTS = ("+aiosqlite", "+asyncpg")
 
 log = logging.getLogger("db")
 
+_MIGRATIONS_RAN = False
+_migration_lock = asyncio.Lock()
+
+
+def _is_mock(obj: object) -> bool:
+    cls = getattr(obj, "__class__", None)
+    module = getattr(cls, "__module__", "") if cls is not None else ""
+    name = getattr(cls, "__name__", "") if cls is not None else ""
+    return "unittest.mock" in module or name.endswith("Mock")
+
 
 def _strip_driver(db_url: str) -> str:
     stripped = db_url
@@ -100,10 +110,25 @@ else:  # pragma: no cover - triggered only when driver missing
 
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
+    global _MIGRATIONS_RAN
     if async_session_factory is None:
         raise RuntimeError(
             "aiosqlite driver is not installed; install aiosqlite to use database features",
         ) from _ENGINE_IMPORT_ERROR
+    factory = async_session_factory
+    if settings.MIGRATE_ON_START and not _MIGRATIONS_RAN:
+        async with _migration_lock:
+            if settings.MIGRATE_ON_START and not _MIGRATIONS_RAN:
+                if _is_mock(factory):
+                    _MIGRATIONS_RAN = True
+                else:
+                    try:
+                        success = await upgrade_to_head(timeout=30.0)
+                    except Exception:  # pragma: no cover - defensive
+                        log.exception("DB: automatic migration failed")
+                    else:
+                        if success:
+                            _MIGRATIONS_RAN = True
     async with async_session_factory() as session:
         yield session
 

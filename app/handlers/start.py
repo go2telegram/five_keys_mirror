@@ -42,6 +42,7 @@ from app.handlers import reg as reg_handlers
 
 logger = logging.getLogger(__name__)
 log_start = logging.getLogger("start")
+log_start.propagate = True
 
 router = Router(name="start")
 
@@ -119,22 +120,31 @@ async def start_safe(message: Message) -> None:
     if _is_admin(user_id):
         log_start.debug("START admin detected uid=%s", user_id)
 
+    log_start.disabled = False
+    logging.getLogger("start").disabled = False
+    log_start.info(
+        "START uid=%s uname=%s",
+        getattr(message.from_user, "id", None),
+        getattr(message.from_user, "username", None),
+    )
+    logging.getLogger().info(
+        "START uid=%s uname=%s",
+        getattr(message.from_user, "id", None),
+        getattr(message.from_user, "username", None),
+    )
+
     remaining = touch_throttle(user_id, "start:command", START_THROTTLE_SECONDS)
     if remaining > 0:
         log_start.info("START throttled uid=%s remaining=%.2f", user_id, remaining)
         await message.answer("Команда уже выполняется, попробуйте позже.")
         return
 
-    log_start.info(
-        "START uid=%s uname=%s",
-        getattr(message.from_user, "id", None),
-        getattr(message.from_user, "username", None),
-    )
-
     greeting = greeting_for_user(user_id)
     await message.answer(greeting, reply_markup=kb_onboarding_entry(user_id=user_id))
 
     asyncio.create_task(_start_full(message, payload))
+
+    log_start.info("START uid=%s flow dispatched", user_id)
 
 
 @router.message(Command("menu"))

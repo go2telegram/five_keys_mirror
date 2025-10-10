@@ -80,7 +80,10 @@ ALLOWED_UPDATES = ["message", "callback_query"]
 
 
 log_home = logging.getLogger("home")
+log_home.propagate = True
 startup_log = logging.getLogger("startup")
+startup_log.propagate = True
+startup_log.disabled = False
 doctor_log = logging.getLogger("doctor")
 
 SERVICE_START_TS = time.time()
@@ -137,7 +140,14 @@ def _init_sentry() -> None:
 
 
 async def home_main(c: CallbackQuery) -> None:
+    log_home.disabled = False
+    logging.getLogger("home").disabled = False
     log_home.info(
+        "HOME pressed uid=%s uname=%s",
+        getattr(c.from_user, "id", None),
+        getattr(c.from_user, "username", None),
+    )
+    logging.getLogger().info(
         "HOME pressed uid=%s uname=%s",
         getattr(c.from_user, "id", None),
         getattr(c.from_user, "username", None),
@@ -495,6 +505,8 @@ async def _notify_admin_startup(bot: Bot, allowed_updates: Iterable[str]) -> Non
 
 
 async def main() -> None:
+    startup_log.disabled = False
+    logging.getLogger("startup").disabled = False
     global LAST_KNOWN_REVISION
     _init_sentry()
     setup_logging(
