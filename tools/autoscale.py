@@ -380,17 +380,21 @@ def calculate_desired_replicas(
     idle_since = state.get("idle_since")
     scale_up_threshold = target_rps * 1.2
     scale_down_threshold = target_rps * 0.5
+    if current_replicas > 0:
+        per_replica_rps = current_rps / current_replicas
+    else:
+        per_replica_rps = current_rps
     desired = current_replicas
     scaled = False
     reason = "steady"
 
-    if current_rps > scale_up_threshold and current_replicas < max_replicas:
+    if per_replica_rps > scale_up_threshold and current_replicas < max_replicas:
         desired = min(max_replicas, current_replicas + 1)
         state["idle_since"] = None
         state["last_scale_at"] = now
         scaled = desired != current_replicas
         reason = "scale_up"
-    elif current_rps < scale_down_threshold and current_replicas > min_replicas:
+    elif per_replica_rps < scale_down_threshold and current_replicas > min_replicas:
         if idle_since is None:
             idle_since = now
             state["idle_since"] = idle_since
