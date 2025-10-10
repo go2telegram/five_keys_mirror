@@ -588,9 +588,11 @@ def _resolve_image(
     product_id = str(product["id"])
     image_name = _choose_image(product_id, image_files, used_images=used_images)
     if not image_name:
+        if strict_descriptions == "off":
+            return
         logging.warning("Missing image for %s", product_id)
-        tags = [tag for tag in product.get("tags", []) if isinstance(tag, str)]
         if strict_descriptions == "add":
+            tags = [tag for tag in product.get("tags", []) if isinstance(tag, str)]
             product["available"] = False
             if "missing_image" not in tags:
                 tags.append("missing_image")
@@ -598,9 +600,6 @@ def _resolve_image(
             product.setdefault("images", [])
             return
         if strict_descriptions == "warn":
-            product["_skip"] = True
-            return
-        if strict_descriptions == "off":
             product["_skip"] = True
             return
         return

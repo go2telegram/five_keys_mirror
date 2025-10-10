@@ -243,7 +243,9 @@ def test_strict_descriptions_warn_skips_missing_images(tmp_path: Path, caplog: p
     assert any("Missing image" in record.message for record in caplog.records)
 
 
-def test_strict_descriptions_off_skips_missing_images_without_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_strict_descriptions_off_keeps_missing_images_without_warning(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     descriptions_path, images_dir = _prepare_fixture_catalog(tmp_path)
 
     output = tmp_path / "products.json"
@@ -257,11 +259,10 @@ def test_strict_descriptions_off_skips_missing_images_without_warning(tmp_path: 
         output=output,
     )
 
-    assert count == 10
     data = json.loads(output.read_text(encoding="utf-8"))
-    assert len(data["products"]) == 10
+    assert len(data["products"]) == count == 11
     assert not any("missing_image" in product.get("tags", []) for product in data["products"])
-    assert any("Missing image" in record.message for record in caplog.records)
+    assert not any("Missing image" in record.message for record in caplog.records)
 
 
 def test_cli_build_uses_argparse_and_outputs_file(tmp_path: Path) -> None:
