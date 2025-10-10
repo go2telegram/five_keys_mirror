@@ -105,10 +105,17 @@ def _iter_github_files(location: GithubLocation, path: str | None = None) -> Ite
 def _list_remote_images(images_url: str) -> list[str]:
     location = _parse_github_tree_url(images_url)
     filenames: set[str] = set()
+    base_path = Path(location.path) if location.path else None
     for entry in _iter_github_files(location):
         extension = Path(entry.name).suffix.lower()
         if extension in IMAGE_EXTENSIONS:
-            filenames.add(entry.name)
+            entry_path = Path(entry.path)
+            if base_path:
+                try:
+                    entry_path = entry_path.relative_to(base_path)
+                except ValueError:
+                    pass
+            filenames.add(entry_path.as_posix())
     return sorted(filenames)
 
 
@@ -121,7 +128,8 @@ def _list_local_images(images_dir: Path) -> list[str]:
             continue
         extension = file.suffix.lower()
         if extension in IMAGE_EXTENSIONS:
-            filenames.add(file.name)
+            relative_path = file.relative_to(images_dir).as_posix()
+            filenames.add(relative_path)
     return sorted(filenames)
 
 
