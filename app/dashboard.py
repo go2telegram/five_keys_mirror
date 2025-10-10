@@ -960,8 +960,15 @@ table.links-table tbody tr:last-child td {
 </div>
 <script>
 (() => {
+    const urlToken = new URLSearchParams(window.location.search).get('token');
+    const storedToken = sessionStorage.getItem('links-admin-token') || '';
+
+    if (urlToken) {
+        sessionStorage.setItem('links-admin-token', urlToken);
+    }
+
     const state = {
-        token: new URLSearchParams(window.location.search).get('token') || '',
+        token: urlToken || storedToken || '',
         activeSet: '',
         register: '',
         registerOverride: null,
@@ -980,7 +987,7 @@ table.links-table tbody tr:last-child td {
         importText: document.getElementById('import-text')
     };
 
-    if (state.token) {
+    if (urlToken) {
         const currentUrl = new URL(window.location.href);
         if (currentUrl.searchParams.has('token')) {
             currentUrl.searchParams.delete('token');
