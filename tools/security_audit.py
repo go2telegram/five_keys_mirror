@@ -3,6 +3,7 @@ import json
 import pathlib
 import subprocess
 import sys
+from shutil import which
 from typing import Any, Dict, Iterable
 
 REPORTS_DIR = pathlib.Path("build/reports")
@@ -17,8 +18,11 @@ def collect_reports() -> Dict[str, Any]:
     results["pip_audit"] = run_command("pip-audit -r requirements.txt -f json").stdout or "[]"
     results["safety"] = run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
     results["bandit"] = run_command("bandit -q -r app -f json").stdout or "{}"
-    # gitleaks exit code is non-zero when leaks are found; ignore to allow summary generation
-    results["gitleaks"] = run_command("gitleaks detect --no-git -f json --redact || true").stdout or "[]"
+    if which("gitleaks"):
+        # gitleaks exit code is non-zero when leaks are found; ignore to allow summary generation
+        results["gitleaks"] = run_command("gitleaks detect --no-git -f json --redact || true").stdout or "[]"
+    else:
+        results["gitleaks"] = "not-installed"
     return results
 
 
@@ -27,13 +31,17 @@ def write_reports(results: Dict[str, Any]) -> None:
     (REPORTS_DIR / "security_audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2))
     gitleaks_payload = results.get("gitleaks", "")
     gitleaks_has_leaks = '"leaks":' in gitleaks_payload if isinstance(gitleaks_payload, str) else bool(gitleaks_payload)
+    if gitleaks_payload == "not-installed":
+        gitleaks_summary = "skipped"
+    else:
+        gitleaks_summary = "issues" if gitleaks_has_leaks else "none"
 
     summary = (
         "## Security audit\n\n"
         f"- pip-audit: {'issues' if results['pip_audit'] != '[]' else 'none'}\n"
         f"- safety: {'issues' if results['safety'] != '[]' else 'none'}\n"
         f"- bandit: {'issues' if results['bandit'] != '{}' else 'none'}\n"
-        f"- gitleaks: {'issues' if gitleaks_has_leaks else 'none'}\n"
+        f"- gitleaks: {gitleaks_summary}\n"
     )
     (REPORTS_DIR / "security_audit.md").write_text(summary)
     return summary
