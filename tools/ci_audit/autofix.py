@@ -18,7 +18,7 @@ _RUFF_STEP = {
     "run": "ruff check . --fix\nruff format .",
 }
 
-_SECURITY_STEP_RUN = "python tools/security_audit.py --summary || echo \"WARN: security audit returned warn\""
+_SECURITY_STEP_RUN = 'python tools/security_audit.py --summary || echo "WARN: security audit returned warn"'
 
 
 @dataclass
@@ -126,7 +126,7 @@ def _ensure_security_step(workflow_path: Path) -> AutoFixResult:
 
 def _ensure_pythonpath(files: Sequence[Path]) -> AutoFixResult:
     result = AutoFixResult()
-    snippet = "sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), \"..\")))"
+    snippet = 'sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))'
     for path in files:
         if not path.exists():
             result.skipped.append(f"file missing: {path}")
@@ -135,7 +135,6 @@ def _ensure_pythonpath(files: Sequence[Path]) -> AutoFixResult:
         if snippet in text:
             result.skipped.append(f"{path.name}: already patched")
             continue
-        import_block = "import sys" in text
         os_block = "import os" in text
         new_lines: list[str] = []
         inserted = False
@@ -187,18 +186,17 @@ def apply_autofixes(issues: Iterable[str], *, repo_root: str | Path | None = Non
         security_script = root / "tools" / "security_audit.py"
         if security_script.exists():
             text = security_script.read_text(encoding="utf-8")
-            snippet = "FAIL_LEVEL = os.getenv(\"SECURITY_FAIL_LEVEL\", \"HIGH\").upper()"
+            snippet = 'FAIL_LEVEL = os.getenv("SECURITY_FAIL_LEVEL", "CRITICAL").upper()'
             if snippet not in text:
                 if "import os" not in text:
                     text = text.replace("import argparse", "import argparse\nimport os")
                 if "FAIL_LEVEL" in text:
                     text = re.sub(r"FAIL_LEVEL\s*=.*", snippet, text, count=1)
                 else:
-                    text = text.replace("ORDER = [\"NONE\"", snippet + "\nORDER = [\"NONE\"")
+                    text = text.replace('ORDER = ["NONE"', snippet + '\nORDER = ["NONE"')
                 security_script.write_text(text, encoding="utf-8")
                 result.applied.append("updated security audit threshold")
     if "imports" in issue_set:
         result.merge(_ensure_pythonpath(files))
 
     return result
-

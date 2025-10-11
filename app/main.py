@@ -27,8 +27,8 @@ from app.db.session import current_revision, head_revision, init_db, session_sco
 from app.feature_flags import FF_FLOODWAIT_PATCH, feature_flags
 from app.handlers import (
     admin as h_admin,
-    admin_ci as h_admin_ci,
     admin_audit as h_admin_audit,
+    admin_ci as h_admin_ci,
     admin_crud as h_admin_crud,
     admin_growth as h_admin_growth,
     admin_links as h_admin_links,
