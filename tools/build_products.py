@@ -359,10 +359,19 @@ def _coerce_sources(value: str | Sequence[str] | None) -> list[str]:
     return normalized
 
 
+def _is_not_found_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "404" in message or "not found" in message
+
+
 def _load_description_texts(
-    *, descriptions_url: str | Sequence[str] | None, descriptions_path: str | Sequence[str] | None
+    *,
+    descriptions_url: str | Sequence[str] | None,
+    descriptions_path: str | Sequence[str] | None,
+    _state: dict[str, bool] | None = None,
 ) -> list[tuple[str, str]]:
     items: list[tuple[str, str]] = []
+    state = _state if _state is not None else {"missing_remote": False}
 
     for path_value in _coerce_sources(descriptions_path):
         items.extend(_list_local_texts(Path(path_value)))
@@ -372,20 +381,44 @@ def _load_description_texts(
             items.extend(_list_local_texts(_file_url_to_path(url_value)))
             continue
         if url_value.lower().endswith(".txt"):
-            text = _http_get(url_value).decode("utf-8")
+            try:
+                text = _http_get(url_value).decode("utf-8")
+            except CatalogBuildError as exc:
+                if _is_not_found_error(exc):
+                    state["missing_remote"] = True
+                    continue
+                raise
             items.append((url_value, text))
             continue
         owner, repo, ref, path = _parse_github_tree(url_value)
-        entries = _github_contents(owner, repo, path, ref, extensions={".txt"})
+        try:
+            entries = _github_contents(owner, repo, path, ref, extensions={".txt"})
+        except CatalogBuildError as exc:
+            if _is_not_found_error(exc):
+                state["missing_remote"] = True
+                continue
+            raise
         for entry in entries:
             download_url = entry["download_url"]
-            items.append((download_url, _http_get(download_url).decode("utf-8")))
+            if not download_url:
+                continue
+            try:
+                text = _http_get(download_url).decode("utf-8")
+            except CatalogBuildError as exc:
+                if _is_not_found_error(exc):
+                    state["missing_remote"] = True
+                    continue
+                raise
+            items.append((download_url, text))
 
     if not items and os.getenv("NO_NET") != "1":
         try:
             remote_urls = enumerate_descriptions(MEDIA_REF)
         except Exception as exc:  # pragma: no cover - network dependent
-            logging.warning("Failed to enumerate remote descriptions: %s", exc)
+            if _is_not_found_error(exc):
+                state["missing_remote"] = True
+            else:
+                logging.warning("Failed to enumerate remote descriptions: %s", exc)
         else:
             seen: set[str] = set()
             for url in remote_urls:
@@ -395,6 +428,9 @@ def _load_description_texts(
                 try:
                     text = _http_get(url).decode("utf-8")
                 except CatalogBuildError as exc:  # pragma: no cover - network dependent
+                    if _is_not_found_error(exc):
+                        state["missing_remote"] = True
+                        continue
                     logging.warning("Failed to fetch remote description %s: %s", url, exc)
                     continue
                 items.append((url, text))
@@ -405,8 +441,15 @@ def _load_description_texts(
     if DEFAULT_DESCRIPTIONS_PATH:
         local_path = Path(DEFAULT_DESCRIPTIONS_PATH)
         if local_path.exists():
-            return _list_local_texts(local_path)
-    return _load_description_texts(descriptions_url=DEFAULT_DESCRIPTIONS_URL, descriptions_path=None)
+            local_items = _list_local_texts(local_path)
+            if local_items and state.get("missing_remote"):
+                logging.info("Some remote descriptions missing; using local media")
+            return local_items
+    return _load_description_texts(
+        descriptions_url=DEFAULT_DESCRIPTIONS_URL,
+        descriptions_path=None,
+        _state=state,
+    )
 
 
 def _normalize_heading(value: str) -> str:

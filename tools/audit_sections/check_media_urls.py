@@ -9,16 +9,21 @@ from . import AuditContext, SectionResult, section
 
 
 REPORT_NAME = "media_head_report.txt"
-LEGACY_REPORT = Path("build/images_head_report.txt")
+REPORT_CANDIDATES = (
+    Path("build/reports") / REPORT_NAME,
+    Path("build/images_head_report.txt"),
+)
 
 
 def _copy_legacy_report(root: Path, reports_dir: Path) -> Path | None:
-    source = root / LEGACY_REPORT
-    if not source.exists():
-        return None
-    target = reports_dir / REPORT_NAME
-    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-    return target
+    for candidate in REPORT_CANDIDATES:
+        source = root / candidate
+        if not source.exists():
+            continue
+        target = reports_dir / REPORT_NAME
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        return target
+    return None
 
 
 @section("media")
@@ -40,7 +45,7 @@ def run(ctx: AuditContext) -> SectionResult:
             details=[str(exc)],
         )
 
-    exit_code = head_check.main()
+    exit_code = head_check.main(["--quiet"])
     report_path = _copy_legacy_report(ctx.root, ctx.reports_dir)
     lines = []
     errors = 0

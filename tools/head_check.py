@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -25,32 +26,51 @@ from app.config import settings
 
 CATALOG_FILE = ROOT / "app" / "catalog" / "products.json"
 QUIZ_DATA_DIR = ROOT / "app" / "quiz" / "data"
-REPORT_PATH = ROOT / "build" / "images_head_report.txt"
+REPORT_PATH = ROOT / "build" / "reports" / "media_head_report.txt"
 
 USER_AGENT = "five-keys-bot/head-check"
 DEFAULT_TIMEOUT = 10
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="HEAD-check catalog and quiz images")
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="suppress console output; only write the report",
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=REPORT_PATH,
+        help="destination for the HEAD report (default: %(default)s)",
+    )
+    args = parser.parse_args(argv)
+
+    quiet = args.quiet
+    report_path: Path = args.report_path
+
     if os.getenv("NO_NET", "0") == "1":
-        print("NO_NET=1 -> skip head checks")
+        if not quiet:
+            print("NO_NET=1 -> skip head checks")
         return 0
 
     urls = set(_collect_product_urls())
     urls.update(_collect_quiz_urls())
 
-    if not urls:
+    if not urls and not quiet:
         print("WARN No image URLs discovered; report will be empty.")
 
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
 
     results: list[tuple[str, str, str | None]] = []
     for url in sorted(urls):
         status, detail = _head_request(url)
         results.append((status, url, detail))
 
-    _write_report(results)
-    _print_summary(results)
+    _write_report(results, report_path)
+    if not quiet:
+        _print_summary(results, report_path)
     return 0
 
 
@@ -147,22 +167,26 @@ def _head_request(url: str) -> tuple[str, str | None]:
         return "ERR", str(exc)
 
 
-def _write_report(results: Iterable[tuple[str, str, str | None]]) -> None:
+def _write_report(results: Iterable[tuple[str, str, str | None]], report_path: Path) -> None:
     lines = ["# Image HEAD check report", ""]
     for status, url, detail in results:
         if detail:
             lines.append(f"{status}\t{url}\t{detail}")
         else:
             lines.append(f"{status}\t{url}")
-    REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _print_summary(results: Iterable[tuple[str, str, str | None]]) -> None:
+def _print_summary(results: Iterable[tuple[str, str, str | None]], report_path: Path) -> None:
     counter = Counter(status for status, _, _ in results)
     total = sum(counter.values())
     summary = ", ".join(f"{status}={count}" for status, count in sorted(counter.items()))
     print(f"HEAD check completed. Total={total}. Breakdown: {summary or 'none'}.")
-    print(f"Report saved to {REPORT_PATH.relative_to(ROOT)}")
+    try:
+        relative = report_path.relative_to(ROOT)
+    except ValueError:
+        relative = report_path
+    print(f"Report saved to {relative}")
 
 
 if __name__ == "__main__":

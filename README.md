@@ -92,6 +92,22 @@ pytest -q
 Шаги, требующие выхода в интернет (онлайн-сборка каталога и `tools/head_check.py`), остаются только в GitHub Actions. Там окружение
 получает доступ к медиарепозиторию и гарантирует, что изображения по удалённым URL отвечают.
 
+### Make aliases
+
+```bash
+make pull
+make install
+make build && make validate
+make links BASE="https://vilavi.com/reg/NEWID"
+make dry
+make prod TOKEN="123:AA..." PORT=8080
+make selfcheck
+make precommit
+```
+
+На Windows можно воспользоваться `make.cmd`, например: `make.cmd prod TOKEN=...`. После `git pull` Git может показать предупреждение
+про нормализацию `CRLF→LF` — это ожидаемо, коммит приведёт файлы к нужному формату.
+
 ### FAQ
 
 **Что делать при mismatch?**

@@ -18,6 +18,7 @@ Options:
   --no-build            Skip catalog build/validation
   --links               Generate partner links CSV report
   --base-register URL   Override BASE_REGISTER_URL for the run
+  --no-head-check       Skip media HEAD check step
   --skip-pull           Skip git stash/pull step
   --help                Show this help message
 USAGE
@@ -32,6 +33,7 @@ NO_BUILD=0
 GENERATE_LINKS=0
 BASE_REGISTER_OVERRIDE=""
 SKIP_PULL=0
+RUN_HEAD_CHECK=1
 
 while (($# > 0)); do
   case "$1" in
@@ -69,6 +71,10 @@ while (($# > 0)); do
       ;;
     --links)
       GENERATE_LINKS=1
+      shift
+      ;;
+    --no-head-check)
+      RUN_HEAD_CHECK=0
       shift
       ;;
     --base-register)
@@ -203,11 +209,27 @@ print(f"Links CSV written to {output}")
 PY
 }
 
+run_head_check() {
+  if [[ $RUN_HEAD_CHECK -eq 0 ]]; then
+    log "Skipping media head check (--no-head-check)"
+    return
+  fi
+  if [[ ${NO_NET:-0} == 1 ]]; then
+    log "Skipping media head check (NO_NET=1)"
+    return
+  fi
+  log "Running media head check"
+  if ! python -m tools.head_check --quiet; then
+    log "WARN head_check reported issues; inspect build/reports/media_head_report.txt"
+  fi
+}
+
 main() {
   ensure_pull
   install_deps
   build_catalog
   generate_links_csv
+  run_head_check
 
   local bot_token
   bot_token="${BOT_TOKEN_OVERRIDE:-${BOT_TOKEN:-}}"
