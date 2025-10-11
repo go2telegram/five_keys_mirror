@@ -52,9 +52,9 @@ def main() -> None:
         f"GIT_COMMIT = {json.dumps(commit)}\n"
         f"BUILD_TIME = {json.dumps(build_time)}\n"
         "BUILD = {\n"
-        f"    \"version\": {json.dumps(version)},\n"
-        f"    \"commit\": {json.dumps(commit)},\n"
-        f"    \"timestamp\": {json.dumps(build_time)},\n"
+        f'    "version": {json.dumps(version)},\n'
+        f'    "commit": {json.dumps(commit)},\n'
+        f'    "timestamp": {json.dumps(build_time)},\n'
         "}\n"
     )
 
