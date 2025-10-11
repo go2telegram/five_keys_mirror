@@ -18,6 +18,8 @@ Drawing: Any = Any  # type: ignore[assignment]
 colors: Any = SimpleNamespace(HexColor=lambda *_a, **_k: "#000000")
 A4: tuple[float, float] = (0.0, 0.0)
 ParagraphStyle: Any = Any  # type: ignore[assignment]
+
+
 def _dummy_stylesheet() -> dict[str, Any]:
     return {}
 

@@ -300,9 +300,7 @@ async def _send_notification(new_items: Sequence[LinkCheckResult]) -> None:
 
     timeout = aiohttp.ClientTimeout(total=10)
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
-            api_url, json=payload
-        ) as response:
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.post(api_url, json=payload) as response:
             if response.status >= 400:
                 body = await response.text()
                 print(

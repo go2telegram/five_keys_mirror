@@ -10,9 +10,10 @@ import yaml
 async def head(url: str):
     try:
         timeout = aiohttp.ClientTimeout(total=6)
-        async with aiohttp.ClientSession(timeout=timeout) as session, session.head(
-            url, allow_redirects=True
-        ) as response:
+        async with (
+            aiohttp.ClientSession(timeout=timeout) as session,
+            session.head(url, allow_redirects=True) as response,
+        ):
             return url, response.status, response.headers.get("Content-Type", "")
     except Exception as exc:  # noqa: BLE001 - we only log the exception message
         return url, -1, str(exc)
