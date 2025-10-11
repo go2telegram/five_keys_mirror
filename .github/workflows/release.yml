@@ -65,6 +65,21 @@ jobs:
           echo "prev_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)" >> $GITHUB_ENV
           echo "new_tag=v$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_ENV
 
+      - name: Update build_info.py
+        env:
+          TAG_NAME: ${{ env.new_tag }}
+        run: python -m tools.release.update_build_info
+
+      - name: Commit updated build_info
+        env:
+          TAG_NAME: ${{ env.new_tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build_info.py
+          git commit -m "chore(release): update build_info for $TAG_NAME" || echo "No changes to commit"
+          git push origin main
+
       - name: Tag and push
         run: |
           git tag -a ${{ env.new_tag }} -m "Auto release ${{ env.new_tag }}"
