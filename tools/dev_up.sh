@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PYTHONPATH="${PYTHONPATH:-.}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -16,6 +18,8 @@ Options:
   --health-port PORT    Override the HEALTH_PORT for the run (default: 8080)
   --no-install          Skip dependency installation
   --no-build            Skip catalog build/validation
+  --selfcheck           Run fast development self-check before starting the bot
+  --no-selfcheck        Skip the development self-check (overrides --selfcheck)
   --links               Generate partner links CSV report
   --base-register URL   Override BASE_REGISTER_URL for the run
   --skip-pull           Skip git stash/pull step
@@ -29,6 +33,8 @@ BOT_TOKEN_OVERRIDE=""
 HEALTH_PORT_OVERRIDE=""
 NO_INSTALL=0
 NO_BUILD=0
+RUN_SELF_CHECK=0
+SKIP_SELF_CHECK=0
 GENERATE_LINKS=0
 BASE_REGISTER_OVERRIDE=""
 SKIP_PULL=0
@@ -81,6 +87,14 @@ while (($# > 0)); do
       ;;
     --skip-pull)
       SKIP_PULL=1
+      shift
+      ;;
+    --selfcheck)
+      RUN_SELF_CHECK=1
+      shift
+      ;;
+    --no-selfcheck)
+      SKIP_SELF_CHECK=1
       shift
       ;;
     --help|-h)
@@ -203,11 +217,41 @@ print(f"Links CSV written to {output}")
 PY
 }
 
+run_self_check() {
+  if [[ $SKIP_SELF_CHECK -eq 1 ]]; then
+    log "Skipping self-check (--no-selfcheck)"
+    return
+  fi
+
+  if [[ $RUN_SELF_CHECK -eq 0 ]]; then
+    return
+  fi
+
+  log "Running local self-check (fast)"
+  if python -m tools.dev_check --fast; then
+    log "Self-check passed"
+    return
+  fi
+
+  log "Self-check failed"
+  local report_file="build/reports/dev_check.md"
+  if [[ -f "$report_file" ]]; then
+    echo "------ dev_check summary ------"
+    sed -n '1,40p' "$report_file"
+    echo "--------------------------------"
+  else
+    echo "(No dev_check report generated)"
+  fi
+  echo "Fix the reported issues and rerun, or pass --no-selfcheck to override."
+  exit 1
+}
+
 main() {
   ensure_pull
   install_deps
   build_catalog
   generate_links_csv
+  run_self_check
 
   local bot_token
   bot_token="${BOT_TOKEN_OVERRIDE:-${BOT_TOKEN:-}}"
