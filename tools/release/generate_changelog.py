@@ -1,7 +1,6 @@
 import re
 import subprocess
 
-
 print("## 🚀 Release Changelog\n")
 
 log = subprocess.run(

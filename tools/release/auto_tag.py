@@ -4,10 +4,15 @@ import subprocess
 
 
 def next_tag() -> str:
-    tags = subprocess.run([
-        "git",
-        "tag",
-    ], capture_output=True, text=True, check=False).stdout.split()
+    tags = subprocess.run(
+        [
+            "git",
+            "tag",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.split()
     rc = [t for t in tags if re.match(r"v\d+\.\d+\.\d+", t)]
     rc.sort()
     if not rc:
@@ -20,13 +25,16 @@ def next_tag() -> str:
 if __name__ == "__main__":
     tag = next_tag()
     os.environ["TAG_NAME"] = tag
-    subprocess.run([
-        "git",
-        "tag",
-        "-a",
-        tag,
-        "-m",
-        f"Auto-release {tag}",
-    ], check=True)
+    subprocess.run(
+        [
+            "git",
+            "tag",
+            "-a",
+            tag,
+            "-m",
+            f"Auto-release {tag}",
+        ],
+        check=True,
+    )
     subprocess.run(["git", "push", "origin", tag], check=True)
     print(f"✅ Created tag {tag}")
