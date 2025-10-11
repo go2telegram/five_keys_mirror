@@ -1,80 +1,41 @@
 name: release
 on:
   push:
-    branches: [ main ]
-
-permissions:
-  contents: write
-  packages: write
+    branches: [main]
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
     env:
-      BOT_TOKEN: dummy:000
-      SERVICE_HOST: 127.0.0.1
-      HEALTH_PORT: 0
-      NO_NET: 0
-      MPLBACKEND: Agg
-      MEDIA_OWNER: go2telegram
-      MEDIA_REPO: media
-      MEDIA_REF: 1312d74492d26a8de5b8a65af38293fe6bf8ccc5
-      PYTHONWARNINGS: ignore
+      PYTHONPATH: .
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-
-      - uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: pip-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}
+          python-version: "3.11"
 
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          pip install requests pyyaml rich
 
-      - name: Build catalog & validate
+      - name: Auto tag and changelog
         run: |
-          python tools/build_products.py build
-          python tools/build_products.py validate
+          python -m tools.release.auto_tag
+          python -m tools.release.generate_changelog > build/reports/CHANGELOG.md
 
-      - name: Run self audit (full)
-        run: |
-          python tools/self_audit.py --ci --no-net --out build/reports/self_audit_release.md
-
-      - name: Run tests
-        run: pytest -q
-
-      - name: Collect artifacts
-        run: |
-          mkdir -p dist
-          cp build/reports/self_audit_release.md dist/
-          echo "BUILD_DATE=$(date -u)" >> dist/build_meta.txt
-          echo "GIT_SHA=$(git rev-parse --short HEAD)" >> dist/build_meta.txt
-
-      - name: Auto version bump
-        id: version
-        run: |
-          echo "prev_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)" >> $GITHUB_ENV
-          echo "new_tag=v$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_ENV
-
-      - name: Tag and push
-        run: |
-          git tag -a ${{ env.new_tag }} -m "Auto release ${{ env.new_tag }}"
-          git push origin ${{ env.new_tag }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.new_tag }}
-          name: "Auto Release ${{ env.new_tag }}"
-          body_path: build/reports/self_audit_release.md
+          tag_name: ${{ env.TAG_NAME }}
           files: |
-            dist/*
+            build/reports/CHANGELOG.md
+            build/reports/sbom.json
+            app/catalog/products.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
