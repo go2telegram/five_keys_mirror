@@ -12,6 +12,8 @@ from typing import Mapping
 from app.config import Settings, settings
 from app.storage import USE_REDIS
 
+FF_FLOODWAIT_PATCH: bool = bool(getattr(settings, "FF_FLOODWAIT_PATCH", True))
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,6 +22,7 @@ _ALL_FLAGS = {
     "FF_QUIZ_GUARD",
     "FF_NAV_FOOTER",
     "FF_MEDIA_PROXY",
+    "FF_FLOODWAIT_PATCH",
 }
 _CANARY_FLAGS = {"FF_NEW_ONBOARDING", "FF_NAV_FOOTER"}
 
@@ -213,5 +216,5 @@ class FeatureFlagManager:
 feature_flags = FeatureFlagManager()
 
 
-__all__ = ["FeatureFlagManager", "feature_flags"]
+__all__ = ["FeatureFlagManager", "feature_flags", "FF_FLOODWAIT_PATCH"]
 

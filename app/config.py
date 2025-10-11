@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     FF_QUIZ_GUARD: bool = False
     FF_NAV_FOOTER: bool = False
     FF_MEDIA_PROXY: bool = False
+    FF_FLOODWAIT_PATCH: bool = True
     CANARY_PERCENT: int = Field(default=0, ge=0, le=100)
     FEATURE_FLAGS_FILE: str = Field(default="var/feature_flags.json")
 
@@ -160,6 +161,7 @@ class Settings(BaseSettings):
                 "FF_QUIZ_GUARD",
                 "FF_NAV_FOOTER",
                 "FF_MEDIA_PROXY",
+                "FF_FLOODWAIT_PATCH",
             }
             for flag in stage_flags:
                 if flag not in self.model_fields_set:

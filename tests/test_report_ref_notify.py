@@ -58,12 +58,16 @@ async def test_notify_toggle_flow(monkeypatch):
         entries = events.setdefault(name, [])
         entries.append(SimpleNamespace(ts=datetime.now(timezone.utc), user_id=user_id))
 
+    async def fake_upsert(session, user_id: int, name: str, meta: dict | None = None):
+        await fake_log(session, user_id, name, meta or {})
+
     async def fake_last_by(session, user_id: int, name: str):
         items = [item for item in events.get(name, []) if item.user_id == user_id]
         return items[-1] if items else None
 
     monkeypatch.setattr(notify, "session_scope", fake_scope)
     monkeypatch.setattr(notify.events_repo, "log", fake_log)
+    monkeypatch.setattr(notify.events_repo, "upsert", fake_upsert)
     monkeypatch.setattr(notify.events_repo, "last_by", fake_last_by)
 
     await notify._set_event(42, "notify_on")

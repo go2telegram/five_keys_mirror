@@ -6,6 +6,7 @@ import asyncio
 import logging
 from typing import Any, Awaitable, Callable, TYPE_CHECKING
 
+import aiogram
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.methods.base import TelegramMethod
@@ -14,8 +15,19 @@ if TYPE_CHECKING:  # pragma: no cover - import for type checking only
     from aiogram import Bot
 
 logger = logging.getLogger("telegram.floodwait")
+startup_log = logging.getLogger("startup")
 
 SleepFunc = Callable[[float], Awaitable[None]]
+
+
+def log_aiogram_version() -> None:
+    """Log the currently active aiogram version for diagnostics."""
+
+    try:
+        version = aiogram.__version__
+    except Exception:  # pragma: no cover - defensive fallback
+        version = "unknown"
+    startup_log.info("aiogram=%s (session compatibility patch active)", version)
 
 
 class FloodWaitRetrySession(AiohttpSession):
@@ -36,15 +48,18 @@ class FloodWaitRetrySession(AiohttpSession):
 
     async def make_request(
         self,
-        bot: Bot,
+        bot: "Bot",
         method: TelegramMethod[Any],
-        data: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> Any:
+        kwargs.pop("timeout", None)
+
         attempt = 0
         while True:
             attempt += 1
             try:
-                return await super().make_request(bot, method, data)
+                return await super().make_request(bot, method, *args, **kwargs)
             except TelegramRetryAfter as exc:
                 delay = max(float(exc.retry_after), 0.0)
                 method_name = getattr(method, "name", method.__class__.__name__)
@@ -64,6 +79,11 @@ class FloodWaitRetrySession(AiohttpSession):
                     self._max_attempts,
                 )
                 await self._sleep(delay)
+            except TypeError as exc:  # pragma: no cover - defensive fallback
+                logger.debug("make_request fallback due to TypeError: %s", exc)
+                if args or kwargs:
+                    raise
+                return await super().make_request(bot, method)
 
 
-__all__ = ["FloodWaitRetrySession"]
+__all__ = ["FloodWaitRetrySession", "log_aiogram_version"]

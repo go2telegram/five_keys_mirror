@@ -20,7 +20,7 @@ from aiohttp import web
 from app import build_info
 from app.catalog.loader import CATALOG_SHA
 from app.config import settings
-from app.feature_flags import feature_flags
+from app.feature_flags import FF_FLOODWAIT_PATCH, feature_flags
 from app.db.session import current_revision, head_revision, init_db, session_scope
 from app.catalog import handlers as h_catalog
 from app.handlers import (
@@ -75,7 +75,7 @@ from app.middlewares import (
 from app.repo import events as events_repo
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
-from app.utils.telegram_session import FloodWaitRetrySession
+from app.utils.telegram_session import FloodWaitRetrySession, log_aiogram_version
 from app.router_map import capture_router_map
 
 try:
@@ -633,10 +633,17 @@ async def main() -> None:
             await _cleanup_service_resources(runner, site)
         return
 
+    session = None
+    if FF_FLOODWAIT_PATCH:
+        session = FloodWaitRetrySession()
+        log_aiogram_version()
+    else:
+        startup_log.info("FF_FLOODWAIT_PATCH disabled; using default aiogram session")
+
     bot = Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode="HTML"),
-        session=FloodWaitRetrySession(),
+        session=session,
     )
     dp = Dispatcher()
     mark("S3: bot/dispatcher created")
