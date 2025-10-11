@@ -380,6 +380,12 @@ python run.py
 - `GET http://localhost:8080/metrics` → Prometheus-метрики
 - В боте: `/version`, `/catalog`, `/product <id>`
 
+## Build info
+
+- Workflow релиза обновляет `app/build_info.py`, подставляя версию, коммит и время сборки.
+- Команда `/version` и сервисные эндпоинты `/ping`, `/doctor` показывают текущие данные сборки.
+- В `/metrics` экспортируется `bot_build_info{version="…",commit="…",timestamp="…"} = 1`.
+
 ## Главное меню
 
 Все разделы доступны из встроенной клавиатуры (`/start` → две колонки):

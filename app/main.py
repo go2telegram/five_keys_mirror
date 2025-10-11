@@ -78,6 +78,7 @@ from app.repo import events as events_repo
 from app.router_map import capture_router_map
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
+from app.utils.build import get_build_info
 from app.utils.telegram_session import FloodWaitRetrySession, log_aiogram_version
 
 try:
@@ -178,7 +179,15 @@ async def home_main(c: CallbackQuery) -> None:
 
 
 async def _handle_ping(_: web.Request) -> web.Response:
-    return web.json_response({"status": "ok"})
+    build = get_build_info()
+    return web.json_response(
+        {
+            "status": "ok",
+            "version": build["version"],
+            "commit": build["commit"],
+            "time": build["timestamp"],
+        }
+    )
 
 
 async def _handle_metrics(_: web.Request) -> web.Response:
@@ -188,9 +197,14 @@ async def _handle_metrics(_: web.Request) -> web.Response:
         "# TYPE five_keys_bot_uptime_seconds gauge",
         f"five_keys_bot_uptime_seconds {uptime:.0f}",
     ]
+    build = get_build_info()
     branch = getattr(build_info, "GIT_BRANCH", "unknown")
     commit = getattr(build_info, "GIT_COMMIT", "unknown")
     lines.append(f'five_keys_bot_build_info{{branch="{branch}",commit="{commit}"}} 1')
+    lines.append(
+        'bot_build_info{version="%s",commit="%s",timestamp="%s"} 1'
+        % (build["version"], build["commit"], build["timestamp"])
+    )
 
     recommend_total: int | None = None
     quiz_total: int | None = None
@@ -258,8 +272,14 @@ async def _handle_doctor(_: web.Request) -> web.Response:
     head = await head_revision()
     migrations = _collect_migration_files()
     catalog_sha = CATALOG_SHA or "unknown"
+    build = get_build_info()
     payload = {
         "status": "ok",
+        "build": {
+            "version": build["version"],
+            "commit": build["commit"],
+            "timestamp": build["timestamp"],
+        },
         "alembic": {
             "current": current or "unknown",
             "head": head or "unknown",
@@ -487,8 +507,10 @@ def _register_input_validation_middleware(dp: Dispatcher) -> InputValidationMidd
 
 
 def _log_startup_metadata() -> None:
+    build = get_build_info()
     startup_log.info(
-        "build: branch=%s commit=%s time=%s",
+        "build: version=%s branch=%s commit=%s time=%s",
+        build["version"],
         getattr(build_info, "GIT_BRANCH", "unknown"),
         getattr(build_info, "GIT_COMMIT", "unknown"),
         getattr(build_info, "BUILD_TIME", "unknown"),

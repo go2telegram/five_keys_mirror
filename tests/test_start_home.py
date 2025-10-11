@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from app.handlers import start
-from app.main import home_main
+from app.main import _handle_ping, home_main
 
 
 @pytest.mark.asyncio
@@ -66,3 +67,13 @@ async def test_home_main_falls_back_to_answer_on_edit_failure(monkeypatch):
 
     message.answer.assert_awaited()
     callback.answer.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ping_contains_build_info() -> None:
+    response = await _handle_ping(object())
+    payload = json.loads(response.text)
+    assert payload["status"] == "ok"
+    assert payload["version"]
+    assert payload["commit"]
+    assert payload["time"]

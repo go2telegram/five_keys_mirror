@@ -37,6 +37,7 @@ from app.link_manager import (
     switch_set,
 )
 from app.repo import events as events_repo, leads as leads_repo
+from app.utils.build import get_build_info
 
 app = FastAPI(title="Five Keys Admin Dashboard")
 
@@ -418,6 +419,11 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
       color: #64748b;
       text-align: center;
     }}
+    .build-info {{
+      margin-top: 8px;
+      color: #94a3b8;
+      font-size: 14px;
+    }}
     .charts {{
       display: grid;
       gap: 24px;
@@ -436,6 +442,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 <body>
   <header>
     <h1>Аналитика Five Keys</h1>
+    <p class="build-info">Версия {context["build_info"]["version"]} · commit {context["build_commit_short"]} · {context["build_info"]["timestamp"]}</p>
   </header>
   <main>
     <section class=\"cards\">
@@ -528,6 +535,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 
 
 async def _gather_dashboard_context() -> Dict[str, Any]:
+    build = get_build_info()
     utm_metrics: Dict[growth_attribution.UtmKey, growth_attribution.UtmFunnelMetrics] = {}
     async with session_scope() as session:
         quiz_counts, quiz_total = await _collect_event_stats(session, "quiz_finish", "quiz")
@@ -604,6 +612,8 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "utm_total_reg": utm_total.registrations,
         "utm_ctr": utm_total.quiz_ctr,
         "utm_cr": utm_total.premium_cr,
+        "build_info": build,
+        "build_commit_short": build["commit"][:7] if build["commit"] not in {"unknown", ""} else build["commit"],
     }
 
 

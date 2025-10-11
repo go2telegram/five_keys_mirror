@@ -64,4 +64,6 @@ async def test_doctor_report(monkeypatch: pytest.MonkeyPatch) -> None:
     await health.doctor(message)  # type: ignore[arg-type]
     joined = "\n".join(message.answers)
     assert "Doctor report:" in joined
+    assert "Build" in joined
+    assert "version" in joined
     assert "plan_generated" in joined

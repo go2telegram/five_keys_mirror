@@ -30,6 +30,11 @@ def _detect_commit() -> str:
     return commit or "unknown"
 
 
+def _detect_version() -> str:
+    version = _git_output("git", "describe", "--tags", "--always")
+    return version or "unknown"
+
+
 def _build_time() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -37,13 +42,20 @@ def _build_time() -> str:
 def main() -> None:
     branch = _detect_branch()
     commit = _detect_commit()
+    version = _detect_version()
     build_time = _build_time()
 
     content = (
         '"""Auto-generated build metadata."""\n\n'
+        f"VERSION = {json.dumps(version)}\n"
         f"GIT_BRANCH = {json.dumps(branch)}\n"
         f"GIT_COMMIT = {json.dumps(commit)}\n"
         f"BUILD_TIME = {json.dumps(build_time)}\n"
+        "BUILD = {\n"
+        f"    \"version\": {json.dumps(version)},\n"
+        f"    \"commit\": {json.dumps(commit)},\n"
+        f"    \"timestamp\": {json.dumps(build_time)},\n"
+        "}\n"
     )
 
     BUILD_MODULE_PATH.parent.mkdir(parents=True, exist_ok=True)
