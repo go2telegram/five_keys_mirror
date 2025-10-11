@@ -66,4 +66,6 @@ async def test_doctor_report(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "Doctor report:" in joined
     assert "Build" in joined
     assert "version" in joined
+    assert "commit" in joined
+    assert "time" in joined
     assert "plan_generated" in joined
