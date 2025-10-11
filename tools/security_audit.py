@@ -1,12 +1,14 @@
 import argparse
 import json
+import logging
 import pathlib
 import subprocess
 import sys
-from shutil import which
 from typing import Any, Dict, Iterable
 
 REPORTS_DIR = pathlib.Path("build/reports")
+
+logger = logging.getLogger(__name__)
 
 
 def run_command(command: str) -> subprocess.CompletedProcess:
@@ -18,12 +20,41 @@ def collect_reports() -> Dict[str, Any]:
     results["pip_audit"] = run_command("pip-audit -r requirements.txt -f json").stdout or "[]"
     results["safety"] = run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
     results["bandit"] = run_command("bandit -q -r app -f json").stdout or "{}"
-    if which("gitleaks"):
-        # gitleaks exit code is non-zero when leaks are found; ignore to allow summary generation
-        results["gitleaks"] = run_command("gitleaks detect --no-git -f json --redact || true").stdout or "[]"
-    else:
-        results["gitleaks"] = "not-installed"
+    results["gitleaks"] = run_gitleaks_scan()
     return results
+
+
+def run_gitleaks_scan() -> str:
+    command = [
+        "gitleaks",
+        "detect",
+        "--no-git",
+        "-f",
+        "json",
+        "--redact",
+        "--exit-code",
+        "0",
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        logger.warning("Skipping gitleaks scan (binary not found)")
+        return "not-installed"
+    except OSError as exc:
+        logger.warning("Skipping gitleaks scan (binary not found)")
+        logger.debug("gitleaks execution failed: %s", exc)
+        return "not-installed"
+    if completed.returncode != 0:
+        if completed.stderr:
+            logger.debug("gitleaks stderr: %s", completed.stderr.strip())
+        logger.warning("Skipping gitleaks scan (binary not found)")
+        return "not-installed"
+    return completed.stdout or "[]"
 
 
 def write_reports(results: Dict[str, Any]) -> None:
