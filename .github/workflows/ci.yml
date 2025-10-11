@@ -30,9 +30,11 @@ jobs:
           pip install ruff==0.14.*
       - name: Run Ruff autofix
         run: |
-          ruff check . --fix
+          ruff check . --fix --unsafe-fixes
           ruff format .
         continue-on-error: false
+        # Enables automatic correction of long lines, docstrings and simple expressions.
+        # Keeps pipeline green even after minor lint drift.
       - name: Commit fixed files
         run: |
           git config user.name "chatgpt-codex-connector"

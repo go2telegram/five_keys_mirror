@@ -324,6 +324,10 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     utm_chart = context["utm_chart"]
     top_products_rows = _render_table(context["top_products"])
     goal_rows = _render_table(context["catalog_goals"])
+    _commit = (
+        f"{context['build_commit_short']} : "
+        f"{context['build_info']['timestamp']}"
+    )
     lead_rows_html = (
         "".join(
             "<tr>"
@@ -442,9 +446,7 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 <body>
   <header>
     <h1>Аналитика Five Keys</h1>
-    <p class="build-info">Версия {context["build_info"]["version"]} · commit {context["build_commit_short"]} · {
-        context["build_info"]["timestamp"]
-    }</p>
+    <p class="build-info">Версия {context["build_info"]["version"]} · commit {_commit}</p>
   </header>
   <main>
     <section class=\"cards\">
