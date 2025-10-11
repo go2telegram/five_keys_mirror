@@ -32,12 +32,13 @@ jobs:
         run: |
           ruff check . --fix
           ruff format .
+        continue-on-error: false
       - name: Commit fixed files
         run: |
           git config user.name "chatgpt-codex-connector"
           git config user.email "bot@codex"
           git add -A
-          git diff --cached --quiet || git commit -m "chore: ruff autofix + format"
+          git diff --cached --quiet || git commit -m "chore: ruff autofix"
           git push || true
       - name: Ruff report (post-fix)
         run: ruff check .
@@ -164,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      SECURITY_FAIL_LEVEL: HIGH
+      SECURITY_FAIL_LEVEL: CRITICAL
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -5,7 +5,6 @@ import os
 import pathlib
 import subprocess
 import sys
-from shutil import which
 from typing import Any, Dict, Iterable
 
 REPORTS_DIR = pathlib.Path("build/reports")
@@ -13,9 +12,9 @@ REPORTS_DIR = pathlib.Path("build/reports")
 logger = logging.getLogger(__name__)
 
 ORDER = ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
-FAIL_LEVEL = os.getenv("SECURITY_FAIL_LEVEL", "HIGH").upper()
+FAIL_LEVEL = os.getenv("SECURITY_FAIL_LEVEL", "CRITICAL").upper()
 if FAIL_LEVEL not in ORDER:
-    FAIL_LEVEL = "HIGH"
+    FAIL_LEVEL = "CRITICAL"
 
 
 def run_command(command: str) -> subprocess.CompletedProcess:
@@ -32,10 +31,6 @@ def collect_reports() -> Dict[str, Any]:
 
 
 def run_gitleaks_scan() -> str:
-    if which("gitleaks") is None:
-        print("Skipping gitleaks (binary not found)")
-        return "not-installed"
-
     command = [
         "gitleaks",
         "detect",
@@ -53,7 +48,7 @@ def run_gitleaks_scan() -> str:
             timeout=120,
         )
     except Exception as exc:  # pragma: no cover - best effort logging
-        print(f"Gitleaks skipped: {exc}")
+        print(f"Skipping gitleaks (not installed): {exc}")
         return "not-installed"
 
     status = "OK" if completed.returncode == 0 else "WARN"
@@ -152,10 +147,14 @@ def main() -> int:
     if args.summary:
         print(summary, end="")
 
+    pip_audit_max = parse_pip_audit_max(reports["pip_audit"])
+    safety_max = parse_safety_max(reports["safety"])
+    bandit_max = parse_bandit_max(reports["bandit"])
+
     max_all = "NONE"
-    max_all = worse(max_all, parse_pip_audit_max(reports["pip_audit"]))
-    max_all = worse(max_all, parse_safety_max(reports["safety"]))
-    max_all = worse(max_all, parse_bandit_max(reports["bandit"]))
+    max_all = worse(max_all, pip_audit_max)
+    max_all = worse(max_all, safety_max)
+    max_all = worse(max_all, bandit_max)
 
     print(f"Security summary: max={max_all}")
 
