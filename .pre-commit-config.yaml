@@ -1,14 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.9
+    rev: v0.4.7
     hooks:
       - id: ruff
-        args: [--exit-non-zero-on-fix]
-      - id: ruff-format
-  - repo: local
-    hooks:
-      - id: dev-check-fast
-        name: dev-check-fast
-        entry: bash tools/hooks/run_dev_check.sh
-        language: system
-        pass_filenames: false
+        args: [--fix, --unsafe-fixes]

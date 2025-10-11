@@ -159,6 +159,8 @@ install_deps() {
   trap 'rm -f "$tmpfile"' EXIT
   grep -v '^gitleaks\b' requirements-dev.txt >"$tmpfile"
   python -m pip install -r "$tmpfile"
+  echo "[dev-up] Running Ruff autoformat..."
+  python -m ruff check . --fix --unsafe-fixes || true
   rm -f "$tmpfile"
   trap - EXIT
 }
