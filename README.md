@@ -92,6 +92,39 @@ pytest -q
 Шаги, требующие выхода в интернет (онлайн-сборка каталога и `tools/head_check.py`), остаются только в GitHub Actions. Там окружение
 получает доступ к медиарепозиторию и гарантирует, что изображения по удалённым URL отвечают.
 
+## Dev up & self-check
+
+### One-liner
+
+```bash
+bash tools/dev_up.sh --dry --selfcheck              # /ping,/doctor без Telegram
+bash tools/dev_up.sh --prod --bot-token="123:AA..." # полный запуск
+```
+
+Pre-commit (локальный автосмоук)
+
+```bash
+python tools/hooks/install_hooks.py     # установить pre-commit
+git commit -m "..."                     # перед коммитом dev_check --fast
+```
+
+Если нужно пропустить временно:
+
+```bash
+git commit -m "..." --no-verify
+```
+
+(не рекомендуется)
+
+Быстрый ручной смоук
+
+```bash
+python -m tools.dev_check --fast --json
+cat build/reports/dev_check.md
+```
+
+---
+
 ### FAQ
 
 **Что делать при mismatch?**
