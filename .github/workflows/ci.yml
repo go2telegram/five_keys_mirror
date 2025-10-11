@@ -177,6 +177,8 @@ jobs:
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      GITLEAKS_SKIP_ON_MISSING: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

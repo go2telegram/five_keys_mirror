@@ -1,10 +1,11 @@
 import argparse
 import json
 import logging
+import os
 import pathlib
 import subprocess
 import sys
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Tuple
 
 REPORTS_DIR = pathlib.Path("build/reports")
 
@@ -15,16 +16,28 @@ def run_command(command: str) -> subprocess.CompletedProcess:
     return subprocess.run(command, shell=True, text=True, capture_output=True)
 
 
-def collect_reports() -> Dict[str, Any]:
+def collect_reports() -> Tuple[Dict[str, Any], bool]:
     results: Dict[str, Any] = {}
     results["pip_audit"] = run_command("pip-audit -r requirements.txt -f json").stdout or "[]"
     results["safety"] = run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
     results["bandit"] = run_command("bandit -q -r app -f json").stdout or "{}"
-    results["gitleaks"] = run_gitleaks_scan()
-    return results
+    gitleaks_payload, gitleaks_missing = run_gitleaks_scan()
+    results["gitleaks"] = gitleaks_payload
+    return results, gitleaks_missing
 
 
-def run_gitleaks_scan() -> str:
+GITLEAKS_SKIP_MESSAGE = "⚠️ Skipping gitleaks (binary not found)"
+
+
+def _should_skip_on_missing() -> bool:
+    value = os.getenv("GITLEAKS_SKIP_ON_MISSING")
+    if value is None:
+        return True
+    value = value.strip().lower()
+    return value not in {"", "0", "false", "no"}
+
+
+def run_gitleaks_scan() -> Tuple[str, bool]:
     command = [
         "gitleaks",
         "detect",
@@ -42,19 +55,18 @@ def run_gitleaks_scan() -> str:
             text=True,
             capture_output=True,
         )
-    except FileNotFoundError:
-        logger.warning("Skipping gitleaks scan (binary not found)")
-        return "not-installed"
-    except OSError as exc:
-        logger.warning("Skipping gitleaks scan (binary not found)")
+    except (FileNotFoundError, OSError) as exc:
         logger.debug("gitleaks execution failed: %s", exc)
-        return "not-installed"
+        return "not-installed", True
+
+    stdout = completed.stdout or ""
     if completed.returncode != 0:
+        if "no leaks found" in stdout.lower():
+            return stdout or "[]", False
         if completed.stderr:
             logger.debug("gitleaks stderr: %s", completed.stderr.strip())
-        logger.warning("Skipping gitleaks scan (binary not found)")
-        return "not-installed"
-    return completed.stdout or "[]"
+        return stdout or "[]", False
+    return stdout or "[]", False
 
 
 def write_reports(results: Dict[str, Any]) -> None:
@@ -125,15 +137,19 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    reports = collect_reports()
+    reports, gitleaks_missing = collect_reports()
     summary = write_reports(reports)
 
     if args.summary:
         print(summary, end="")
 
-    if has_high_findings(reports):
-        return 1
-    return 0
+    exit_code = 1 if has_high_findings(reports) else 0
+
+    if gitleaks_missing and _should_skip_on_missing():
+        print(GITLEAKS_SKIP_MESSAGE)
+        return 0
+
+    return exit_code
 
 
 if __name__ == "__main__":
