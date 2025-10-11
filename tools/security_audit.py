@@ -1,14 +1,21 @@
 import argparse
 import json
 import logging
+import os
 import pathlib
 import subprocess
 import sys
+from shutil import which
 from typing import Any, Dict, Iterable
 
 REPORTS_DIR = pathlib.Path("build/reports")
 
 logger = logging.getLogger(__name__)
+
+ORDER = ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+FAIL_LEVEL = os.getenv("SECURITY_FAIL_LEVEL", "HIGH").upper()
+if FAIL_LEVEL not in ORDER:
+    FAIL_LEVEL = "HIGH"
 
 
 def run_command(command: str) -> subprocess.CompletedProcess:
@@ -25,6 +32,10 @@ def collect_reports() -> Dict[str, Any]:
 
 
 def run_gitleaks_scan() -> str:
+    if which("gitleaks") is None:
+        print("Skipping gitleaks (binary not found)")
+        return "not-installed"
+
     command = [
         "gitleaks",
         "detect",
@@ -32,8 +43,6 @@ def run_gitleaks_scan() -> str:
         "-f",
         "json",
         "--redact",
-        "--exit-code",
-        "0",
     ]
     try:
         completed = subprocess.run(
@@ -41,19 +50,14 @@ def run_gitleaks_scan() -> str:
             check=False,
             text=True,
             capture_output=True,
+            timeout=120,
         )
-    except FileNotFoundError:
-        logger.warning("Skipping gitleaks scan (binary not found)")
+    except Exception as exc:  # pragma: no cover - best effort logging
+        print(f"Gitleaks skipped: {exc}")
         return "not-installed"
-    except OSError as exc:
-        logger.warning("Skipping gitleaks scan (binary not found)")
-        logger.debug("gitleaks execution failed: %s", exc)
-        return "not-installed"
-    if completed.returncode != 0:
-        if completed.stderr:
-            logger.debug("gitleaks stderr: %s", completed.stderr.strip())
-        logger.warning("Skipping gitleaks scan (binary not found)")
-        return "not-installed"
+
+    status = "OK" if completed.returncode == 0 else "WARN"
+    print(f"Gitleaks done: {status}")
     return completed.stdout or "[]"
 
 
@@ -62,13 +66,7 @@ def write_reports(results: Dict[str, Any]) -> None:
     (REPORTS_DIR / "security_audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2))
     gitleaks_payload = results.get("gitleaks", "")
     gitleaks_has_leaks = '"leaks":' in gitleaks_payload if isinstance(gitleaks_payload, str) else bool(gitleaks_payload)
-    gitleaks_summary = (
-        "skipped"
-        if gitleaks_payload == "not-installed"
-        else "issues"
-        if gitleaks_has_leaks
-        else "none"
-    )
+    gitleaks_summary = "skipped" if gitleaks_payload == "not-installed" else "issues" if gitleaks_has_leaks else "none"
 
     summary = (
         "## Security audit\n\n"
@@ -99,24 +97,44 @@ def _iter_safety_findings(payload: Any) -> Iterable[Dict[str, Any]]:
                 yield finding
 
 
-def has_high_findings(results: Dict[str, Any]) -> bool:
-    pip_payload = _load_json(results["pip_audit"], [])
-    for entry in pip_payload if isinstance(pip_payload, list) else []:
-        for vuln in entry.get("vulns", []):
-            if vuln.get("severity", "").upper() in {"HIGH", "CRITICAL"}:
-                return True
+def normalize_severity(value: Any) -> str:
+    text = str(value).upper() if value is not None else ""
+    return text if text in ORDER else "NONE"
 
-    safety_payload = _load_json(results["safety"], [])
-    for finding in _iter_safety_findings(safety_payload):
-        if finding.get("severity", "").upper() in {"HIGH", "CRITICAL"}:
-            return True
 
-    bandit_payload = _load_json(results["bandit"], {})
-    for finding in bandit_payload.get("results", []) if isinstance(bandit_payload, dict) else []:
-        if finding.get("issue_severity", "").upper() in {"HIGH", "CRITICAL"}:
-            return True
+def worse(left: str, right: str) -> str:
+    return ORDER[max(ORDER.index(left), ORDER.index(right))]
 
-    return False
+
+def parse_pip_audit_max(text: str) -> str:
+    payload = _load_json(text, [])
+    maximum = "NONE"
+    if isinstance(payload, list):
+        for entry in payload:
+            if not isinstance(entry, dict):
+                continue
+            for vuln in entry.get("vulns", []) or []:
+                if isinstance(vuln, dict):
+                    maximum = worse(maximum, normalize_severity(vuln.get("severity")))
+    return maximum
+
+
+def parse_safety_max(text: str) -> str:
+    payload = _load_json(text, [])
+    maximum = "NONE"
+    for finding in _iter_safety_findings(payload):
+        maximum = worse(maximum, normalize_severity(finding.get("severity")))
+    return maximum
+
+
+def parse_bandit_max(text: str) -> str:
+    payload = _load_json(text, {})
+    maximum = "NONE"
+    if isinstance(payload, dict):
+        for finding in payload.get("results", []) or []:
+            if isinstance(finding, dict):
+                maximum = worse(maximum, normalize_severity(finding.get("issue_severity")))
+    return maximum
 
 
 def main() -> int:
@@ -134,7 +152,14 @@ def main() -> int:
     if args.summary:
         print(summary, end="")
 
-    if has_high_findings(reports):
+    max_all = "NONE"
+    max_all = worse(max_all, parse_pip_audit_max(reports["pip_audit"]))
+    max_all = worse(max_all, parse_safety_max(reports["safety"]))
+    max_all = worse(max_all, parse_bandit_max(reports["bandit"]))
+
+    print(f"Security summary: max={max_all}")
+
+    if ORDER.index(max_all) >= ORDER.index(FAIL_LEVEL):
         return 1
     return 0
 

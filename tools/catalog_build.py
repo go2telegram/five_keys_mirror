@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
