@@ -10,7 +10,7 @@
         "switch_inline_query": null,
         "switch_inline_query_chosen_chat": null,
         "switch_inline_query_current_chat": null,
-        "text": "Тесты и диагностика",
+        "text": "Тесты",
         "url": null,
         "web_app": null
       },
@@ -23,10 +23,12 @@
         "switch_inline_query": null,
         "switch_inline_query_chosen_chat": null,
         "switch_inline_query_current_chat": null,
-        "text": "Персональные рекомендации",
+        "text": "План (AI)",
         "url": null,
         "web_app": null
-      },
+      }
+    ],
+    [
       {
         "callback_data": "catalog:menu",
         "callback_game": null,
@@ -39,9 +41,7 @@
         "text": "Каталог",
         "url": null,
         "web_app": null
-      }
-    ],
-    [
+      },
       {
         "callback_data": "menu:premium",
         "callback_game": null,
@@ -51,10 +51,12 @@
         "switch_inline_query": null,
         "switch_inline_query_chosen_chat": null,
         "switch_inline_query_current_chat": null,
-        "text": "Премиум-доступ",
+        "text": "Премиум",
         "url": null,
         "web_app": null
-      },
+      }
+    ],
+    [
       {
         "callback_data": "profile:open",
         "callback_game": null,

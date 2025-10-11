@@ -142,14 +142,47 @@ def _collect_image_refs(product: dict) -> list[str]:
     return refs
 
 
-async def _build_media_group(refs: Sequence[str]) -> list[InputMediaPhoto]:
-    media: list[InputMediaPhoto] = []
+async def _check_remote_media(url: str) -> bool:
+    timeout = aiohttp.ClientTimeout(total=4.0)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.head(url, allow_redirects=True) as response:
+                status = response.status
+                if status == 405:  # Method Not Allowed — trust Telegram to fetch via GET
+                    return True
+                if not (200 <= status < 400):
+                    LOG.warning("send_product_album: remote HEAD %s returned %s", url, status)
+                    return False
+                content_type = response.headers.get("Content-Type")
+                if content_type and not _is_supported_content_type(content_type):
+                    LOG.warning(
+                        "send_product_album: remote HEAD %s content-type %s", url, content_type
+                    )
+                    return False
+                return True
+    except (ClientError, asyncio.TimeoutError) as exc:
+        LOG.warning("send_product_album: remote HEAD %s failed: %s", url, exc)
+    except Exception:  # pragma: no cover - defensive fallback for unexpected errors
+        LOG.exception("send_product_album: remote HEAD unexpected error for %s", url)
+    return False
+
+
+async def _gather_media_entries(
+    refs: Sequence[str],
+) -> list[tuple[str, FSInputFile | BufferedInputFile | str]]:
+    entries: list[tuple[str, FSInputFile | BufferedInputFile | str]] = []
     for ref in refs:
-        source = await _resolve_media_source(ref)
+        try:
+            source = await _resolve_media_source(ref)
+        except Exception:  # pragma: no cover - defensive guard
+            LOG.exception("send_product_album: failed to resolve media %s", ref)
+            continue
         if not source:
             continue
-        media.append(InputMediaPhoto(media=source))
-    return media
+        if isinstance(source, str) and not await _check_remote_media(source):
+            continue
+        entries.append((ref, source))
+    return entries
 
 
 async def _resolve_media_source(ref: str) -> FSInputFile | BufferedInputFile | None:
@@ -215,6 +248,7 @@ async def send_product_album(bot: Bot, chat_id: int, codes: Sequence[str]) -> No
         if not product:
             LOG.warning("send_product_album: unknown product %s", code)
             continue
+        added = False
         for ref in _collect_image_refs(product):
             if ref in seen:
                 continue
@@ -222,9 +256,9 @@ async def send_product_album(bot: Bot, chat_id: int, codes: Sequence[str]) -> No
                 continue
             collected.append(ref)
             seen.add(ref)
-            break
-        else:
-            LOG.warning("send_product_album: no local images for %s", code)
+            added = True
+        if not added:
+            LOG.warning("send_product_album: no usable images for %s", code)
 
     if not collected:
         LOG.info("send_product_album: nothing to send for %s", codes)
@@ -232,10 +266,12 @@ async def send_product_album(bot: Bot, chat_id: int, codes: Sequence[str]) -> No
 
     precache_remote_images(collected)
 
-    media_group = await _build_media_group(collected)
-    if not media_group:
-        LOG.info("send_product_album: failed to build media group for %s", collected)
+    entries = await _gather_media_entries(collected)
+    if not entries:
+        LOG.info("send_product_album: no valid media sources for %s", collected)
         return
+
+    media_group = [InputMediaPhoto(media=source) for _, source in entries]
 
     if len(media_group) >= 2:
         try:
@@ -245,10 +281,7 @@ async def send_product_album(bot: Bot, chat_id: int, codes: Sequence[str]) -> No
         except Exception:
             LOG.exception("send_product_album: media group failed; falling back to singles")
 
-    for ref in collected:
-        source = await _resolve_media_source(ref)
-        if not source:
-            continue
+    for ref, source in entries:
         try:
             await bot.send_photo(chat_id, photo=source)
             LOG.debug("send_product_album: sent single %s", ref)
