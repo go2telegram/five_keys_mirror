@@ -31,6 +31,7 @@ class FakeMessage:
         type(self)._next_id += 1
         self.message_id = type(self)._next_id
         self.chat = SimpleNamespace(id=chat_id)
+        self.from_user = SimpleNamespace(id=4242, language_code="ru")
         self.answers: list[dict[str, object]] = []
         self.photos: list[dict[str, object]] = []
         self.last_child: "FakeMessage" | None = None

@@ -52,9 +52,10 @@ class _DummyDispatcher:
 
 
 class _DummyBot:
-    def __init__(self, token: str, default: Any = None) -> None:
+    def __init__(self, token: str, default: Any = None, *, session: Any | None = None) -> None:
         self.token = token
         self.default = default
+        self.session = session
 
 
 @pytest.mark.anyio("asyncio")

@@ -10,7 +10,7 @@ from aiogram.methods import SendMessage
 from app.utils.telegram_session import FloodWaitRetrySession
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_flood_wait_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     attempts: list[int] = []
 
@@ -37,7 +37,7 @@ async def test_flood_wait_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     assert sleeps == [2.0, 2.0]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_flood_wait_gives_up_after_max(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_make_request(self, bot, method, data):
         raise TelegramRetryAfter(method, "Flood", retry_after=1)
@@ -56,3 +56,31 @@ async def test_flood_wait_gives_up_after_max(monkeypatch: pytest.MonkeyPatch) ->
         await session.make_request(AsyncMock(), method, {})
 
     assert sleeps == [1.0]
+
+
+@pytest.mark.anyio
+async def test_floodwait_session_ignores_timeout_kw(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_make_request(self, bot, method, *args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return {"ok": True}
+
+    monkeypatch.setattr(AiohttpSession, "make_request", fake_make_request, raising=False)
+
+    session = FloodWaitRetrySession()
+    method = SendMessage(chat_id=1, text="hello")
+
+    result = await session.make_request(AsyncMock(), method, {}, timeout=5)
+
+    assert result == {"ok": True}
+    assert captured["args"] == ({},)
+    assert "timeout" not in captured["kwargs"]
+
+
+@pytest.mark.anyio
+async def test_bot_starts_with_patched_session() -> None:
+    from app.feature_flags import FF_FLOODWAIT_PATCH
+
+    assert FF_FLOODWAIT_PATCH is True
