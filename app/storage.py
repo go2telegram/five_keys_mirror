@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import logging
 import os
 import time
-import logging
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, MutableMapping
 from copy import deepcopy
@@ -140,10 +140,7 @@ class SessionStore(MutableMapping[int, SessionData]):
         return SessionData(self, key, data)
 
     def __setitem__(self, key: int, value: Dict[str, Any] | SessionData) -> None:
-        if isinstance(value, SessionData):
-            payload = value.to_dict()
-        else:
-            payload = deepcopy(value)
+        payload = value.to_dict() if isinstance(value, SessionData) else deepcopy(value)
         self._save(key, payload)
 
     def __delitem__(self, key: int) -> None:
@@ -297,4 +294,3 @@ def has_role(user_id: int, role: str) -> bool:
     if user_id is None or not role:
         return False
     return role in ACCESS_ROLES.get(user_id, set())
-

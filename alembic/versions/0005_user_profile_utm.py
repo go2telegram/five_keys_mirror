@@ -1,4 +1,5 @@
 """Add UTM field to user profiles."""
+
 from __future__ import annotations
 
 import sqlalchemy as sa

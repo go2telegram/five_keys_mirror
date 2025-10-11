@@ -7,15 +7,15 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home, kb_buylist_pdf, kb_goal_menu
+from app.link_manager import get_register_link
 from app.products import GOAL_MAP, PRODUCTS
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
-from app.link_manager import get_register_link
 from app.utils import safe_edit_text
 from app.utils.cards import build_order_link
-from app.utils_media import send_product_album
 from app.utils.premium_cta import send_premium_cta
+from app.utils_media import send_product_album
 
 LOG = logging.getLogger(__name__)
 
@@ -336,9 +336,9 @@ async def pick_finalize(c: CallbackQuery):
     actions = meta["actions"]
     notes = meta["notes"]
     if allerg == "herbs":
-        notes += " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, " "избегай острых блюд и алкоголя."
+        notes += " Учитываем чувствительный ЖКТ/аллергии: начни с половинных порций, избегай острых блюд и алкоголя."
     if age == "50p":
-        notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците " "по согласованию с врачом."
+        notes += " Сфокусируй внимание на костях/суставах: витамин D3 при дефиците по согласованию с врачом."
 
     plan_payload = {
         "title": meta["title"],

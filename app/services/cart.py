@@ -12,7 +12,7 @@ from app.catalog.loader import product_by_alias, product_by_id
 from app.storage import USE_REDIS
 
 try:
-    from app.storage_redis import cart_get, cart_set, cart_pop
+    from app.storage_redis import cart_get, cart_pop, cart_set
 except ImportError:  # pragma: no cover - redis optional
     cart_get = cart_set = cart_pop = None  # type: ignore[assignment]
 
@@ -173,6 +173,7 @@ class CartStorage:
 
     def clear(self, user_id: int) -> None:
         self._delete(user_id)
+
 
 _CART = CartStorage()
 

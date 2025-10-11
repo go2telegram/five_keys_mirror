@@ -10,9 +10,10 @@ import yaml
 async def head(url: str):
     try:
         timeout = aiohttp.ClientTimeout(total=6)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.head(url, allow_redirects=True) as response:
-                return url, response.status, response.headers.get("Content-Type", "")
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.head(
+            url, allow_redirects=True
+        ) as response:
+            return url, response.status, response.headers.get("Content-Type", "")
     except Exception as exc:  # noqa: BLE001 - we only log the exception message
         return url, -1, str(exc)
 
@@ -20,7 +21,8 @@ async def head(url: str):
 async def collect_urls():
     urls = set()
 
-    data = json.load(open("app/catalog/products.json", encoding="utf-8"))
+    with open("app/catalog/products.json", encoding="utf-8") as fp:
+        data = json.load(fp)
     items = data["products"] if isinstance(data, dict) else data
     for product in items:
         image = product.get("image") or (product.get("images") or [None])[0]
@@ -33,7 +35,7 @@ async def collect_urls():
 
         base = os.getenv("QUIZ_IMG_BASE", "")
 
-        def norm(url: str):
+        def norm(url: str, base: str = base):
             return url if url.startswith("http") else f"{base.rstrip('/')}/{url.lstrip('/')}"
 
         cover = yml.get("cover")

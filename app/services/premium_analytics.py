@@ -1,4 +1,5 @@
 """Premium analytics helpers used by admin commands."""
+
 from __future__ import annotations
 
 import datetime as dt

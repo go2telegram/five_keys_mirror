@@ -33,9 +33,7 @@ def test_images_mapping_examples():
     product = _find(products, "nash-omega-3")
     assert product and (product.get("image") or product.get("images")), "Omega-3 image missing"
     image = product.get("image") or product.get("images", [None])[0]
-    assert image and (
-        image.endswith(".jpg") or image.endswith(".png") or image.endswith(".webp")
-    )
+    assert image and (image.endswith(".jpg") or image.endswith(".png") or image.endswith(".webp"))
 
 
 def test_buy_url_has_utm():

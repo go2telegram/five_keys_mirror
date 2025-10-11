@@ -82,10 +82,7 @@ def _slugify_name(name: str) -> str:
 
 def _split_name(path: Path) -> tuple[str, str]:
     suffix = "".join(path.suffixes).lower()
-    if suffix:
-        stem = path.name[: -len(suffix)]
-    else:
-        stem = path.name
+    stem = path.name[: -len(suffix)] if suffix else path.name
     return stem, suffix
 
 
@@ -196,9 +193,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     print(f"Total files scanned: {plan.total_files}")
     if plan.collisions:
-        print(
-            f"Planned renames: {len(plan.renames)} (collisions resolved: {plan.collisions})"
-        )
+        print(f"Planned renames: {len(plan.renames)} (collisions resolved: {plan.collisions})")
     else:
         print(f"Planned renames: {len(plan.renames)}")
 

@@ -56,4 +56,5 @@ class CommonTexts:
             )
         )
 
+
 __all__ = ["CommonTexts"]

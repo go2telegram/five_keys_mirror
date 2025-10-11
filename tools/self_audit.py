@@ -19,17 +19,25 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from audit_sections import (
+from audit_sections import (  # noqa: E402
     AuditContext,
     SectionResult,
+    check_calculators,
+    check_catalog,
+    check_linters,
+    check_load_smoke,
+    check_media_urls,
+    check_migrations,
+    check_quizzes,
+    check_recommendations,
+    check_security,
+    check_tests_quality,
 )
-from audit_sections import check_calculators, check_catalog, check_linters
-from audit_sections import check_load_smoke, check_media_urls, check_migrations
-from audit_sections import check_quizzes, check_recommendations, check_security
-from audit_sections import check_tests_quality
+
 DEFAULT_REPORT = ROOT / "build" / "reports" / "self_audit.md"
 JSON_REPORT = "self_audit.json"
 TIMINGS_REPORT = "timings.json"
+
 
 def _check_git_dirty(context: AuditContext) -> SectionResult:
     try:
@@ -168,15 +176,14 @@ def _render_markdown(metadata: dict, results: Dict[str, SectionResult]) -> str:
 def _is_network_error(exc: Exception) -> bool:
     if isinstance(exc, (ConnectionError, TimeoutError, socket.gaierror)):
         return True
-    if isinstance(exc, OSError):
-        if exc.errno in {
-            errno.ECONNREFUSED,
-            errno.EHOSTUNREACH,
-            errno.ECONNRESET,
-            errno.ENETUNREACH,
-            errno.ETIMEDOUT,
-        }:
-            return True
+    if isinstance(exc, OSError) and exc.errno in {
+        errno.ECONNREFUSED,
+        errno.EHOSTUNREACH,
+        errno.ECONNRESET,
+        errno.ENETUNREACH,
+        errno.ETIMEDOUT,
+    }:
+        return True
     module = type(exc).__module__
     if module.startswith("aiohttp") or module.startswith("urllib3"):
         return True
@@ -192,9 +199,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     existing_pythonpath = os.environ.get("PYTHONPATH")
-    pythonpath = (
-        f"{ROOT}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(ROOT)
-    )
+    pythonpath = f"{ROOT}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(ROOT)
 
     context = AuditContext(
         root=ROOT,
@@ -259,9 +264,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     timings_path.write_text(json.dumps(timings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     critical_errors = [
-        name
-        for name, result in results.items()
-        if result.status in {"error", "fail"} and name in _CRITICAL_FOR_CI
+        name for name, result in results.items() if result.status in {"error", "fail"} and name in _CRITICAL_FOR_CI
     ]
     status_counts: Dict[str, int] = {}
     for result in results.values():

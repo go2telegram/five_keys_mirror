@@ -6,7 +6,6 @@ from typing import Any
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramNotFound
 from aiogram.types import CallbackQuery, Message
 
-
 _SAFE_EDIT_LOG = logging.getLogger("telegram.safe_edit")
 
 

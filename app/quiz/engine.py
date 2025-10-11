@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-import re
-import time
 from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 import yaml
@@ -29,7 +29,7 @@ from app.repo import events as events_repo
 from app.storage import commit_safely, touch_throttle
 
 if TYPE_CHECKING:  # pragma: no cover - import only for typing
-    from app.utils_media import fetch_image_as_file
+    pass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(__file__).resolve().parent / "data"
@@ -121,9 +121,7 @@ class QuizResultContext:
 class QuizHooks:
     """Optional lifecycle hooks to customize quiz behaviour."""
 
-    on_finish: (
-        Callable[[int, QuizDefinition, QuizResultContext], Awaitable[bool]] | None
-    ) = None
+    on_finish: Callable[[int, QuizDefinition, QuizResultContext], Awaitable[bool]] | None = None
 
 
 @dataclass(frozen=True)
@@ -531,13 +529,9 @@ def _parse_question(raw: dict[str, Any]) -> QuizQuestion:
     seen_keys: set[str] = set()
     for option in options:
         if not OPTION_KEY_PATTERN.fullmatch(option.key):
-            raise ValueError(
-                f"Question {qid} option key must match [a-z0-9_-]: {option.key!r}"
-            )
+            raise ValueError(f"Question {qid} option key must match [a-z0-9_-]: {option.key!r}")
         if option.key in seen_keys:
-            raise ValueError(
-                f"Question {qid} has duplicate option key: {option.key}"
-            )
+            raise ValueError(f"Question {qid} has duplicate option key: {option.key}")
         seen_keys.add(option.key)
 
     return QuizQuestion(id=qid, text=text, options=options, image=image)
@@ -567,9 +561,7 @@ def _validate_thresholds(name: str, thresholds: list[QuizThreshold]) -> None:
     prev_max: int | None = None
     for threshold in thresholds:
         if threshold.min > threshold.max:
-            raise ValueError(
-                f"Quiz {name} has invalid threshold range: {threshold.min}>{threshold.max}"
-            )
+            raise ValueError(f"Quiz {name} has invalid threshold range: {threshold.min}>{threshold.max}")
         if prev_max is not None and threshold.min > prev_max + 1:
             logger.warning(
                 "Quiz %s thresholds have gaps between %s and %s",
@@ -584,7 +576,7 @@ def _entry_message(entry: CallbackQuery | Message) -> Message | None:
     if isinstance(entry, CallbackQuery):
         return entry.message
     if hasattr(entry, "message"):
-        candidate = getattr(entry, "message")
+        candidate = entry.message
         if candidate is not None:
             return candidate
     return entry
@@ -601,9 +593,7 @@ async def _send_cover(message: Message, definition: QuizDefinition) -> None:
     await message.answer(caption)
 
 
-async def _send_question(
-    message: Message, definition: QuizDefinition, index: int
-) -> Message | None:
+async def _send_question(message: Message, definition: QuizDefinition, index: int) -> Message | None:
     total = len(definition.questions)
     question = definition.questions[index]
 
@@ -615,9 +605,7 @@ async def _send_question(
     for option in question.options:
         kb.button(
             text=option.text,
-            callback_data=build_answer_callback_data(
-                definition.name, question.id, option.key
-            ),
+            callback_data=build_answer_callback_data(definition.name, question.id, option.key),
         )
     if index > 0:
         kb.button(
@@ -666,9 +654,7 @@ async def _record_question_state(
     await state.set_state(_question_state(index))
 
 
-async def _handle_step_timeout(
-    call: CallbackQuery, state: FSMContext, definition: QuizDefinition
-) -> None:
+async def _handle_step_timeout(call: CallbackQuery, state: FSMContext, definition: QuizDefinition) -> None:
     await state.clear()
 
     builder = InlineKeyboardBuilder()
@@ -698,9 +684,7 @@ async def _handle_step_timeout(
         await call.answer("Сессия теста устарела", show_alert=True)
 
 
-async def _handle_nav_next(
-    call: CallbackQuery, state: FSMContext, quiz_name: str
-) -> None:
+async def _handle_nav_next(call: CallbackQuery, state: FSMContext, quiz_name: str) -> None:
     try:
         await start_quiz(call, state, quiz_name)
     except FileNotFoundError:
@@ -708,9 +692,7 @@ async def _handle_nav_next(
             await call.answer("Тест недоступен", show_alert=True)
 
 
-async def _handle_nav_home(
-    call: CallbackQuery, state: FSMContext, quiz_name: str
-) -> None:
+async def _handle_nav_home(call: CallbackQuery, state: FSMContext, quiz_name: str) -> None:
     await state.clear()
 
     message = call.message
@@ -736,9 +718,7 @@ async def _handle_nav_home(
         await call.answer()
 
 
-async def _handle_nav_finish(
-    call: CallbackQuery, state: FSMContext, quiz_name: str
-) -> None:
+async def _handle_nav_finish(call: CallbackQuery, state: FSMContext, quiz_name: str) -> None:
     await state.clear()
     with suppress(Exception):
         await call.answer("Тест завершён", show_alert=False)
@@ -938,9 +918,7 @@ def _flexible_image_lookup(relative: str) -> Path | None:
     return None
 
 
-def _materialize_answers(
-    definition: QuizDefinition, answer_keys: dict[str, str]
-) -> dict[str, QuizOption]:
+def _materialize_answers(definition: QuizDefinition, answer_keys: dict[str, str]) -> dict[str, QuizOption]:
     mapping: dict[str, QuizOption] = {}
     for question in definition.questions:
         key = answer_keys.get(question.id)
@@ -968,9 +946,7 @@ def _question_state(index: int) -> State:
     return State(f"{QuizSession.__name__}:Q{index + 1}")
 
 
-def _recalculate_progress(
-    definition: QuizDefinition, answers: dict[str, str]
-) -> tuple[int, list[str]]:
+def _recalculate_progress(definition: QuizDefinition, answers: dict[str, str]) -> tuple[int, list[str]]:
     score = 0
     tags: list[str] = []
     for question in definition.questions:

@@ -173,6 +173,7 @@ async def request_with_retries(
     last_error: Exception | None = None
 
     for attempt in range(1, attempts + 1):
+
         async def _attempt() -> httpx.Response:
             response = await client.request(method, url, **kwargs)
             if retryable_statuses and response.status_code in retryable_statuses:

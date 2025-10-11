@@ -9,7 +9,6 @@ from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-
 logger = logging.getLogger("callback.fallback")
 
 router = Router(name="callback_fallback")

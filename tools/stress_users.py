@@ -298,13 +298,15 @@ def _render_markdown(history: List[Dict[str, Any]]) -> str:
 
     per_step = latest.get("per_step", {})
     if per_step:
-        lines.extend([
-            "",
-            "### Per-step latency",
-            "",
-            "| Step | Requests | Errors | p50 (ms) | p95 (ms) |",
-            "| --- | --- | --- | --- | --- |",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Per-step latency",
+                "",
+                "| Step | Requests | Errors | p50 (ms) | p95 (ms) |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
         for step_name, payload in per_step.items():
             latency = payload.get("latency", {})
             lines.append(
@@ -317,13 +319,15 @@ def _render_markdown(history: List[Dict[str, Any]]) -> str:
                 )
             )
 
-    lines.extend([
-        "",
-        "## History (latest 10 runs)",
-        "",
-        "| Timestamp | p50 (ms) | p95 (ms) | Errors | Requests |",
-        "| --- | --- | --- | --- | --- |",
-    ])
+    lines.extend(
+        [
+            "",
+            "## History (latest 10 runs)",
+            "",
+            "| Timestamp | p50 (ms) | p95 (ms) | Errors | Requests |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
 
     for entry in history[-10:]:
         latency = entry.get("latency", {})
@@ -425,10 +429,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Raw metrics saved to {args.output}")
 
     report_dir: Optional[Path]
-    if args.report_dir == Path("-"):
-        report_dir = None
-    else:
-        report_dir = args.report_dir
+    report_dir = None if args.report_dir == Path("-") else args.report_dir
 
     if report_dir is not None:
         _write_reports(summary, report_dir)

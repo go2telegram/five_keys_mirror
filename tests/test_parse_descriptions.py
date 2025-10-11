@@ -6,7 +6,6 @@ import pytest
 
 from tools.parse_descriptions import build_index
 
-
 DESCRIPTIONS_FILE = Path("app/catalog/descriptions/Полное описание продуктов vilavi.txt")
 
 

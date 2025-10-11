@@ -6,7 +6,6 @@ from pathlib import Path
 
 from . import AuditContext, SectionResult, section
 
-
 _SENSITIVE_HINTS = ("token", "secret", "api_key", "apikey", "password")
 _TARGET_FILES = (".env", "config.py")
 
@@ -20,7 +19,7 @@ def _scan_file(path: Path) -> list[str]:
     for idx, line in enumerate(text.splitlines(), 1):
         lower = line.lower()
         if any(hint in lower for hint in _SENSITIVE_HINTS) and "=" in line:
-            value = line.split("=", 1)[1].strip().strip('"\'')
+            value = line.split("=", 1)[1].strip().strip("\"'")
             if value and len(value) > 8 and not value.startswith("${"):
                 findings.append(f"{path.name}:{idx}")
     return findings

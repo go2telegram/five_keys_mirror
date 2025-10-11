@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0003_commerce_tables"
@@ -16,6 +17,7 @@ depends_on = None
 _json = postgresql.JSONB(astext_type=sa.Text()).with_variant(sa.JSON(), "sqlite")
 _json_default = sa.text("'{}'")
 _ts_default = sa.text("CURRENT_TIMESTAMP")
+
 
 def upgrade() -> None:
     op.create_table(

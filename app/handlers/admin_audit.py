@@ -84,9 +84,7 @@ def _format_summary(data: dict[str, Any], *, flags: Iterable[str], returncode: i
     info_lines = [header]
     if meta:
         info_lines.append(
-            "Коммит: {commit} | Ветка: {branch}".format(
-                commit=meta.get("commit", "—"), branch=meta.get("branch", "—")
-            )
+            "Коммит: {commit} | Ветка: {branch}".format(commit=meta.get("commit", "—"), branch=meta.get("branch", "—"))
         )
     for key in [
         "migrations",
@@ -113,10 +111,7 @@ def _format_summary(data: dict[str, Any], *, flags: Iterable[str], returncode: i
 
 
 async def _send_report(target: Message | CallbackQuery, *, flags: list[str]) -> None:
-    if isinstance(target, CallbackQuery):
-        message = target.message
-    else:
-        message = target
+    message = target.message if isinstance(target, CallbackQuery) else target
     if message is None:
         return
 

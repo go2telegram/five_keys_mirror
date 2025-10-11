@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
-
 CATALOG_DIR = Path(__file__).resolve().parent
 CATALOG_PATH = CATALOG_DIR / "products.json"
 REPORT_PATH = CATALOG_DIR / "products.report.json"

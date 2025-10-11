@@ -21,7 +21,7 @@ try:  # pragma: no cover - optional dependency for quiz parsing
 except ModuleNotFoundError:  # pragma: no cover - handled gracefully below
     yaml = None  # type: ignore[assignment]
 
-from app.config import settings
+from app.config import settings  # noqa: E402
 
 CATALOG_FILE = ROOT / "app" / "catalog" / "products.json"
 QUIZ_DATA_DIR = ROOT / "app" / "quiz" / "data"

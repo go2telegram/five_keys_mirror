@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify PowerShell scripts are ASCII-only and use CRLF with a single trailing newline."""
+
 from __future__ import annotations
 
 import sys

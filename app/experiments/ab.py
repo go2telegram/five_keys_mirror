@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Dict, Iterable, Mapping
+from typing import Any, Iterable, Mapping
 
 import yaml
 

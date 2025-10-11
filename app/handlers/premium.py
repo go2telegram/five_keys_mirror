@@ -1,4 +1,3 @@
-from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
@@ -6,31 +5,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.keyboards import kb_back_home, kb_premium_info_actions
+from app.keyboards import kb_back_home
 from app.repo import events as events_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.storage import commit_safely
 from app.utils import safe_edit_text
 from app.utils.premium_cta import CTA_BUTTON_TEXT
 
 router = Router(name="premium")
-
-PREMIUM_INFO_TEXT = (
-    "🔓 Получи доступ к персональному плану здоровья:\n"
-    "💡 Все тесты и рекомендации\n"
-    "🧠 AI-анализ профиля\n"
-    "📅 Еженедельные обновления и персональный чат."
-)
-
-
-@router.message(Command("premium_info"))
-async def premium_info_command(message: Message) -> None:
-    await message.answer(PREMIUM_INFO_TEXT, reply_markup=kb_premium_info_actions())
-
-
-@router.callback_query(F.data == "premium:info")
-async def premium_info_callback(c: CallbackQuery) -> None:
-    await c.answer()
-    if c.message:
-        await safe_edit_text(c.message, PREMIUM_INFO_TEXT, kb_premium_info_actions())
 
 BASIC_LINKS = [
     ("МИТОlife (новости)", "https://t.me/c/1858905974/3331"),
@@ -62,8 +43,8 @@ PREMIUM_BULLETS = [
 
 PREMIUM_INFO_TEXT = (
     "💎 <b>MITO Premium</b> — расширенный доступ\n\n"
-    f"<b>Free</b>:\n" + "\n".join(f"• {item}" for item in FREE_BULLETS) + "\n\n"
-    f"<b>Premium</b>:\n" + "\n".join(f"• {item}" for item in PREMIUM_BULLETS) + "\n\n"
+    "<b>Free</b>:\n" + "\n".join(f"• {item}" for item in FREE_BULLETS) + "\n\n"
+    "<b>Premium</b>:\n" + "\n".join(f"• {item}" for item in PREMIUM_BULLETS) + "\n\n"
     "Открой Premium, чтобы получить полный план и сопровождение."
 )
 

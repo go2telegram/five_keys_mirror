@@ -220,17 +220,21 @@ def handle_conflicts(pr: PRStatus) -> None:
 def resolve_keyboard_conflict(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
     target_block = (
-        "    kb.button(text=\"⚡ Тесты и диагностика\", callback_data=\"menu:tests\")\n"
-        "    kb.button(text=\"🎯 Рекомендации\", callback_data=\"pick:menu\")\n"
-        "    kb.button(text=\"🛍 Каталог\", callback_data=\"catalog:menu\")\n"
-        "    kb.button(text=\"💎 Премиум\", callback_data=\"menu:premium\")\n"
-        "    kb.button(text=\"👤 Профиль\", callback_data=\"profile:open\")\n"
-        "    kb.button(text=\"ℹ️ Помощь\", callback_data=\"menu:help\")\n"
+        '    kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")\n'
+        '    kb.button(text="🎯 Рекомендации", callback_data="pick:menu")\n'
+        '    kb.button(text="🛍 Каталог", callback_data="catalog:menu")\n'
+        '    kb.button(text="💎 Премиум", callback_data="menu:premium")\n'
+        '    kb.button(text="👤 Профиль", callback_data="profile:open")\n'
+        '    kb.button(text="ℹ️ Помощь", callback_data="menu:help")\n'
     )
     import re
 
     pattern = re.compile(
-        r"(def kb_main\(\) -> InlineKeyboardMarkup:\n\s+kb = InlineKeyboardBuilder\(\)\n)(.*?)(\s+kb.adjust\(3, 3\)\n\s+return kb.as_markup\(\))",
+        (
+            r"(def kb_main\(\) -> InlineKeyboardMarkup:\n"
+            r"\s+kb = InlineKeyboardBuilder\(\)\n)"
+            r"(.*?)(\s+kb.adjust\(3, 3\)\n\s+return kb.as_markup\(\))"
+        ),
         re.DOTALL,
     )
     match = pattern.search(text)
@@ -266,7 +270,10 @@ def resolve_quiz_conflict(path: Path) -> None:
 def ensure_state_clear(text: str) -> str:
     if "await state.clear()" in text:
         return text
-    return text.replace("await state.set_state(QuizSession.home)", "await state.set_state(QuizSession.home)\n    await state.clear()")
+    return text.replace(
+        "await state.set_state(QuizSession.home)",
+        "await state.set_state(QuizSession.home)\n    await state.clear()",
+    )
 
 
 QUIZ_SEND_PHOTO_BLOCK = """async def _send_photo(
@@ -327,13 +334,23 @@ def ensure_remote_image_constants(text: str) -> str:
     if "DEFAULT_REMOTE_BASE" not in text:
         text = text.replace(
             "logger = logging.getLogger(__name__)",
-            "logger = logging.getLogger(__name__)\n\nDEFAULT_REMOTE_BASE = (\n"
-            "    \"https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/quizzes\"\n)\n\n",
+            (
+                "logger = logging.getLogger(__name__)\n\n"
+                "DEFAULT_REMOTE_BASE = (\n"
+                '    "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/'
+                'media/quizzes"\n'
+                ")\n\n"
+            ),
         )
     if "QUIZ_IMAGE_MODE" not in text:
         text = text.replace(
             "PROJECT_ROOT = Path(__file__).resolve().parents[2]",
-            "PROJECT_ROOT = Path(__file__).resolve().parents[2]\n_quiz_mode = os.getenv(\"QUIZ_IMAGE_MODE\", \"remote\").strip().lower()\nQUIZ_IMAGE_MODE = _quiz_mode if _quiz_mode in {\"remote\", \"local\"} else \"remote\"\nQUIZ_REMOTE_BASE = os.getenv(\"QUIZ_IMG_BASE\", DEFAULT_REMOTE_BASE).rstrip(\"/\")\n",
+            (
+                "PROJECT_ROOT = Path(__file__).resolve().parents[2]\n"
+                '_quiz_mode = os.getenv("QUIZ_IMAGE_MODE", "remote").strip().lower()\n'
+                'QUIZ_IMAGE_MODE = _quiz_mode if _quiz_mode in {"remote", "local"} else "remote"\n'
+                'QUIZ_REMOTE_BASE = os.getenv("QUIZ_IMG_BASE", DEFAULT_REMOTE_BASE).rstrip("/")\n'
+            ),
         )
     return text
 
@@ -484,9 +501,7 @@ def write_report(prs: Sequence[PRStatus]) -> None:
     lines.append("| --- | --- | --- | --- |")
     for pr in prs:
         notes = "<br/>".join(pr.messages) if pr.messages else ""
-        lines.append(
-            f"| [#{pr.number}]({pr.url}) | {pr.title} | {pr.status_label()} | {notes} |"
-        )
+        lines.append(f"| [#{pr.number}]({pr.url}) | {pr.title} | {pr.status_label()} | {notes} |")
     REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

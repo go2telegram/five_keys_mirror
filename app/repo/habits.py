@@ -1,9 +1,7 @@
 """Repository helpers for the habit tracker subsystem."""
+
 from __future__ import annotations
 
-import datetime as dt
-from dataclasses import dataclass
-from enum import Enum
 import datetime as dt
 from dataclasses import dataclass
 from enum import Enum
@@ -125,7 +123,11 @@ async def unique_event_dates(
     """Return sorted unique local dates with events for the user/kind."""
 
     habit = HabitKind.parse(kind)
-    stmt = select(TrackEvent.ts).where(TrackEvent.user_id == user_id, TrackEvent.kind == habit.value).order_by(TrackEvent.ts.asc())
+    stmt = (
+        select(TrackEvent.ts)
+        .where(TrackEvent.user_id == user_id, TrackEvent.kind == habit.value)
+        .order_by(TrackEvent.ts.asc())
+    )
     result = await session.execute(stmt)
     dates: list[dt.date] = []
     seen: set[dt.date] = set()

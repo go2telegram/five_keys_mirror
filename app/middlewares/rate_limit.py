@@ -22,10 +22,7 @@ def _resolve_admin_ids() -> set[int]:
     if settings.ADMIN_ID:
         admins.add(int(settings.ADMIN_ID))
     extra = settings.ADMIN_USER_IDS or []
-    if isinstance(extra, Iterable) and not isinstance(extra, (str, bytes)):
-        iterator = extra
-    else:
-        iterator = [extra]
+    iterator = extra if isinstance(extra, Iterable) and not isinstance(extra, (str, bytes)) else [extra]
     for item in iterator:
         try:
             admins.add(int(item))

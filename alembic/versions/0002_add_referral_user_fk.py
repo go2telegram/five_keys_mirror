@@ -9,6 +9,7 @@ def _is_sqlite() -> bool:
     bind = op.get_bind()
     return bind.dialect.name == "sqlite"
 
+
 revision = "0002_add_referral_user_fk"
 down_revision = "0001_init_core_tables"
 branch_labels = None

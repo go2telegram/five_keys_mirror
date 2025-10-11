@@ -26,7 +26,13 @@ class PickleSerializer:
 class Cache:
     MEMORY = "memory"
 
-    def __init__(self, _backend: str, *, namespace: str | None = None, serializer: PickleSerializer | None = None) -> None:
+    def __init__(
+        self,
+        _backend: str,
+        *,
+        namespace: str | None = None,
+        serializer: PickleSerializer | None = None,
+    ) -> None:
         self._namespace = namespace or ""
         self._serializer = serializer or PickleSerializer()
         self._store: dict[str, tuple[float | None, bytes]] = {}

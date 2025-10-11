@@ -8,7 +8,6 @@ from aiogram import BaseMiddleware
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, TelegramObject
 
-
 logger = logging.getLogger("callback.trace")
 
 _TRACE_ENABLED = False

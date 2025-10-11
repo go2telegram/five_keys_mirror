@@ -123,7 +123,12 @@ async def gather_cohorts(session: AsyncSession, *, weeks: int = 6) -> list[Cohor
     return aggregate_cohorts(users, subscriptions, weeks=weeks)
 
 
-def aggregate_cohorts(users: Iterable[User], subscriptions: Iterable[CommerceSubscription], *, weeks: int = 6) -> list[CohortRow]:
+def aggregate_cohorts(
+    users: Iterable[User],
+    subscriptions: Iterable[CommerceSubscription],
+    *,
+    weeks: int = 6,
+) -> list[CohortRow]:
     cohorts: dict[dt.date, CohortRow] = {}
     cohort_lookup: dict[int, dt.date] = {}
 
@@ -159,7 +164,10 @@ def format_cohorts(rows: Sequence[CohortRow]) -> str:
     lines = ["📈 Cohort report по неделям"]
     for row in rows:
         lines.append(
-            f"{row.week_start:%d.%m}: новых {row.new_users}, оплат {row.conversions}, конверсия {row.conversion_rate():.1%}"
+            (
+                f"{row.week_start:%d.%m}: новых {row.new_users}, оплат {row.conversions}, "
+                f"конверсия {row.conversion_rate():.1%}"
+            )
         )
     return "\n".join(lines)
 

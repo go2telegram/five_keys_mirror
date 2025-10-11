@@ -12,7 +12,6 @@ from typing import Any, Awaitable, Callable, Dict, Tuple
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 
-
 logger = logging.getLogger("updates.deduplicate")
 
 
@@ -58,9 +57,7 @@ class UpdateDeduplicateMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-    def _make_key(
-        self, event: TelegramObject
-    ) -> Tuple[int | None, int | None, str | None] | None:
+    def _make_key(self, event: TelegramObject) -> Tuple[int | None, int | None, str | None] | None:
         update_id: int | None = None
         user_id: int | None = None
         callback_data: str | None = None

@@ -1,13 +1,12 @@
 import httpx
 
+from app.config import settings
 from app.http_client import (
     AsyncCircuitBreaker,
     CircuitBreakerOpenError,
     async_http_client,
     request_with_retries,
 )
-
-from app.config import settings
 
 DEFAULT_SYSTEM_PROMPT = "Ты — эксперт по здоровью, пиши кратко и по делу на русском."
 

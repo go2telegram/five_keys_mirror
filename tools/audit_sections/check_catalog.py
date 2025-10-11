@@ -9,7 +9,6 @@ from pathlib import Path
 
 from . import AuditContext, SectionResult, section
 
-
 SUMMARY_SOURCE = Path("app/catalog/mapping/build_summary.json")
 REPORT_COPY = "catalog_summary.json"
 LINKCHECK_LOG = Path("logs/catalog_linkcheck.log")

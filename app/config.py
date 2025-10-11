@@ -76,10 +76,14 @@ class Settings(BaseSettings):
 
     # Каталог и квизы: онлайн/офлайн режимы
     IMAGES_MODE: str = "catalog_remote"
-    IMAGES_BASE: str = "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products"
+    IMAGES_BASE: str = (
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/products"
+    )
     IMAGES_DIR: str = "app/static/images/products"
     QUIZ_IMAGE_MODE: str = "remote"
-    QUIZ_IMG_BASE: str = "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/quizzes"
+    QUIZ_IMG_BASE: str = (
+        "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/quizzes"
+    )
 
     # --------- Tribute (подписки) ----------
     TRIBUTE_LINK_BASIC: str = ""

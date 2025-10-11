@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import inspect
+from contextlib import suppress
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, Optional, Sequence
-
-import inspect
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -33,10 +33,8 @@ async def log(session: AsyncSession, user_id: Optional[int], name: str, meta: Op
         if callable(rollback):
             result = rollback()
             if inspect.isawaitable(result):
-                try:
+                with suppress(Exception):  # pragma: no cover - best effort cleanup
                     await result
-                except Exception:  # pragma: no cover - best effort cleanup
-                    pass
         return event
     return event
 
@@ -49,12 +47,7 @@ async def upsert(
 ) -> Event:
     """Ensure a single event per ``(user_id, name)`` combination."""
 
-    stmt = (
-        select(Event)
-        .where(Event.user_id == user_id, Event.name == name)
-        .order_by(Event.id.asc())
-        .limit(1)
-    )
+    stmt = select(Event).where(Event.user_id == user_id, Event.name == name).order_by(Event.id.asc()).limit(1)
     try:
         result = await session.execute(stmt)
     except (OperationalError, ProgrammingError) as exc:
@@ -81,10 +74,8 @@ async def upsert(
         if callable(rollback):
             result = rollback()
             if inspect.isawaitable(result):
-                try:
+                with suppress(Exception):  # pragma: no cover
                     await result
-                except Exception:  # pragma: no cover
-                    pass
     return event
 
 

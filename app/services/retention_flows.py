@@ -1,4 +1,5 @@
 """Retention flow helpers used by scheduled jobs."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -67,27 +68,33 @@ class RetentionManager:
             now = now.replace(tzinfo=dt.timezone.utc)
         pushes: list[RetentionPushPayload] = []
 
-        if self.inactivity_threshold is not None and not state.has_premium:
-            if _should_trigger(state.last_activity, self.inactivity_threshold, now):
-                if _should_send_again(state.last_pushes.get(self.FLOW_ENERGY), state.last_activity, now):
-                    pushes.append(
-                        RetentionPushPayload(
-                            kind=self.FLOW_ENERGY,
-                            message="⚡ Пройти тест энергии",
-                            scheduled_at=now,
-                        )
-                    )
+        if (
+            self.inactivity_threshold is not None
+            and not state.has_premium
+            and _should_trigger(state.last_activity, self.inactivity_threshold, now)
+            and _should_send_again(state.last_pushes.get(self.FLOW_ENERGY), state.last_activity, now)
+        ):
+            pushes.append(
+                RetentionPushPayload(
+                    kind=self.FLOW_ENERGY,
+                    message="⚡ Пройти тест энергии",
+                    scheduled_at=now,
+                )
+            )
 
-        if self.premium_threshold is not None and not state.has_premium:
-            if _should_trigger(state.last_energy_test, self.premium_threshold, now):
-                if _should_send_again(state.last_pushes.get(self.FLOW_PREMIUM), state.last_energy_test, now):
-                    pushes.append(
-                        RetentionPushPayload(
-                            kind=self.FLOW_PREMIUM,
-                            message="💎 Попробовать Премиум",
-                            scheduled_at=now,
-                        )
-                    )
+        if (
+            self.premium_threshold is not None
+            and not state.has_premium
+            and _should_trigger(state.last_energy_test, self.premium_threshold, now)
+            and _should_send_again(state.last_pushes.get(self.FLOW_PREMIUM), state.last_energy_test, now)
+        ):
+            pushes.append(
+                RetentionPushPayload(
+                    kind=self.FLOW_PREMIUM,
+                    message="💎 Попробовать Премиум",
+                    scheduled_at=now,
+                )
+            )
 
         return pushes
 

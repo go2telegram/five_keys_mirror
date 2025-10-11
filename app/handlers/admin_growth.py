@@ -1,4 +1,5 @@
 """Admin commands for growth analytics and UTM tooling."""
+
 from __future__ import annotations
 
 import shlex
@@ -52,8 +53,7 @@ async def link_builder(message: Message, command: CommandObject) -> None:
     params = attribution.normalize_utm(_extract_pairs(args))
     if not params:
         await message.answer(
-            "Использование: /link_builder utm_source=tiktok utm_medium=shorts "
-            "[utm_campaign=energy] [utm_content=vid01]"
+            "Использование: /link_builder utm_source=tiktok utm_medium=shorts [utm_campaign=energy] [utm_content=vid01]"
         )
         return
 
@@ -68,17 +68,12 @@ async def link_builder(message: Message, command: CommandObject) -> None:
     if username:
         deeplink = f"https://t.me/{username}?start={encoded_payload}" if encoded_payload else f"https://t.me/{username}"
     else:
-        deeplink = (
-            f"https://t.me/<bot>?start={encoded_payload}" if encoded_payload else "https://t.me/<bot>"
-        )
+        deeplink = f"https://t.me/<bot>?start={encoded_payload}" if encoded_payload else "https://t.me/<bot>"
 
     bullets = "\n".join(f"• {key}: {params.get(key, '—')}" for key in attribution.UTM_KEYS)
 
     await message.answer(
-        "🔗 Deeplink сконструирован:\n"
-        f"{deeplink}\n\n"
-        f"Payload: <code>{raw_payload}</code>\n"
-        f"UTM:\n{bullets}"
+        f"🔗 Deeplink сконструирован:\n{deeplink}\n\nPayload: <code>{raw_payload}</code>\nUTM:\n{bullets}"
     )
 
 

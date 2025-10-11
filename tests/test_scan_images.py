@@ -7,15 +7,12 @@ import pytest
 
 from tools import scan_images
 
-
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "catalog" / "images"
 
 
 def test_scan_images_from_directory(tmp_path, capsys):
     output = tmp_path / "images_index.json"
-    exit_code = scan_images.main(
-        ["--images-dir", str(FIXTURE_DIR), "--out", str(output)]
-    )
+    exit_code = scan_images.main(["--images-dir", str(FIXTURE_DIR), "--out", str(output)])
     assert exit_code == 0
 
     data = json.loads(output.read_text(encoding="utf-8"))
@@ -62,9 +59,7 @@ def test_scan_images_requires_source():
 
 
 def test_parse_github_tree_url():
-    location = scan_images._parse_github_tree_url(
-        "https://github.com/example/repo/tree/main/media/products"
-    )
+    location = scan_images._parse_github_tree_url("https://github.com/example/repo/tree/main/media/products")
     assert location.owner == "example"
     assert location.repo == "repo"
     assert location.ref == "main"

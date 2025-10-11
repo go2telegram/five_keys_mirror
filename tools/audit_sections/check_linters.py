@@ -6,7 +6,6 @@ import shutil
 
 from . import AuditContext, SectionResult, section
 
-
 _TOOLS = {
     "ruff": ["ruff", "check"],
     "mypy": ["mypy", "app"],

@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery
 from app.catalog.api import pick_for_context
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
+from app.link_manager import get_register_link
 from app.quiz.engine import (
     QuizDefinition,
     QuizHooks,
@@ -20,7 +21,6 @@ from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
-from app.link_manager import get_register_link
 
 router = Router()
 
@@ -52,9 +52,7 @@ def _energy_outcome(total: int) -> tuple[str, str, str, list[str]]:
     )
 
 
-async def _on_finish_energy(
-    user_id: int, definition: QuizDefinition, result: QuizResultContext
-) -> bool:
+async def _on_finish_energy(user_id: int, definition: QuizDefinition, result: QuizResultContext) -> bool:
     level_key, level_label, ctx, rec_codes = _energy_outcome(result.total_score)
     lines = product_lines(rec_codes[:3], ctx)
 

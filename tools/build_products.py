@@ -13,11 +13,12 @@ import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator, Mapping, Sequence
+from typing import Iterable, Mapping, Sequence
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
-from urllib.request import Request, urlopen, url2pathname
+from urllib.request import Request, url2pathname, urlopen
 
 try:  # pragma: no cover - optional dependency
     from python_slugify import slugify as _python_slugify  # type: ignore
@@ -29,7 +30,6 @@ from slugify import slugify as _fallback_slugify
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from tools.catalog_build import CatalogValidationError, validate_catalog_payload
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,9 +66,7 @@ MEDIA_REPO = os.getenv("MEDIA_REPO", "media")
 MEDIA_REF = os.getenv("MEDIA_REF", "main")
 MEDIA_PRODUCTS_PATH = os.getenv("MEDIA_PRODUCTS_PATH", "media/products")
 MEDIA_DESCRIPTIONS_PATH = os.getenv("MEDIA_DESCRIPTIONS_PATH", "media/descriptions")
-ONLINE_IMAGES_BASE = (
-    f"https://raw.githubusercontent.com/{MEDIA_OWNER}/{MEDIA_REPO}/{MEDIA_REF}/{MEDIA_PRODUCTS_PATH}"
-)
+ONLINE_IMAGES_BASE = f"https://raw.githubusercontent.com/{MEDIA_OWNER}/{MEDIA_REPO}/{MEDIA_REF}/{MEDIA_PRODUCTS_PATH}"
 
 EXPECT_COUNT_FROM_IMAGES = "from=images"
 
@@ -200,9 +198,7 @@ def enumerate_product_images(ref: str) -> list[str]:
 def enumerate_descriptions(ref: str) -> list[str]:
     """Return RAW URLs of all text descriptions for the given ref."""
 
-    return sorted(
-        set(_collect_media_urls(MEDIA_DESCRIPTIONS_PATH, ref, extensions=(".txt",)))
-    )
+    return sorted(set(_collect_media_urls(MEDIA_DESCRIPTIONS_PATH, ref, extensions=(".txt",))))
 
 
 class CatalogBuildError(RuntimeError):
@@ -310,9 +306,8 @@ def _github_contents(
     entries: list[dict[str, str]] = []
     if isinstance(payload, dict) and payload.get("type") == "file":
         download = payload.get("download_url")
-        if download:
-            if not extensions or Path(download).suffix.lower() in extensions:
-                entries.append({"download_url": download, "path": payload.get("path", path)})
+        if download and (not extensions or Path(download).suffix.lower() in extensions):
+            entries.append({"download_url": download, "path": payload.get("path", path)})
         return entries
     if not isinstance(payload, list):
         raise CatalogBuildError(f"Unexpected GitHub API response for {path}")
@@ -345,10 +340,7 @@ def _github_contents(
 def _coerce_sources(value: str | Sequence[str] | None) -> list[str]:
     if value is None:
         return []
-    if isinstance(value, (list, tuple, set)):
-        items = value
-    else:
-        items = [value]
+    items = value if isinstance(value, (list, tuple, set)) else [value]
     normalized: list[str] = []
     for item in items:
         if item is None:
@@ -659,9 +651,7 @@ def _parse_block(block: ProductBlock) -> dict[str, object]:
     short = " ".join(sentences[:2]) if sentences else ""
     usage = _join_paragraphs([part for part in section_data.get("usage", []) if part])
     contra = _join_paragraphs([part for part in section_data.get("contra", []) if part])
-    composition = _join_paragraphs(
-        [part for part in section_data.get("composition", []) if part]
-    )
+    composition = _join_paragraphs([part for part in section_data.get("composition", []) if part])
     category = _classify_category(name + "\n" + description)
     product_id = _refine_slug(_slug(canonical_name))
     tags = sorted({token for token in _tokenize_slug(product_id) if token})
@@ -727,9 +717,7 @@ def _dedupe_products(
         if dedupe and key in seen:
             duplicates.append((title, url))
             if strict:
-                raise CatalogBuildError(
-                    f"Duplicate product description for '{title}' ({url})"
-                )
+                raise CatalogBuildError(f"Duplicate product description for '{title}' ({url})")
             continue
         seen.add(key)
         normalized.append(product)
@@ -786,16 +774,12 @@ def normalize_images_directory(images_dir: Path) -> bool:
         source.rename(target)
         modified = True
     if not conflicts:
-        try:
-            for directory in sorted(nested.glob("**/*"), reverse=True):
-                if directory.is_dir():
+        for directory in sorted(nested.glob("**/*"), reverse=True):
+            if directory.is_dir():
+                with suppress(OSError):
                     directory.rmdir()
-        except OSError:
-            pass
-        try:
+        with suppress(OSError):
             nested.rmdir()
-        except OSError:
-            pass
     return modified
 
 
@@ -810,9 +794,7 @@ def _list_local_images(images_dir: Path) -> list[str]:
         relative = file.relative_to(images_dir)
         normalized_path, trimmed = _normalize_image_relative_path(relative)
         if trimmed and not warned:
-            logging.warning(
-                "Nested images directory detected under %s — treating as flattened", images_dir
-            )
+            logging.warning("Nested images directory detected under %s — treating as flattened", images_dir)
             warned = True
         normalized.append(normalized_path.as_posix())
     return sorted(set(normalized))
@@ -863,11 +845,11 @@ def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
         score: int | None = None
         if candidate_slug == slug_lower:
             score = 0
-        elif candidate_slug.startswith(slug_lower) and "main" in candidate_slug[len(slug_lower):]:
+        elif candidate_slug.startswith(slug_lower) and "main" in candidate_slug[len(slug_lower) :]:
             score = 1
         elif sanitized_slug and sanitized == sanitized_slug:
             score = 2
-        elif sanitized_slug and sanitized.startswith(sanitized_slug) and "main" in sanitized[len(sanitized_slug):]:
+        elif sanitized_slug and sanitized.startswith(sanitized_slug) and "main" in sanitized[len(sanitized_slug) :]:
             score = 3
         elif alias_intersection:
             score = 4
@@ -953,9 +935,7 @@ def _merge_utm(url: str, product_id: str, category: str) -> tuple[str, dict[str,
         _ensure_item(key, default_value)
 
     normalized_query = urlencode(query_items, doseq=True)
-    normalized_url = urlunsplit(
-        parsed._replace(path=quote(parsed.path), query=normalized_query)
-    )
+    normalized_url = urlunsplit(parsed._replace(path=quote(parsed.path), query=normalized_query))
 
     utm_values: dict[str, str] = {}
     for key in utm_defaults:
@@ -985,9 +965,7 @@ def build_catalog(
         descriptions_url=descriptions_url,
         descriptions_path=descriptions_path,
     )
-    products = _dedupe_products(
-        _load_products(texts), dedupe=dedupe, strict=strict_descriptions
-    )
+    products = _dedupe_products(_load_products(texts), dedupe=dedupe, strict=strict_descriptions)
 
     mode = (images_mode or DEFAULT_IMAGES_MODE).lower()
     if mode not in {"remote", "local"}:
@@ -1079,10 +1057,7 @@ def build_catalog(
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     count = len(normalized)
     if resolved_expect_count is not None and count != resolved_expect_count:
-        mismatch = (
-            "Built product count mismatch: "
-            f"expected {resolved_expect_count}, got {count}"
-        )
+        mismatch = f"Built product count mismatch: expected {resolved_expect_count}, got {count}"
         if fail_on_mismatch:
             raise CatalogBuildError(mismatch)
         logging.warning(mismatch)
@@ -1155,17 +1130,13 @@ def _parse_expect_count(value: str) -> int | str:
     try:
         parsed = int(normalized)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            "--expect-count must be an integer or 'from=images'"
-        ) from exc
+        raise argparse.ArgumentTypeError("--expect-count must be an integer or 'from=images'") from exc
     if parsed < 0:
         raise argparse.ArgumentTypeError("--expect-count must be non-negative")
     return parsed
 
 
-def _resolve_expect_count(
-    expect_count: int | str | None, image_files: Sequence[str]
-) -> int | None:
+def _resolve_expect_count(expect_count: int | str | None, image_files: Sequence[str]) -> int | None:
     if expect_count is None:
         return None
     if isinstance(expect_count, int):
@@ -1173,9 +1144,7 @@ def _resolve_expect_count(
     lowered = expect_count.strip().lower()
     if lowered == EXPECT_COUNT_FROM_IMAGES:
         return len(image_files)
-    raise CatalogBuildError(
-        "Unsupported --expect-count value: {value}".format(value=expect_count)
-    )
+    raise CatalogBuildError("Unsupported --expect-count value: {value}".format(value=expect_count))
 
 
 def _build_cli(argv: Sequence[str]) -> argparse.Namespace:

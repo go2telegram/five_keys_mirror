@@ -1,4 +1,5 @@
 """Utilities for UTM attribution and growth analytics."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -185,9 +186,7 @@ def summarize(metrics: Mapping[UtmKey, UtmFunnelMetrics]) -> UtmFunnelMetrics:
 def sort_metrics(
     metrics: Mapping[UtmKey, UtmFunnelMetrics], *, limit: int | None = None
 ) -> list[tuple[UtmKey, UtmFunnelMetrics]]:
-    ordered = sorted(
-        metrics.items(), key=lambda item: item[1].registrations, reverse=True
-    )
+    ordered = sorted(metrics.items(), key=lambda item: item[1].registrations, reverse=True)
     if limit is None:
         return ordered
     return ordered[:limit]

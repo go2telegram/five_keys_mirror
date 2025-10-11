@@ -42,10 +42,7 @@ async def command_tests(message: Message) -> None:
     kb.adjust(1)
 
     titles = "\n".join(f"• {quiz.title}" for quiz in quizzes)
-    text = (
-        "🧪 <b>Доступные тесты</b>\n\n"
-        f"{titles}\n\nВыбирай тест, чтобы пройти его прямо сейчас."
-    )
+    text = f"🧪 <b>Доступные тесты</b>\n\n{titles}\n\nВыбирай тест, чтобы пройти его прямо сейчас."
     await message.answer(text, reply_markup=kb.as_markup())
 
 

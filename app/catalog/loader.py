@@ -82,10 +82,7 @@ def _load_manual_aliases() -> Dict[str, str]:
     except json.JSONDecodeError as exc:
         raise CatalogError("aliases.json is not valid JSON") from exc
 
-    if isinstance(payload, dict):
-        aliases = payload.get("aliases", payload)
-    else:
-        aliases = payload
+    aliases = payload.get("aliases", payload) if isinstance(payload, dict) else payload
 
     manual: Dict[str, str] = {}
     if isinstance(aliases, dict):

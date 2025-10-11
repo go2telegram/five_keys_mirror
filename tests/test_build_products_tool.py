@@ -6,7 +6,6 @@ import pytest
 
 from tools import build_products as bp
 
-
 DESCRIPTIONS_DIR = Path("tests/fixtures/catalog/descriptions_multi")
 
 
@@ -138,8 +137,12 @@ def test_build_catalog_with_local_assets(tmp_path: Path) -> None:
 def test_load_description_texts_combines_multiple_sources(monkeypatch: pytest.MonkeyPatch) -> None:
     remote_api = "https://api.github.com/repos/example/repo/contents/descriptions?ref=main"
     remote_files = {
-        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote1.txt": "Продукт Эхо\nСсылка для заказа: https://shop.example.com/e",
-        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote2.txt": "Продукт Фокстрот\nСсылка для заказа: https://shop.example.com/f",
+        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote1.txt": (
+            "Продукт Эхо\nСсылка для заказа: https://shop.example.com/e"
+        ),
+        "https://raw.githubusercontent.com/example/repo/main/descriptions/remote2.txt": (
+            "Продукт Фокстрот\nСсылка для заказа: https://shop.example.com/f"
+        ),
     }
 
     def fake_http_get(url: str, *, accept: str | None = None) -> bytes:
@@ -178,9 +181,17 @@ def test_load_description_texts_combines_multiple_sources(monkeypatch: pytest.Mo
 
 def test_dedupe_products_removes_duplicates() -> None:
     base_products = [
-        {"title": " Product Alpha ", "name": " Product Alpha ", "order": {"velavie_link": " https://shop.example.com/a "}},
+        {
+            "title": " Product Alpha ",
+            "name": " Product Alpha ",
+            "order": {"velavie_link": " https://shop.example.com/a "},
+        },
         {"title": "Product Alpha", "name": "Product Alpha", "order": {"velavie_link": "https://shop.example.com/a"}},
-        {"title": "Product Bravo", "name": "Product Bravo", "order": {"velavie_link": "https://shop.example.com/b"}},
+        {
+            "title": "Product Bravo",
+            "name": "Product Bravo",
+            "order": {"velavie_link": "https://shop.example.com/b"},
+        },
     ]
 
     deduped = bp._dedupe_products([product.copy() for product in base_products], dedupe=True)

@@ -47,9 +47,7 @@ class User(Base):
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    profile: Mapped["UserProfile"] = relationship(
-        back_populates="user", uselist=False, cascade="all, delete-orphan"
-    )
+    profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
@@ -135,13 +133,9 @@ class Referral(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     invited_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     bonus_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
@@ -203,9 +197,7 @@ class TrackEvent(Base):
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     plan_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
     utm: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
 

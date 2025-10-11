@@ -84,7 +84,9 @@ def _normalize_order(product: dict[str, Any]) -> Any:
 
 
 def _order_to_display(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) if isinstance(value, (dict, list)) else json.dumps(value, ensure_ascii=False)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2)
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _format_tags(tags: Iterable[str]) -> str:
@@ -111,7 +113,13 @@ def _append_diff(lines: list[str], label: str, old_value: str, new_value: str) -
     _append_value(lines, "new", new_value)
 
 
-def _write_report(out_path: Path, *, added: list[tuple[str, dict[str, Any]]], removed: list[tuple[str, dict[str, Any]]], changed: list[tuple[str, list[str]]]) -> None:
+def _write_report(
+    out_path: Path,
+    *,
+    added: list[tuple[str, dict[str, Any]]],
+    removed: list[tuple[str, dict[str, Any]]],
+    changed: list[tuple[str, list[str]]],
+) -> None:
     lines: list[str] = []
 
     def _section(title: str) -> None:
@@ -126,9 +134,7 @@ def _write_report(out_path: Path, *, added: list[tuple[str, dict[str, Any]]], re
             lines.append(f"- {product_id}")
             _append_key_value(lines, "title", _normalize_title(product) or "—")
             _append_key_value(lines, "image", _normalize_image(product) or "—")
-            order_display = (
-                _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
-            )
+            order_display = _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
             _append_key_value(lines, "order", order_display)
             _append_key_value(lines, "tags", _format_tags(_normalize_tags(product)))
     else:
@@ -140,9 +146,7 @@ def _write_report(out_path: Path, *, added: list[tuple[str, dict[str, Any]]], re
             lines.append(f"- {product_id}")
             _append_key_value(lines, "title", _normalize_title(product) or "—")
             _append_key_value(lines, "image", _normalize_image(product) or "—")
-            order_display = (
-                _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
-            )
+            order_display = _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
             _append_key_value(lines, "order", order_display)
             _append_key_value(lines, "tags", _format_tags(_normalize_tags(product)))
     else:

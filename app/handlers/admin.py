@@ -21,17 +21,17 @@ from app.db.session import (
 )
 from app.feature_flags import feature_flags
 from app.link_manager import active_set_name
-from app.repo import (
-    events as events_repo,
-    retention as retention_repo,
-    leads as leads_repo,
-    referrals as referrals_repo,
-    subscriptions as subscriptions_repo,
-    users as users_repo,
-)
 from app.middlewares import (
     is_callback_trace_enabled,
     set_callback_trace_enabled,
+)
+from app.repo import (
+    events as events_repo,
+    leads as leads_repo,
+    referrals as referrals_repo,
+    retention as retention_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
 )
 from app.router_map import get_router_map, write_router_map
 
@@ -227,11 +227,7 @@ async def debug_callbacks(message: Message, command: CommandObject) -> None:
         return
 
     status = "включен" if current else "выключен"
-    await message.answer(
-        "ℹ️ Callback trace сейчас {status}. Используй /debug_callbacks on|off.".format(
-            status=status
-        )
-    )
+    await message.answer("ℹ️ Callback trace сейчас {status}. Используй /debug_callbacks on|off.".format(status=status))
 
 
 @router.message(Command("routers"))
@@ -246,13 +242,9 @@ async def routers_dump(message: Message) -> None:
 
     lines = ["🛣 <b>Router map</b>"]
     for idx, entry in enumerate(snapshot, start=1):
-        event_counts = ", ".join(
-            f"{event.event}:{len(event.handlers)}" for event in entry.patterns
-        )
+        event_counts = ", ".join(f"{event.event}:{len(event.handlers)}" for event in entry.patterns)
         lines.append(
-            f"{idx}. {entry.name} — {entry.handlers_count} handlers" + (
-                f" ({event_counts})" if event_counts else ""
-            )
+            f"{idx}. {entry.name} — {entry.handlers_count} handlers" + (f" ({event_counts})" if event_counts else "")
         )
 
     path = write_router_map(Path("build/reports/routers.json"))
@@ -412,10 +404,7 @@ async def doctor_db(m: Message) -> None:
     updated_revision = await current_revision(db_url)
 
     if applied:
-        text = (
-            "✅ Миграции применены.\n"
-            f"Текущая ревизия: {updated_revision or '—'}"
-        )
+        text = f"✅ Миграции применены.\nТекущая ревизия: {updated_revision or '—'}"
     else:
         text = (
             "❌ Не удалось применить миграции. Подробности в логах.\n"

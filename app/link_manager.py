@@ -42,9 +42,7 @@ _LOADED_SET: str | None = None
 _REGISTER_LINK: str | None = None
 _PRODUCT_LINKS: dict[str, str] = {}
 
-_ACTOR: contextvars.ContextVar[str | int | None] = contextvars.ContextVar(
-    "link_manager_actor", default=None
-)
+_ACTOR: contextvars.ContextVar[str | int | None] = contextvars.ContextVar("link_manager_actor", default=None)
 
 _PING_CIRCUIT_BREAKER = AsyncCircuitBreaker(
     max_failures=settings.HTTP_CIRCUIT_BREAKER_MAX_FAILURES,
@@ -213,19 +211,19 @@ def _invalidate_cache() -> None:
 async def _refresh_cache(force: bool = False) -> None:
     global _LOADED_SET, _REGISTER_LINK, _PRODUCT_LINKS
     name = await active_set_name()
-    if not force and _LOADED_SET == name:
+    if not force and name == _LOADED_SET:
         return
     payload = await _load_set_payload(name)
     register_raw = payload.get("register")
-    if isinstance(register_raw, str) and register_raw.strip():
-        _REGISTER_LINK = register_raw.strip()
-    else:
-        _REGISTER_LINK = None
+    _REGISTER_LINK = (
+        register_raw.strip()
+        if isinstance(register_raw, str) and register_raw.strip()
+        else None
+    )
     products_raw = payload.get("products")
-    if isinstance(products_raw, dict):
-        _PRODUCT_LINKS = _canonicalise_mapping(products_raw)
-    else:
-        _PRODUCT_LINKS = {}
+    _PRODUCT_LINKS = (
+        _canonicalise_mapping(products_raw) if isinstance(products_raw, dict) else {}
+    )
     _LOADED_SET = name
 
 
@@ -237,12 +235,7 @@ def _auto_product_link(product_id: str) -> str | None:
 
 
 def _resolve_register_fallback() -> str:
-    return (
-        (_REGISTER_LINK or "")
-        or (settings.BASE_REGISTER_URL or "").strip()
-        or settings.velavie_url
-        or ""
-    )
+    return (_REGISTER_LINK or "") or (settings.BASE_REGISTER_URL or "").strip() or settings.velavie_url or ""
 
 
 async def get_register_link() -> str:
@@ -515,7 +508,7 @@ def _parse_import_dict(data: Dict[str, Any]) -> tuple[str | None, dict[str, str]
     elif products_value:
         warnings.append("products value ignored: expected mapping")
 
-    if not products and not ("products" in data):
+    if not products and "products" not in data:
         products = _canonicalise_mapping({k: v for k, v in data.items() if isinstance(v, str)})
 
     return register, products, warnings
@@ -605,9 +598,7 @@ async def import_set(
         await _refresh_cache(force=True)
         payload = await _load_set_payload(name)
         old_register = payload.get("register") if isinstance(payload.get("register"), str) else None
-        old_products = (
-            dict(payload.get("products")) if isinstance(payload.get("products"), dict) else {}
-        )
+        old_products = dict(payload.get("products")) if isinstance(payload.get("products"), dict) else {}
         if register:
             payload["register"] = register
         else:

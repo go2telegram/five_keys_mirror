@@ -143,9 +143,7 @@ def product_lines(codes: List[str], context: str) -> List[str]:
         generic = p.get("bullets", [""])[0]
         help_text = CTX.get(context, {}).get(code)
         if help_text:
-            out.append(
-                f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{help_text}</i>"
-            )
+            out.append(f"— <b>{title}</b>: {generic}\n  Как поможет сейчас: <i>{help_text}</i>")
         else:
             out.append(f"— <b>{title}</b>: {generic}")
     return out

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Sequence
 
-
 _PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9]{20,}", re.IGNORECASE),
     re.compile(r"ghp_[A-Za-z0-9]{36}"),

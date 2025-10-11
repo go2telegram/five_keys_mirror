@@ -7,7 +7,6 @@ from pathlib import Path
 
 from . import AuditContext, SectionResult, section
 
-
 REPORT_NAME = "media_head_report.txt"
 LEGACY_REPORT = Path("build/images_head_report.txt")
 

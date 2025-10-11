@@ -102,11 +102,14 @@ async def cart_add_bundle(callback: CallbackQuery) -> None:
     if bundle is None:
         await callback.answer("Бандл не найден", show_alert=True)
         return
-    add_bundle_to_cart(callback.from_user.id, {
-        "id": bundle.id,
-        "title": bundle.title,
-        "price": bundle.price,
-    })
+    add_bundle_to_cart(
+        callback.from_user.id,
+        {
+            "id": bundle.id,
+            "title": bundle.title,
+            "price": bundle.price,
+        },
+    )
     await callback.answer("Бандл добавлен в корзину", show_alert=False)
 
 
@@ -201,20 +204,17 @@ def _format_currency(amount: float) -> str:
 
 
 async def _orders_report_lines(period: str, *, session) -> list[str]:
-    from sqlalchemy import func, select
     from datetime import datetime, timedelta, timezone
 
+    from sqlalchemy import func, select
+
     now = datetime.now(timezone.utc)
-    if period == "day":
-        since = now - timedelta(days=1)
-    else:
-        since = now - timedelta(days=7)
+    since = now - timedelta(days=1) if period == "day" else now - timedelta(days=7)
 
     from app.db.models import Order
 
-    stmt = (
-        select(func.count(Order.id), func.coalesce(func.sum(Order.amount), 0.0))
-        .where(Order.created_at >= since, Order.status == "paid")
+    stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.amount), 0.0)).where(
+        Order.created_at >= since, Order.status == "paid"
     )
     total_orders, total_amount = (await session.execute(stmt)).one()
     return [
@@ -225,6 +225,7 @@ async def _orders_report_lines(period: str, *, session) -> list[str]:
 
 async def _mrr_report_lines(*, session) -> list[str]:
     from sqlalchemy import func, select
+
     from app.db.models import CommerceSubscription
 
     stmt = select(func.count(CommerceSubscription.id), func.coalesce(func.sum(CommerceSubscription.amount), 0.0)).where(

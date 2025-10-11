@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import json
 import os
-from app.storage import commit_safely
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot
@@ -17,6 +16,7 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
+from app.storage import commit_safely
 
 LOG = os.getenv("TRIBUTE_WEBHOOK_LOG", "0") == "1"
 INSECURE = os.getenv("TRIBUTE_WEBHOOK_INSECURE", "0") == "1"
@@ -72,7 +72,7 @@ async def _notify_cancel(user_id: int, until: datetime):
         kb = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text="Продлить доступ", callback_data="sub:menu")]]
         )
-        text = "⚠️ <b>Подписка будет отключена</b>\n\n" f"Доступ сохранится до <b>{until.date().isoformat()}</b>."
+        text = f"⚠️ <b>Подписка будет отключена</b>\n\nДоступ сохранится до <b>{until.date().isoformat()}</b>."
         await bot.send_message(user_id, text, reply_markup=kb)
         await bot.session.close()
     except Exception as exc:

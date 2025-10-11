@@ -249,9 +249,7 @@ async def sub_get(message: Message) -> None:
         text = "No active subscription"
     else:
         text = (
-            f"Plan {subscription.plan}\n"
-            f"Since {_format_dt(subscription.since)}\n"
-            f"Until {_format_dt(subscription.until)}"
+            f"Plan {subscription.plan}\nSince {_format_dt(subscription.since)}\nUntil {_format_dt(subscription.until)}"
         )
     await message.answer(text, reply_markup=kb_back_home("home:main"))
 
@@ -341,9 +339,7 @@ async def _render_referrals(user_id: int, page: int, period: str):
     else:
         for ref in items:
             converted = _format_dt(ref.converted_at) if ref.converted_at else "-"
-            line = (
-                f"{ref.invited_id} | {_format_dt(ref.joined_at)} | " f"converted: {converted} | bonus: {ref.bonus_days}"
-            )
+            line = f"{ref.invited_id} | {_format_dt(ref.joined_at)} | converted: {converted} | bonus: {ref.bonus_days}"
             lines.append(line)
     text = "\n".join(lines)
     encoded_period = _encode_query(period)
