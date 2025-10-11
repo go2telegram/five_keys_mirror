@@ -442,7 +442,9 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
 <body>
   <header>
     <h1>Аналитика Five Keys</h1>
-    <p class="build-info">Версия {context["build_info"]["version"]} · commit {context["build_commit_short"]} · {context["build_info"]["timestamp"]}</p>
+    <p class="build-info">Версия {context["build_info"]["version"]} · commit {context["build_commit_short"]} · {
+        context["build_info"]["timestamp"]
+    }</p>
   </header>
   <main>
     <section class=\"cards\">

@@ -22,7 +22,7 @@ def test_register_audit_logs_marker(monkeypatch, caplog: pytest.LogCaptureFixtur
     assert isinstance(middleware, AuditMiddleware)
     messages = [record.message for record in caplog.records if record.name == "startup"]
     assert any("S4: audit middleware registered" in msg for msg in messages)
-    assert any("build: branch=" in msg for msg in messages)
+    assert any("build: version=" in msg for msg in messages)
     assert any(build_info.GIT_COMMIT in msg for msg in messages)
     assert any("log_paths dir=" in msg for msg in messages)
     assert any("aiogram=" in msg for msg in messages)

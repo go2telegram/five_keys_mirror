@@ -22,9 +22,8 @@ def test_setup_logging_creates_files(tmp_path) -> None:
     )
     logging.getLogger("doctor").error("doctor token=%s", "hidden-value")
     logging.getLogger("startup").info(
-        "build: version=%s branch=%s commit=%s time=%s",
+        "build: version=%s commit=%s time=%s",
         "test-version",
-        "test-branch",
         "abcdef1",
         "2024-01-01T00:00:00Z",
     )
@@ -53,3 +52,5 @@ def test_setup_logging_creates_files(tmp_path) -> None:
     assert "token=<token>" in bot_text
     assert "token=<token>" in errors_text
     assert "build: version=" in bot_text
+    assert " commit=" in bot_text
+    assert " time=" in bot_text

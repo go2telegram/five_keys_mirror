@@ -44,11 +44,7 @@ async def version_command(message: Message) -> None:
     """Report the current build version."""
 
     build = get_build_info()
-    text = (
-        "🧩 Версия бота: *{version}*\n"
-        "🧷 Commit: `{commit}`\n"
-        "🕒 Build: {timestamp}"
-    ).format(
+    text = ("🧩 Версия бота: *{version}*\n🧷 Commit: `{commit}`\n🕒 Build: {timestamp}").format(
         version=build["version"],
         commit=build["commit"],
         timestamp=build["timestamp"],
