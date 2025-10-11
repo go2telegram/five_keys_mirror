@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main ]
 
+env:
+  PYTHONPATH: .
+
 jobs:
   lint-autofix:
     name: Lint autofix
@@ -183,10 +186,24 @@ jobs:
       - name: Download gitleaks (binary)
         run: |
           set -e
-          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
-            | grep tag_name | cut -d '"' -f 4)
-          curl -L -o gitleaks.tar.gz \
-            https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz
+          if command -v gitleaks >/dev/null 2>&1; then
+            gitleaks version
+            exit 0
+          fi
+          if ! curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest -o gitleaks_latest.json; then
+            echo "Skipping gitleaks download (offline?)"
+            exit 0
+          fi
+          GITLEAKS_VERSION=$(grep tag_name gitleaks_latest.json | cut -d '"' -f 4)
+          if [ -z "$GITLEAKS_VERSION" ]; then
+            echo "Skipping gitleaks download (version not detected)"
+            exit 0
+          fi
+          if ! curl -L -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz; then
+            echo "Skipping gitleaks download (offline?)"
+            exit 0
+          fi
           tar -xzf gitleaks.tar.gz gitleaks
           sudo mv gitleaks /usr/local/bin/
           gitleaks version

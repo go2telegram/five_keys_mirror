@@ -122,7 +122,12 @@ def build_search_query(repo: str, labels: Sequence[str], since: str) -> str:
     return " ".join(fragments)
 
 
-def fetch_pull_requests(client: GitHubClient, repo: str, labels: Sequence[str], since_days: int) -> List[Dict[str, object]]:
+def fetch_pull_requests(
+    client: GitHubClient,
+    repo: str,
+    labels: Sequence[str],
+    since_days: int,
+) -> List[Dict[str, object]]:
     since = compute_since_date(since_days)
     query = build_search_query(repo, labels, since)
     has_next_page = True
@@ -250,10 +255,10 @@ def execute_checks() -> Dict[str, Dict[str, object]]:
 def checks_failed(checks: Dict[str, Dict[str, object]], related: Sequence[str]) -> bool:
     if not related:
         return False
-    for check in related:
-        if not checks.get(check, {"success": True})["success"]:
-            return True
-    return False
+    return any(
+        not checks.get(c, {"success": True})["success"]
+        for c in related
+    )
 
 
 def determine_related_checks(comment: ReviewComment) -> List[str]:
@@ -327,7 +332,10 @@ def build_markdown_report(pr_reports: Sequence[PullRequestReport]) -> str:
     for report in pr_reports:
         for comment in report.comments:
             lines.append(
-                f"| [{report.number}]({report.url}) | {comment['file']} | {comment['excerpt']} | {comment['status']} | {comment['reason']} |"
+                "| "
+                f"[{report.number}]({report.url}) | "
+                f"{comment['file']} | {comment['excerpt']} | "
+                f"{comment['status']} | {comment['reason']} |"
             )
     return "\n".join(lines) + "\n"
 

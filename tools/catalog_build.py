@@ -4,9 +4,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 from pathlib import Path
 from typing import Any, Mapping
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"

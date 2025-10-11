@@ -19,19 +19,19 @@ from typing import Iterable, Iterator, Mapping, Sequence
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen, url2pathname
 
-from tools.catalog_build import CatalogValidationError, validate_catalog_payload
-
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 try:  # pragma: no cover - optional dependency
     from python_slugify import slugify as _python_slugify  # type: ignore
 except ImportError:  # pragma: no cover - fallback to vendored implementation
     _python_slugify = None
 
 from slugify import slugify as _fallback_slugify
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from tools.catalog_build import CatalogValidationError, validate_catalog_payload
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 CATALOG_PATH = ROOT / "app" / "catalog" / "products.json"
@@ -555,7 +555,10 @@ def _slug(text: str) -> str:
     prepared = text.replace("Ё", "Е").replace("ё", "е")
     if _python_slugify is not None:
         return _python_slugify(prepared, lowercase=True, language="ru")
-    return _fallback_slugify(prepared, lowercase=True, language="ru")
+    try:
+        return _fallback_slugify(prepared, lowercase=True, language="ru")
+    except TypeError:
+        return _fallback_slugify(prepared, lowercase=True)
 
 
 def _normalize_slug_value(slug_value: str) -> str:
@@ -1084,6 +1087,12 @@ def build_catalog(
             raise CatalogBuildError(mismatch)
         logging.warning(mismatch)
     return count, destination
+
+
+def build(**kwargs: object) -> tuple[int, Path]:
+    """Backward-compatible alias for :func:`build_catalog`."""
+
+    return build_catalog(**kwargs)
 
 
 def validate_catalog(path: Path | None = None) -> int:
