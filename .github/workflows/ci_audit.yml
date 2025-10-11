@@ -1,0 +1,42 @@
+name: ci-audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply autofixes"
+        default: "true"
+      rerun:
+        description: "Re-run failed checks"
+        default: "true"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pyyaml
+      - name: Run CI audit
+        run: |
+          python -m tools.ci_audit.run_ci_audit \
+            --repo go2telegram/five_keys_bot \
+            $([ "${{ github.event.inputs.apply }}" = "true" ] && echo "--apply-fixes" ) \
+            $([ "${{ github.event.inputs.rerun }}" = "true" ] && echo "--re-run" ) \
+            --since-days 14 --post-comments --label-prs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-audit-report
+          path: build/reports/ci_audit.*
