@@ -9,6 +9,7 @@ from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import BufferedInputFile, FSInputFile, Message
 
+from app.catalog.loader import CATALOG_FILE, CATALOG_SHA, CatalogError, load_catalog
 from app.catalog.report import CatalogReportError, get_catalog_report
 from app.config import settings
 from app.db.session import (
@@ -19,6 +20,7 @@ from app.db.session import (
     upgrade_to_head,
 )
 from app.feature_flags import feature_flags
+from app.link_manager import active_set_name
 from app.repo import (
     events as events_repo,
     retention as retention_repo,
@@ -330,6 +332,52 @@ async def ci_report_cmd(m: Message) -> None:
         FSInputFile(report_path),
         caption="CI diagnostics report",
     )
+
+
+@router.message(Command("doctor"))
+@admin_only
+async def doctor(message: Message) -> None:
+    current = await current_revision()
+    head = await head_revision()
+    pending_marker = " ⚠️ pending" if current and head and current != head else ""
+
+    catalog_sha = CATALOG_SHA or "unknown"
+    catalog_items: str
+    try:
+        catalog = load_catalog()
+        count = len(catalog.get("products", {}))
+        catalog_items = str(count)
+    except CatalogError as exc:
+        catalog_items = f"error: {exc}"
+    except Exception as exc:  # noqa: BLE001 - diagnostic command
+        catalog_items = f"error: {exc}"  # pragma: no cover - defensive fallback
+
+    try:
+        size_bytes = CATALOG_FILE.stat().st_size
+        catalog_size = f"{size_bytes} B"
+    except FileNotFoundError:
+        catalog_size = "missing"
+    except Exception as exc:  # noqa: BLE001 - diagnostic command
+        catalog_size = f"error: {exc}"  # pragma: no cover - defensive fallback
+
+    snapshot = feature_flags.snapshot()
+    active_flags = sorted(name for name, enabled in snapshot.items() if enabled)
+    flags_text = ", ".join(active_flags) if active_flags else "—"
+
+    try:
+        links_set = await active_set_name()
+    except Exception as exc:  # noqa: BLE001 - diagnostic command
+        links_set = f"error: {exc}"  # pragma: no cover - defensive fallback
+
+    lines = [
+        "🩺 <b>Doctor</b>",
+        f"Alembic: current={current or '—'} head={head or '—'}{pending_marker}",
+        f"Catalog: sha={catalog_sha} items={catalog_items} size={catalog_size}",
+        f"Feature flags: {flags_text}",
+        f"Links set: {links_set}",
+    ]
+
+    await message.answer("\n".join(lines))
 
 
 @router.message(Command("doctor_db"))
