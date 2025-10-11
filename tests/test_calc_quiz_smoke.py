@@ -166,6 +166,45 @@ async def test_bmi_calculator_smoke(monkeypatch):
     assert calc_unified.SESSIONS.get(user_id) is None
 
 
+@pytest.mark.asyncio
+async def test_send_product_album_uses_media_group(monkeypatch, tmp_path, **_):
+    from app import utils_media as media  # local import to avoid circular deps
+
+    file_one = tmp_path / "first.jpg"
+    file_two = tmp_path / "second.jpg"
+    file_one.write_bytes(b"one")
+    file_two.write_bytes(b"two")
+
+    def fake_product_by_id(code: str):
+        if code == "A":
+            return {"image": str(file_one)}
+        if code == "B":
+            return {"image": str(file_two)}
+        return None
+
+    monkeypatch.setattr(media, "product_by_id", fake_product_by_id)
+    monkeypatch.setattr(media, "product_by_alias", lambda code: None)
+
+    sent_groups: list[tuple[int, list]] = []
+    sent_photos: list[tuple[int, object]] = []
+
+    class DummyBot:
+        async def send_media_group(self, chat_id, media):
+            sent_groups.append((chat_id, media))
+
+        async def send_photo(self, chat_id, photo):
+            sent_photos.append((chat_id, photo))
+
+    bot = DummyBot()
+    await media.send_product_album(bot, 12345, ["A", "B"])
+
+    assert sent_groups, "media group should be sent when multiple images are available"
+    group_chat, media_items = sent_groups[0]
+    assert group_chat == 12345
+    assert len(media_items) == 2
+    assert not sent_photos, "fallback to single photos should not be used for valid media group"
+
+
 def _write_quiz(tmp_path):
     questions = []
     for idx in range(5):

@@ -1,4 +1,5 @@
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -80,7 +81,35 @@ def _read_snapshot(name: str) -> str:
 @pytest.mark.asyncio
 async def test_energy_quiz_flow(monkeypatch):
     monkeypatch.setattr("app.quiz.engine.ai_tip_for_quiz", AsyncMock(return_value=None))
-    monkeypatch.setitem(quiz_engine.QUIZ_HOOKS, "energy", QuizHooks(on_finish=None))
+
+    from app.handlers import quiz_energy as energy_handlers
+
+    call_order: list[str] = []
+
+    async def record_cards(*args, **kwargs):
+        call_order.append("cards")
+
+    async def record_cta(*args, **kwargs):
+        call_order.append("cta")
+
+    cards_mock = AsyncMock(side_effect=record_cards)
+    cta_mock = AsyncMock(side_effect=record_cta)
+    monkeypatch.setattr(energy_handlers, "send_product_cards", cards_mock)
+    monkeypatch.setattr(energy_handlers, "send_premium_cta", cta_mock)
+
+    async def fake_on_finish(user_id, definition, result):
+        origin = result.origin
+        if not origin:
+            return False
+        await energy_handlers.send_product_cards(origin, "Итог", [])
+        await energy_handlers.send_premium_cta(
+            origin,
+            "🔓 Еженедельные обновления доступны в Премиум",
+            source="quiz:energy",
+        )
+        return False
+
+    monkeypatch.setitem(quiz_engine.QUIZ_HOOKS, "energy", QuizHooks(on_finish=fake_on_finish))
 
     storage = MemoryStorage()
     state = FSMContext(storage=storage, key=StorageKey(bot_id=77, chat_id=9001, user_id=4242))
@@ -137,5 +166,9 @@ async def test_energy_quiz_flow(monkeypatch):
         for idx, dump in enumerate(snapshots, start=1):
             expected = _read_snapshot(f"energy_question_{idx}")
             assert dump == expected
+
+        assert call_order == ["cards", "cta"]
+        assert cards_mock.await_count == 1
+        assert cta_mock.await_count == 1
     finally:
         await storage.close()

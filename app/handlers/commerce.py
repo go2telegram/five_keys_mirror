@@ -81,6 +81,42 @@ async def cart_add_callback(callback: CallbackQuery) -> None:
     await callback.answer("Добавлено в корзину", show_alert=False)
 
 
+@router.callback_query(F.data.startswith("cart:add_many:"))
+async def cart_add_many(callback: CallbackQuery) -> None:
+    if not callback.from_user:
+        await callback.answer("Недоступно", show_alert=True)
+        return
+
+    payload = (callback.data or "").split(":", 2)
+    codes_raw = payload[-1] if len(payload) == 3 else ""
+    parts = [code.strip() for code in codes_raw.replace("+", ",").split(",") if code.strip()]
+    if not parts:
+        await callback.answer("Товары не найдены", show_alert=True)
+        return
+
+    added = 0
+    missing: list[str] = []
+    seen: set[str] = set()
+    for code in parts:
+        if code in seen:
+            continue
+        seen.add(code)
+        item = add_product_to_cart(callback.from_user.id, code)
+        if item:
+            added += 1
+        else:
+            missing.append(code)
+
+    if added:
+        suffix = "" if added == 1 else "а"
+        note = f"Добавлено {added} товар{suffix}"
+        if missing:
+            note += " (часть не найдена)"
+        await callback.answer(note, show_alert=False)
+    else:
+        await callback.answer("Товары не найдены", show_alert=True)
+
+
 async def _fetch_bundle(bundle_id: int) -> Bundle | None:
     async with compat_session(session_scope) as session:
         bundle = await session.get(Bundle, bundle_id)

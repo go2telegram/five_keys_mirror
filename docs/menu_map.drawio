@@ -1,0 +1,112 @@
+<mxfile host="app.diagrams.net" modified="2024-04-10T00:00:00.000Z" agent="Mozilla/5.0" version="20.3.3">
+  <diagram id="menu-map" name="Menu Map">
+    <mxGraphModel dx="1400" dy="840" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="home" value="🏠 Домой" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f4f6fb;strokeColor=#4b5563;fontSize=16" vertex="1" parent="1">
+          <mxGeometry x="360" y="40" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="tests" value="⚡ Тесты" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#2563eb;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="120" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="plan" value="🎯 План (AI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="360" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="catalog" value="🛍 Каталог" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="600" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="premium" value="💎 Премиум" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce7f3;strokeColor=#db2777;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="840" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="profile" value="👤 Профиль" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="1080" y="170" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="help" value="ℹ️ Помощь" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fee2e2;strokeColor=#b91c1c;fontSize=14" vertex="1" parent="1">
+          <mxGeometry x="840" y="300" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tests-son" value="🛌 Сон" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tests-energy" value="⚡ Энергия" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="180" y="300" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tests-immunity" value="🛡 Иммунитет" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="320" y="300" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tests-skin" value="🧴 Кожа/суставы" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="460" y="300" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tests-stress" value="😮‍💨 Стресс" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="620" y="300" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="plan-advice" value="💡 AI-совет" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="360" y="300" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="plan-premium" value="💎 Премиум-план" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="520" y="420" width="170" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="catalog-cart" value="🛒 Корзина" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="600" y="420" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="profile-reminders" value="⏰ Напоминания" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1080" y="300" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="profile-ref" value="🔗 Рефералы" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1080" y="420" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_tests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="tests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_plan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="plan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_catalog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="catalog">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_premium" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="premium">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_profile" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="profile">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_home_help" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#4b5563" edge="1" parent="1" source="home" target="help">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tests_son" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#2563eb" edge="1" parent="1" source="tests" target="tests-son">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tests_energy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#2563eb" edge="1" parent="1" source="tests" target="tests-energy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tests_immunity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#2563eb" edge="1" parent="1" source="tests" target="tests-immunity">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tests_skin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#2563eb" edge="1" parent="1" source="tests" target="tests-skin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tests_stress" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#2563eb" edge="1" parent="1" source="tests" target="tests-stress">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_plan_advice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#d97706" edge="1" parent="1" source="plan" target="plan-advice">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_plan_premium" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#d97706" edge="1" parent="1" source="plan" target="plan-premium">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_catalog_cart" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#7c3aed" edge="1" parent="1" source="catalog" target="catalog-cart">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_profile_reminders" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#16a34a" edge="1" parent="1" source="profile" target="profile-reminders">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_profile_ref" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#16a34a" edge="1" parent="1" source="profile" target="profile-ref">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_plan_premium_home" style="edgeStyle=orthogonalEdgeStyle;rounded=0;jettySize=auto;orthogonalLoop=1;strokeColor=#db2777" edge="1" parent="1" source="plan-premium" target="home">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

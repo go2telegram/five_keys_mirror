@@ -49,5 +49,5 @@ calc:
   buttons:
     back: "⬅️ Назад"
     repeat: "🔁 Повторить"
-    home: "🏠 Главное меню"
+    home: "🏠 Домой"
   premium_cta: "💎 Получить полный план (AI)"

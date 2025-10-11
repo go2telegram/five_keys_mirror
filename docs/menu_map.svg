@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 520">
+  <defs>
+    <style>
+      .node { rx: 20; ry: 20; stroke-width: 2; }
+      text { font-family: "Inter", "Segoe UI", sans-serif; font-weight: 500; fill: #111827; }
+      .label { font-size: 18px; }
+      .label-sm { font-size: 16px; }
+      .caption { font-size: 14px; }
+    </style>
+    <marker id="arrow-gray" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#4b5563" />
+    </marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2563eb" />
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#d97706" />
+    </marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#7c3aed" />
+    </marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#16a34a" />
+    </marker>
+    <marker id="arrow-pink" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#db2777" />
+    </marker>
+  </defs>
+
+  <!-- edges from home -->
+  <path d="M440 110 L440 150 L195 150 L195 170" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+  <path d="M440 110 L440 170" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+  <path d="M440 110 L440 150 L675 150 L675 170" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+  <path d="M440 110 L440 150 L915 150 L915 170" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+  <path d="M440 110 L440 150 L1155 150 L1155 170" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+  <path d="M440 110 L440 150 L915 150 L915 300" fill="none" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+  <!-- tests edges -->
+  <path d="M195 230 L195 260 L105 260 L105 300" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)" />
+  <path d="M195 230 L195 260 L245 260 L245 300" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)" />
+  <path d="M195 230 L195 260 L365 260 L365 300" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)" />
+  <path d="M195 230 L195 260 L535 260 L535 300" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)" />
+  <path d="M195 230 L195 260 L685 260 L685 300" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)" />
+
+  <!-- plan edges -->
+  <path d="M435 230 L435 300" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#arrow-orange)" />
+  <path d="M435 230 L435 260 L605 260 L605 420" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#arrow-orange)" />
+
+  <!-- premium plan back to home -->
+  <path d="M605 420 L605 390 L440 390 L440 110" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#arrow-pink)" />
+
+  <!-- catalog edge -->
+  <path d="M675 230 L675 420" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-purple)" />
+
+  <!-- profile edges -->
+  <path d="M1155 230 L1155 300" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)" />
+  <path d="M1155 230 L1155 420" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)" />
+
+  <!-- nodes -->
+  <rect class="node" x="360" y="40" width="160" height="70" fill="#f4f6fb" stroke="#4b5563" />
+  <text class="label" x="440" y="78" text-anchor="middle" dominant-baseline="middle">🏠 Домой</text>
+
+  <rect class="node" x="120" y="170" width="150" height="60" fill="#e0f2fe" stroke="#2563eb" />
+  <text class="label-sm" x="195" y="200" text-anchor="middle" dominant-baseline="middle">⚡ Тесты</text>
+
+  <rect class="node" x="360" y="170" width="150" height="60" fill="#fef3c7" stroke="#d97706" />
+  <text class="label-sm" x="435" y="200" text-anchor="middle" dominant-baseline="middle">🎯 План (AI)</text>
+
+  <rect class="node" x="600" y="170" width="150" height="60" fill="#ede9fe" stroke="#7c3aed" />
+  <text class="label-sm" x="675" y="200" text-anchor="middle" dominant-baseline="middle">🛍 Каталог</text>
+
+  <rect class="node" x="840" y="170" width="150" height="60" fill="#fce7f3" stroke="#db2777" />
+  <text class="label-sm" x="915" y="200" text-anchor="middle" dominant-baseline="middle">💎 Премиум</text>
+
+  <rect class="node" x="1080" y="170" width="150" height="60" fill="#dcfce7" stroke="#16a34a" />
+  <text class="label-sm" x="1155" y="200" text-anchor="middle" dominant-baseline="middle">👤 Профиль</text>
+
+  <rect class="node" x="840" y="300" width="150" height="60" fill="#fee2e2" stroke="#b91c1c" />
+  <text class="label-sm" x="915" y="330" text-anchor="middle" dominant-baseline="middle">ℹ️ Помощь</text>
+
+  <rect class="node" x="40" y="300" width="130" height="50" fill="#ffffff" stroke="#2563eb" />
+  <text class="caption" x="105" y="325" text-anchor="middle" dominant-baseline="middle">🛌 Сон</text>
+
+  <rect class="node" x="180" y="300" width="130" height="50" fill="#ffffff" stroke="#2563eb" />
+  <text class="caption" x="245" y="325" text-anchor="middle" dominant-baseline="middle">⚡ Энергия</text>
+
+  <rect class="node" x="320" y="300" width="130" height="50" fill="#ffffff" stroke="#2563eb" />
+  <text class="caption" x="385" y="325" text-anchor="middle" dominant-baseline="middle">🛡 Иммунитет</text>
+
+  <rect class="node" x="460" y="300" width="150" height="50" fill="#ffffff" stroke="#2563eb" />
+  <text class="caption" x="535" y="320" text-anchor="middle">🧴 Кожа/суставы</text>
+
+  <rect class="node" x="620" y="300" width="130" height="50" fill="#ffffff" stroke="#2563eb" />
+  <text class="caption" x="685" y="325" text-anchor="middle" dominant-baseline="middle">😮‍💨 Стресс</text>
+
+  <rect class="node" x="360" y="300" width="150" height="50" fill="#ffffff" stroke="#d97706" />
+  <text class="caption" x="435" y="325" text-anchor="middle" dominant-baseline="middle">💡 AI-совет</text>
+
+  <rect class="node" x="520" y="420" width="170" height="50" fill="#ffffff" stroke="#db2777" />
+  <text class="caption" x="605" y="445" text-anchor="middle" dominant-baseline="middle">💎 Премиум-план</text>
+
+  <rect class="node" x="600" y="420" width="150" height="50" fill="#ffffff" stroke="#7c3aed" />
+  <text class="caption" x="675" y="445" text-anchor="middle" dominant-baseline="middle">🛒 Корзина</text>
+
+  <rect class="node" x="1080" y="300" width="160" height="50" fill="#ffffff" stroke="#16a34a" />
+  <text class="caption" x="1160" y="325" text-anchor="middle" dominant-baseline="middle">⏰ Напоминания</text>
+
+  <rect class="node" x="1080" y="420" width="160" height="50" fill="#ffffff" stroke="#16a34a" />
+  <text class="caption" x="1160" y="445" text-anchor="middle" dominant-baseline="middle">🔗 Рефералы</text>
+</svg>
