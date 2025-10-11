@@ -110,6 +110,32 @@ jobs:
           name: ci-reports
           path: build/reports/*
 
+  dev-up-smoke:
+    runs-on: ubuntu-latest
+    env:
+      DEV_DRY_RUN: 1
+      HEALTH_PORT: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps (runtime)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build catalog (fast)
+        run: |
+          python -m tools.build_products build
+          python -m tools.build_products validate
+      - name: Run dry
+        run: |
+          python run.py &
+          sleep 2
+          curl -sf http://127.0.0.1:8080/ping || true
+      - name: Kill
+        run: pkill -f "python run.py" || true
+
   windows-wheels-smoke:
     name: Windows wheels smoke
     runs-on: windows-latest
