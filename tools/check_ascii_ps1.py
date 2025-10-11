@@ -2,7 +2,11 @@
 """Verify PowerShell scripts are ASCII-only and use CRLF with a single trailing newline."""
 from __future__ import annotations
 
+import os
 import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -8,13 +8,16 @@ some checks fail.
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import argparse
 import json
-import os
 import pathlib
 import re
 import subprocess
-import sys
 import time
 from typing import Any, Dict, List
 

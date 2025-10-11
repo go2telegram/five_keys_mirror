@@ -3,10 +3,14 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import argparse
 import csv
 import json
-import sys
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path

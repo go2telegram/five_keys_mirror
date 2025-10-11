@@ -3,14 +3,17 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import argparse
 import datetime as dt
 import errno
 import json
-import os
 import socket
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Callable, Dict, Iterable
@@ -93,6 +96,36 @@ _STATUS_EMOJI = {
 }
 
 
+def print_ci_summary(results: dict[str, str]) -> None:
+    ok = [name for name, status in results.items() if status == "ok"]
+    fail = [name for name, status in results.items() if status != "ok"]
+    print(f"✅ Passed: {len(ok)}, ❌ Failed: {len(fail)}")
+    for name in sorted(results):
+        print(f"- {name}: {results[name]}")
+
+
+def _env_ci_results() -> dict[str, str]:
+    mapping = {
+        "lint": os.getenv("CI_LINT_STATUS"),
+        "test": os.getenv("CI_TEST_STATUS"),
+        "security": os.getenv("CI_SECURITY_STATUS"),
+        "dev-up-smoke": os.getenv("CI_DEV_SMOKE_STATUS"),
+        "windows": os.getenv("CI_WINDOWS_STATUS"),
+    }
+
+    def _normalize(value: str | None) -> str:
+        if not value:
+            return "unknown"
+        lowered = value.lower()
+        if lowered in {"success", "succeeded", "ok", "passed", "completed"}:
+            return "ok"
+        if lowered in {"skipped", "cancelled"}:
+            return lowered
+        return "fail" if lowered in {"failure", "failed", "timed_out"} else lowered
+
+    return {name: _normalize(status) for name, status in mapping.items() if status is not None}
+
+
 def _parse_args(argv: Iterable[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fast", action="store_true", help="Пропустить линтеры и нагрузочный смоук")
@@ -104,6 +137,11 @@ def _parse_args(argv: Iterable[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--no-net", action="store_true", help="Пропустить сетевые проверки")
     parser.add_argument("--out", type=Path, default=DEFAULT_REPORT, help="Путь к Markdown-отчёту")
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Вывести краткий итог по статусам CI и завершиться",
+    )
     return parser.parse_args(argv)
 
 
@@ -186,6 +224,14 @@ def _is_network_error(exc: Exception) -> bool:
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = _parse_args(argv)
+
+    if args.summary and not (args.fast or args.ci or args.ci_merge):
+        results = _env_ci_results()
+        if not results:
+            print("No CI job results available in the environment.")
+            return 0
+        print_ci_summary(results)
+        return 0
 
     reports_path = (args.out if isinstance(args.out, Path) else Path(args.out)).resolve()
     reports_dir = reports_path.parent

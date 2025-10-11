@@ -14,10 +14,14 @@ the status can be surfaced in ``doctor`` and other diagnostics tools.
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import argparse
 import asyncio
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path

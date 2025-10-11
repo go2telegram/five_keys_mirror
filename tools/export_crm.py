@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import asyncio
 import csv
 import json
-import os
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
-
-import sys
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

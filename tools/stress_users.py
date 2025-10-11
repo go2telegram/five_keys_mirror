@@ -19,12 +19,16 @@ further analysis.
 
 from __future__ import annotations
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import argparse
 import asyncio
 import json
 import random
 import statistics
-import sys
 import time
 from collections import Counter
 from dataclasses import dataclass

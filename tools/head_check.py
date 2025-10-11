@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
+import json
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable

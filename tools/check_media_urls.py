@@ -1,7 +1,11 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 import asyncio
 import glob
 import json
-import os
 
 import aiohttp
 import yaml
