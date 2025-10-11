@@ -215,15 +215,9 @@ async def _refresh_cache(force: bool = False) -> None:
         return
     payload = await _load_set_payload(name)
     register_raw = payload.get("register")
-    _REGISTER_LINK = (
-        register_raw.strip()
-        if isinstance(register_raw, str) and register_raw.strip()
-        else None
-    )
+    _REGISTER_LINK = register_raw.strip() if isinstance(register_raw, str) and register_raw.strip() else None
     products_raw = payload.get("products")
-    _PRODUCT_LINKS = (
-        _canonicalise_mapping(products_raw) if isinstance(products_raw, dict) else {}
-    )
+    _PRODUCT_LINKS = _canonicalise_mapping(products_raw) if isinstance(products_raw, dict) else {}
     _LOADED_SET = name
 
 
