@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from aiogram import Router
 
 from app.config import settings
 from app.db.session import compat_session, session_scope

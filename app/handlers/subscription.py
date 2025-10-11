@@ -94,9 +94,7 @@ async def sub_check(c: CallbackQuery):
     await c.answer()
     if is_active and sub:
         until_text = _format_until(sub.until)
-        text = (
-            "✅ <b>Подписка активна</b>\n" f"Тариф: <b>MITO {sub.plan.upper()}</b>\n" f"Доступ до: <b>{until_text}</b>."
-        )
+        text = f"✅ <b>Подписка активна</b>\nТариф: <b>MITO {sub.plan.upper()}</b>\nДоступ до: <b>{until_text}</b>."
         builder = InlineKeyboardBuilder()
         builder.button(text="🔁 Проверить снова", callback_data="sub:check")
         builder.button(text="Открыть Premium", callback_data="premium:menu")

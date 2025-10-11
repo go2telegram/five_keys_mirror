@@ -4,11 +4,11 @@ from aiogram.types import CallbackQuery
 from app.catalog.api import pick_for_context
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.link_manager import get_register_link
 from app.reco import product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
-from app.link_manager import get_register_link
 
 router = Router()
 
@@ -52,7 +52,7 @@ def _immunity_outcome(total: int) -> tuple[str, str, str, list[str]]:
         )
     return (
         "severe",
-        ("\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 " "\u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"),
+        ("\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 \u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"),
         "immunity_low",
         ["VITEN", "T8_BLEND", "D3"],
     )

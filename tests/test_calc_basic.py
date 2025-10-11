@@ -62,5 +62,3 @@ async def test_msd_invalid_input_prompts_retry(monkeypatch):
     message.answer.assert_awaited()
     assert user_id in calc.SESSIONS
     calc.SESSIONS.pop(user_id, None)
-
-

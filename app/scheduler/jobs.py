@@ -13,8 +13,8 @@ from app.config import settings
 from app.db.models import Event, Lead, Subscription
 from app.db.session import session_scope
 from app.repo import events as events_repo, retention as retention_repo
-from app.services.reminders import ReminderConfig, ReminderPlanner
 from app.services import retention_logic, retention_messages
+from app.services.reminders import ReminderConfig, ReminderPlanner
 from app.utils_openai import ai_generate
 
 _analytics_log = logging.getLogger("scheduler.analytics")
@@ -36,7 +36,7 @@ async def send_nudges(bot: Bot, tz_name: str, weekdays: set[str]):
     )
     text = await ai_generate(prompt)
     if not text or text.startswith("⚠️"):
-        text = "Микро-челлендж дня:\n" "☑️ Сон 7–9 часов\n" "☑️ 10 мин утреннего света\n" "☑️ 30 мин быстрой ходьбы"
+        text = "Микро-челлендж дня:\n☑️ Сон 7–9 часов\n☑️ 10 мин утреннего света\n☑️ 30 мин быстрой ходьбы"
 
     async with session_scope() as session:
         user_ids = await events_repo.notify_recipients(session)
@@ -117,9 +117,7 @@ async def _start_followup_candidates(session, cutoff: dt.datetime) -> list[int]:
     return [row[0] for row in result.all() if row[0] is not None]
 
 
-async def _premium_followup_candidates(
-    session, cutoff: dt.datetime, now: dt.datetime
-) -> list[int]:
+async def _premium_followup_candidates(session, cutoff: dt.datetime, now: dt.datetime) -> list[int]:
     latest_quiz = (
         select(Event.user_id, func.max(Event.ts).label("ts"))
         .where(Event.name == "quiz_finish", Event.user_id.is_not(None))
@@ -132,11 +130,7 @@ async def _premium_followup_candidates(
         .group_by(Event.user_id)
         .subquery()
     )
-    active_subs = (
-        select(Subscription.user_id)
-        .where(Subscription.until > now)
-        .subquery()
-    )
+    active_subs = select(Subscription.user_id).where(Subscription.until > now).subquery()
 
     stmt = (
         select(latest_quiz.c.user_id)
@@ -297,10 +291,7 @@ async def process_retention_journeys(bot: Bot) -> None:
                 kb.adjust(3, 1)
                 markup = kb.as_markup()
             elif entry.journey == "stress_relief":
-                text = (
-                    f"{retention_messages.format_stress_journey_message()}\n\n"
-                    "💡 Хочу Премиум-план (/premium)"
-                )
+                text = f"{retention_messages.format_stress_journey_message()}\n\n💡 Хочу Премиум-план (/premium)"
                 kb = InlineKeyboardBuilder()
                 kb.button(text="Низкий", callback_data="journey_stress:low")
                 kb.button(text="Средний", callback_data="journey_stress:medium")
@@ -347,12 +338,8 @@ async def export_analytics_snapshot() -> Path | None:
         plans_7d = await events_repo.stats(session, name="plan_generated", since=week_ago)
         retention_test_24h = await events_repo.stats(session, name="retention_test_nudge", since=day_ago)
         retention_test_7d = await events_repo.stats(session, name="retention_test_nudge", since=week_ago)
-        retention_premium_24h = await events_repo.stats(
-            session, name="retention_premium_nudge", since=day_ago
-        )
-        retention_premium_7d = await events_repo.stats(
-            session, name="retention_premium_nudge", since=week_ago
-        )
+        retention_premium_24h = await events_repo.stats(session, name="retention_premium_nudge", since=day_ago)
+        retention_premium_7d = await events_repo.stats(session, name="retention_premium_nudge", since=week_ago)
 
         total_leads_stmt = select(func.count(Lead.id))
         total_leads = (await session.execute(total_leads_stmt)).scalar_one()

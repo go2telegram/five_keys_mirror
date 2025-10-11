@@ -1,6 +1,5 @@
 # app/handlers/lead.py
 import re
-from app.storage import commit_safely
 from contextlib import suppress
 
 from aiogram import F, Router
@@ -13,6 +12,7 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_cancel_home, kb_main
 from app.repo import events as events_repo, leads as leads_repo, users as users_repo
+from app.storage import commit_safely
 
 router = Router()
 

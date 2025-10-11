@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import sys
 from contextlib import asynccontextmanager
@@ -172,10 +171,10 @@ def _write_quiz(tmp_path):
     for idx in range(5):
         questions.append(
             {
-                "id": f"q{idx+1}",
-                "text": f"Question {idx+1}?",
+                "id": f"q{idx + 1}",
+                "text": f"Question {idx + 1}?",
                 "options": [
-                    {"key": "a", "text": "Option A", "score": 1, "tags": [f"tag{idx+1}"]},
+                    {"key": "a", "text": "Option A", "score": 1, "tags": [f"tag{idx + 1}"]},
                     {"key": "b", "text": "Option B", "score": 2, "tags": []},
                 ],
             }

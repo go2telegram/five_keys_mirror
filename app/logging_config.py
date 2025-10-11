@@ -10,7 +10,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Iterable
 
-
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE_RE = re.compile(r"\b\+?\d{6,15}\b")
 _TOKEN_RE = re.compile(r"(?P<key>token\s*[=:]\s*)(?P<secret>[A-Za-z0-9._-]{4,})", re.IGNORECASE)
@@ -107,9 +106,7 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
     pii_filter = PiiScrubbingFilter()
     for logger_name in ("audit", "doctor"):
         logger = logging.getLogger(logger_name)
-        logger.filters = [
-            existing for existing in logger.filters if not isinstance(existing, PiiScrubbingFilter)
-        ]
+        logger.filters = [existing for existing in logger.filters if not isinstance(existing, PiiScrubbingFilter)]
         logger.addFilter(pii_filter)
 
     resolved_level = logging.getLevelName(level)

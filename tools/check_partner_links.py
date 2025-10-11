@@ -35,13 +35,7 @@ if str(ROOT) not in sys.path:
 
 DEFAULT_REPORT_PATH = ROOT / "build" / "reports" / "links_head_report.txt"
 DEFAULT_DIFF_JSON = ROOT / "build" / "reports" / "links_head_diff.json"
-DEFAULT_REGISTER_PATH = (
-    ROOT
-    / "Вспомогательное"
-    / "Сборшик постов с группы и канала"
-    / "mito_export"
-    / "topics.csv"
-)
+DEFAULT_REGISTER_PATH = ROOT / "Вспомогательное" / "Сборшик постов с группы и канала" / "mito_export" / "topics.csv"
 
 USER_AGENT = "five-keys-bot/link-health"
 HTTP_TIMEOUT = 6
@@ -94,9 +88,7 @@ SessionFactory = Callable[..., aiohttp.ClientSession]
 def collect_register_links(path: Path | None = None) -> list[PartnerLink]:
     """Collect links from the exported Telegram register."""
 
-    register_path = Path(
-        os.getenv("PARTNER_REGISTER_PATH", str(path or DEFAULT_REGISTER_PATH))
-    )
+    register_path = Path(os.getenv("PARTNER_REGISTER_PATH", str(path or DEFAULT_REGISTER_PATH)))
     if not register_path.exists():
         print(f"WARN Register file not found: {register_path}")
         return []
@@ -171,9 +163,7 @@ def collect_all_links() -> list[PartnerLink]:
     return links
 
 
-async def _perform_request(
-    session: aiohttp.ClientSession, url: str
-) -> tuple[int | None, str | None]:
+async def _perform_request(session: aiohttp.ClientSession, url: str) -> tuple[int | None, str | None]:
     headers = {"User-Agent": USER_AGENT}
     try:
         async with session.head(url, allow_redirects=True, headers=headers) as resp:
@@ -181,9 +171,7 @@ async def _perform_request(
     except aiohttp.ClientResponseError as exc:
         if exc.status == 405:
             try:
-                async with session.get(
-                    url, allow_redirects=True, headers=headers
-                ) as resp:
+                async with session.get(url, allow_redirects=True, headers=headers) as resp:
                     return resp.status, None
             except Exception as inner_exc:  # noqa: BLE001
                 return None, str(inner_exc)
@@ -260,11 +248,7 @@ def _write_report(results: Sequence[LinkCheckResult], path: Path) -> None:
         safe_title = title.replace("\t", " ").replace("\n", " ")
         safe_detail = detail.replace("\t", " ").replace("\n", " ")
         status = "ERR" if result.status is None else str(result.status)
-        lines.append(
-            "\t".join(
-                [result.link.source, status, result.link.url, safe_title, safe_detail]
-            )
-        )
+        lines.append("\t".join([result.link.source, status, result.link.url, safe_title, safe_detail]))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -316,13 +300,14 @@ async def _send_notification(new_items: Sequence[LinkCheckResult]) -> None:
 
     timeout = aiohttp.ClientTimeout(total=10)
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(api_url, json=payload) as response:
-                if response.status >= 400:
-                    body = await response.text()
-                    print(
-                        f"WARN Failed to send notification: status={response.status} body={body}",
-                    )
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
+            api_url, json=payload
+        ) as response:
+            if response.status >= 400:
+                body = await response.text()
+                print(
+                    f"WARN Failed to send notification: status={response.status} body={body}",
+                )
     except Exception as exc:  # noqa: BLE001 - network failure should not abort the job
         print(f"WARN Notification failed: {exc}")
 
@@ -356,27 +341,17 @@ async def execute(
     problems = [item for item in results if not item.ok]
 
     current_problem_urls = {item.link.url: item for item in problems}
-    previous_problem_urls = {
-        url: status for url, status in previous.items() if not _is_ok(status)
-    }
+    previous_problem_urls = {url: status for url, status in previous.items() if not _is_ok(status)}
 
-    new_problems = [
-        item
-        for url, item in current_problem_urls.items()
-        if url not in previous_problem_urls
-    ]
-    resolved = [
-        url for url in previous_problem_urls if url not in current_problem_urls
-    ]
+    new_problems = [item for url, item in current_problem_urls.items() if url not in previous_problem_urls]
+    resolved = [url for url in previous_problem_urls if url not in current_problem_urls]
 
     _write_report(results, report_path)
     if diff_json_path is not None:
         _write_diff_json(new=new_problems, resolved=resolved, path=diff_json_path)
 
     ok_count = sum(1 for item in results if item.ok)
-    print(
-        f"INFO Partner link check completed: ok={ok_count}, problems={len(problems)}"
-    )
+    print(f"INFO Partner link check completed: ok={ok_count}, problems={len(problems)}")
     try:
         rel_report = report_path.relative_to(ROOT)
     except ValueError:
@@ -384,10 +359,7 @@ async def execute(
     print(f"INFO Report saved to {rel_report}")
 
     if new_problems:
-        print(
-            "WARN New problematic links detected: "
-            + ", ".join(item.link.url for item in new_problems)
-        )
+        print("WARN New problematic links detected: " + ", ".join(item.link.url for item in new_problems))
 
     if resolved:
         print("INFO Resolved link issues: " + ", ".join(resolved))

@@ -10,8 +10,13 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app import build_info
+from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.experiments.ab import select_copy
+from app.feature_flags import feature_flags
+from app.growth import attribution as growth_attribution
+from app.handlers import reg as reg_handlers
 from app.i18n import gettext, resolve_locale
 from app.keyboards import (
     kb_back_home,
@@ -23,6 +28,8 @@ from app.keyboards import (
     kb_recommendation_prompt,
     kb_yes_no,
 )
+from app.link_manager import get_register_link
+from app.quiz.engine import start_quiz
 from app.repo import (
     events as events_repo,
     profiles as profiles_repo,
@@ -30,19 +37,9 @@ from app.repo import (
     subscriptions as subscriptions_repo,
     users as users_repo,
 )
-from app.config import settings
-from app import build_info
-from app.feature_flags import feature_flags
 from app.storage import commit_safely, grant_role, has_role, touch_throttle
 from app.texts import Texts
 from app.utils import safe_edit_text
-from app.link_manager import get_register_link
-
-from app.quiz.engine import start_quiz
-
-from app.growth import attribution as growth_attribution
-
-from app.handlers import reg as reg_handlers
 
 logger = logging.getLogger(__name__)
 log_start = logging.getLogger("start")

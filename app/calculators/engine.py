@@ -182,10 +182,7 @@ def _water_compute_total(weight: float, activity: str, climate: str) -> tuple[fl
 
 
 def _water_headline(total: float, glasses: int) -> str:
-    return (
-        f"Рекомендуемая дневная норма: <b>{total} л</b>"
-        f" (~{glasses} стаканов по 250 мл)."
-    )
+    return f"Рекомендуемая дневная норма: <b>{total} л</b> (~{glasses} стаканов по 250 мл)."
 
 
 def _water_bullets(activity: str, climate: str) -> list[str]:
@@ -225,9 +222,7 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
             "— Обновлять бутылку каждые 2–3 часа",
         ],
         "actions": bullets,
-        "notes": (
-            "Следи за самочувствием и корректируй норму с врачом при хронических состояниях."
-        ),
+        "notes": ("Следи за самочувствием и корректируй норму с врачом при хронических состояниях."),
         "order_url": None,
     }
 
@@ -260,9 +255,7 @@ _water_definition = CalculatorDefinition(
             prompt="Введи вес в килограммах, например: <code>72</code>",
             error="Не удалось распознать вес. Пример: <code>72.5</code>",
             parser=_parse_float,
-            validators=(
-                _range_validator(30, 300, "Вес должен быть от 30 до 300 кг."),
-            ),
+            validators=(_range_validator(30, 300, "Вес должен быть от 30 до 300 кг."),),
         ),
         ChoiceStep(
             key="activity",
@@ -325,8 +318,7 @@ def _compute_calories(
 def _calorie_headline(base: int, tdee: int, target: int, goal: str) -> str:
     label = _GOAL_LABELS.get(goal, "Поддержание")
     return (
-        f"BMR: <b>{base} ккал</b>. Полная норма (TDEE): <b>{tdee} ккал</b>."
-        f"\nЦель — {label}: <b>{target} ккал/день</b>."
+        f"BMR: <b>{base} ккал</b>. Полная норма (TDEE): <b>{tdee} ккал</b>.\nЦель — {label}: <b>{target} ккал/день</b>."
     )
 
 
@@ -415,34 +407,26 @@ _calorie_definition = CalculatorDefinition(
             prompt="Возраст (в годах), например: <code>32</code>",
             error="Возраст должен быть числом лет. Пример: <code>32</code>",
             parser=_parse_int,
-            validators=(
-                _int_range_validator(14, 90, "Укажи возраст от 14 до 90 лет."),
-            ),
+            validators=(_int_range_validator(14, 90, "Укажи возраст от 14 до 90 лет."),),
         ),
         InputStep(
             key="weight",
             prompt="Текущий вес в килограммах (например, <code>78.5</code>):",
             error="Вес должен быть числом от 30 до 250 кг.",
             parser=_parse_float,
-            validators=(
-                _range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),
-            ),
+            validators=(_range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),),
         ),
         InputStep(
             key="height",
             prompt="Рост в сантиметрах (например, <code>175</code>):",
             error="Рост должен быть целым числом сантиметров.",
             parser=_parse_int,
-            validators=(
-                _int_range_validator(130, 220, "Рост в диапазоне 130–220 см."),
-            ),
+            validators=(_int_range_validator(130, 220, "Рост в диапазоне 130–220 см."),),
         ),
         ChoiceStep(
             key="activity",
             prompt="Выбери уровень активности:",
-            options=[
-                ChoiceOption(key, title, key) for key, (title, _) in _ACTIVITY_FACTORS.items()
-            ],
+            options=[ChoiceOption(key, title, key) for key, (title, _) in _ACTIVITY_FACTORS.items()],
         ),
         ChoiceStep(
             key="goal",
@@ -570,9 +554,7 @@ _macro_definition = CalculatorDefinition(
             prompt="Укажи текущий вес в килограммах (например, <code>68</code>):",
             error="Вес должен быть числом от 30 до 250 кг.",
             parser=_parse_float,
-            validators=(
-                _range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),
-            ),
+            validators=(_range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),),
         ),
         ChoiceStep(
             key="goal",
@@ -586,9 +568,7 @@ _macro_definition = CalculatorDefinition(
         ChoiceStep(
             key="preference",
             prompt="Какой стиль питания ближе?",
-            options=[
-                ChoiceOption(key, title, key) for key, (title, _, _) in _PREFERENCE_LABELS.items()
-            ],
+            options=[ChoiceOption(key, title, key) for key, (title, _, _) in _PREFERENCE_LABELS.items()],
         ),
     ],
     build_result=_build_macro_result,
@@ -684,18 +664,14 @@ _bmi_definition = CalculatorDefinition(
             prompt="Рост в сантиметрах (например, <code>170</code>):",
             error="Рост должен быть числом в сантиметрах. Пример: <code>170</code>",
             parser=_parse_float,
-            validators=(
-                _range_validator(130, 230, "Рост должен быть в диапазоне 130–230 см."),
-            ),
+            validators=(_range_validator(130, 230, "Рост должен быть в диапазоне 130–230 см."),),
         ),
         InputStep(
             key="weight",
             prompt="Вес в килограммах (например, <code>72.5</code>):",
             error="Вес должен быть числом от 30 до 250 кг.",
             parser=_parse_float,
-            validators=(
-                _range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),
-            ),
+            validators=(_range_validator(30, 250, "Вес должен быть числом от 30 до 250 кг."),),
         ),
     ],
     build_result=_build_bmi_result,

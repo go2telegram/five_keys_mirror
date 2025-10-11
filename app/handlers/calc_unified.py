@@ -10,18 +10,18 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.calculators.engine import (
     CALCULATORS,
     CalculationContext,
-    CalculatorDefinition,
     CalculationResult,
+    CalculatorDefinition,
     ChoiceStep,
     InputStep,
     Step,
 )
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
+from app.i18n import resolve_locale
 from app.link_manager import get_register_link
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, SessionData, commit_safely, set_last_plan
-from app.i18n import resolve_locale
 from app.texts import Texts
 from app.utils import safe_edit_text
 from app.utils.premium_cta import send_premium_cta
@@ -75,14 +75,10 @@ def _step_keyboard(slug: str, step: Step, allow_back: bool, texts: Texts) -> Inl
             layout.append(1)
 
     if allow_back:
-        kb.button(
-            text=texts.calc.back(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:back"
-        )
+        kb.button(text=texts.calc.back(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:back")
         layout.append(1)
 
-    kb.button(
-        text=texts.calc.repeat(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:repeat"
-    )
+    kb.button(text=texts.calc.repeat(), callback_data=f"{_FLOW_PREFIX}:{slug}:ctrl:repeat")
     layout.append(1)
 
     kb.button(text=texts.calc.home(), callback_data="home:main")
@@ -103,14 +99,9 @@ async def _send_step(
 ) -> None:
     index = int(session.get("step_index", 0))
     step = definition.steps[index]
-    if isinstance(target, CallbackQuery):
-        user = target.from_user
-    else:
-        user = target.from_user
+    user = target.from_user
     texts = _texts_from_user(user)
-    markup = _step_keyboard(
-        definition.slug, step, allow_back=index > 0, texts=texts
-    ).as_markup()
+    markup = _step_keyboard(definition.slug, step, allow_back=index > 0, texts=texts).as_markup()
 
     if isinstance(target, CallbackQuery):
         message = target.message
@@ -183,9 +174,7 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         value = step.parser(text)
     except ValueError:
         texts = _texts_from_user(message.from_user)
-        markup = _step_keyboard(
-            definition.slug, step, allow_back=index > 0, texts=texts
-        ).as_markup()
+        markup = _step_keyboard(definition.slug, step, allow_back=index > 0, texts=texts).as_markup()
         await message.answer(f"{step.error}\n\n{step.prompt}", reply_markup=markup)
         return
 
@@ -193,9 +182,7 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         error = validator(value)
         if error:
             texts = _texts_from_user(message.from_user)
-            markup = _step_keyboard(
-                definition.slug, step, allow_back=index > 0, texts=texts
-            ).as_markup()
+            markup = _step_keyboard(definition.slug, step, allow_back=index > 0, texts=texts).as_markup()
             await message.answer(f"{error}\n\n{step.prompt}", reply_markup=markup)
             return
 

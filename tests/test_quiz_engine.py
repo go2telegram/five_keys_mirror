@@ -28,8 +28,8 @@ def _install_yaml_stub() -> None:
 
 _install_yaml_stub()
 
-from app.quiz import engine
-from app.quiz.engine import (
+from app.quiz import engine  # noqa: E402
+from app.quiz.engine import (  # noqa: E402
     QuizHooks,
     answer_callback,
     back_callback,
@@ -100,15 +100,15 @@ def _write_quiz(tmp_path, name="sample", *, with_images=True):
     questions = []
     for idx in range(5):
         question = {
-            "id": f"q{idx+1}",
-            "text": f"Question {idx+1}?",
+            "id": f"q{idx + 1}",
+            "text": f"Question {idx + 1}?",
             "options": [
-                {"key": "a", "text": "A", "score": 1, "tags": [f"tag{idx+1}"]},
-                {"key": "b", "text": "B", "score": 2, "tags": [f"tag{idx+1}"]},
+                {"key": "a", "text": "A", "score": 1, "tags": [f"tag{idx + 1}"]},
+                {"key": "b", "text": "B", "score": 2, "tags": [f"tag{idx + 1}"]},
             ],
         }
         if with_images:
-            question["image"] = f"folder/q{idx+1}.png"
+            question["image"] = f"folder/q{idx + 1}.png"
         questions.append(question)
 
     content = {
@@ -165,9 +165,7 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
             current_message = entry_message.children[-1]
 
             for idx, question in enumerate(definition.questions):
-                callback_data = build_answer_callback_data(
-                    "sample", question.id, question.options[0].key
-                )
+                callback_data = build_answer_callback_data("sample", question.id, question.options[0].key)
                 callback = DummyCallback(callback_data, current_message)
                 await answer_callback(callback, state)
                 if idx < len(definition.questions) - 1:
@@ -211,9 +209,7 @@ def test_quiz_back_navigation(monkeypatch, quiz_tmp):
             first_question = definition.questions[0]
 
             first_callback = DummyCallback(
-                build_answer_callback_data(
-                    "sample", first_question.id, first_question.options[0].key
-                ),
+                build_answer_callback_data("sample", first_question.id, first_question.options[0].key),
                 current_message,
             )
             await answer_callback(first_callback, state)
@@ -223,9 +219,7 @@ def test_quiz_back_navigation(monkeypatch, quiz_tmp):
             assert state_data["question_id"] == definition.questions[1].id
 
             current_message = current_message.children[-1]
-            back_call = DummyCallback(
-                build_nav_callback_data("sample", "prev"), current_message
-            )
+            back_call = DummyCallback(build_nav_callback_data("sample", "prev"), current_message)
             await back_callback(back_call, state)
 
             state_data = await state.get_data()

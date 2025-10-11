@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import Iterable, Sequence
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Sequence
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram.types import CallbackQuery, Message

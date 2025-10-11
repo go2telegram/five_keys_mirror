@@ -6,27 +6,25 @@ import asyncio
 import csv
 import json
 import os
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Sequence
-
-import sys
-
+from typing import Any, Iterable, Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.exc import SQLAlchemyError  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-from app.config import settings
-from app.db.models import Lead
-from app.db.session import session_scope
-from app.repo import events as events_repo
+from app.config import settings  # noqa: E402
+from app.db.models import Lead  # noqa: E402
+from app.db.session import session_scope  # noqa: E402
+from app.repo import events as events_repo  # noqa: E402
 
 _HEADERS = [
     "lead_id",
@@ -204,10 +202,7 @@ def _summarize(rows: Sequence[LeadExportRow]) -> str:
     with_plan = sum(1 for row in rows if row.recommendation_title)
     products = Counter(code for row in rows for code in row.recommended_products)
     top_products = ", ".join(f"{code}×{count}" for code, count in products.most_common(5))
-    return (
-        f"leads={total_leads}, quizzes={with_quiz}, recommendations={with_plan}, "
-        f"top_products=[{top_products}]"
-    )
+    return f"leads={total_leads}, quizzes={with_quiz}, recommendations={with_plan}, top_products=[{top_products}]"
 
 
 async def run() -> None:

@@ -6,11 +6,11 @@ from aiogram.types import CallbackQuery
 from app.catalog.api import pick_for_context
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
+from app.link_manager import get_register_link
 from app.reco import product_lines
 from app.repo import events as events_repo, retention as retention_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils.premium_cta import send_premium_cta
-from app.link_manager import get_register_link
 
 router = Router()
 

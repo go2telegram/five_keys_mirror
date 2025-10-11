@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from app.experiments.bandit import EpsilonGreedyBandit, BanditError
+from app.experiments.bandit import BanditError, EpsilonGreedyBandit
 
 
 def test_bandit_select_prefers_best_arm():

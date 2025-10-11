@@ -114,12 +114,7 @@ async def update_weight(session: AsyncSession, setting: RetentionSetting, weight
 
 
 async def latest_weight_from_events(session: AsyncSession, user_id: int) -> float | None:
-    stmt = (
-        select(Event)
-        .where(Event.user_id == user_id)
-        .order_by(Event.ts.desc())
-        .limit(50)
-    )
+    stmt = select(Event).where(Event.user_id == user_id).order_by(Event.ts.desc()).limit(50)
     result = await session.execute(stmt)
     for event in result.scalars():
         meta = event.meta or {}
@@ -144,8 +139,7 @@ async def schedule_journey(
     if not hasattr(session, "execute"):
         return
     await session.execute(
-        delete(RetentionJourney)
-        .where(
+        delete(RetentionJourney).where(
             RetentionJourney.user_id == user_id,
             RetentionJourney.journey == journey,
             RetentionJourney.sent_at.is_(None),

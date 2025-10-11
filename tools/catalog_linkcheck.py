@@ -113,9 +113,7 @@ def extract_targets(payload: Mapping[str, object]) -> list[LinkTarget]:
         if isinstance(images, Sequence):
             for index, item in enumerate(images):
                 if isinstance(item, str) and item.startswith("http"):
-                    url_contexts.setdefault(item, set()).add(
-                        f"{product_id}:image:{index}"
-                    )
+                    url_contexts.setdefault(item, set()).add(f"{product_id}:image:{index}")
 
     targets: list[LinkTarget] = []
     for url, contexts in sorted(url_contexts.items()):
@@ -123,9 +121,7 @@ def extract_targets(payload: Mapping[str, object]) -> list[LinkTarget]:
     return targets
 
 
-async def _perform_request(
-    session: aiohttp.ClientSession, url: str
-) -> tuple[int | None, str | None]:
+async def _perform_request(session: aiohttp.ClientSession, url: str) -> tuple[int | None, str | None]:
     headers = {"User-Agent": USER_AGENT}
     try:
         async with session.head(url, allow_redirects=True, headers=headers) as resp:
@@ -150,8 +146,7 @@ async def run_checks(
     targets: Sequence[LinkTarget],
     *,
     session_factory: Callable[[], aiohttp.ClientSession] | None = None,
-    requester: Callable[[aiohttp.ClientSession, LinkTarget], tuple[int | None, str | None]]
-    | None = None,
+    requester: Callable[[aiohttp.ClientSession, LinkTarget], tuple[int | None, str | None]] | None = None,
     concurrency: int = CONCURRENCY,
 ) -> list[LinkCheckResult]:
     """Run availability checks for all provided targets."""
@@ -169,15 +164,14 @@ async def run_checks(
     else:
         factory = session_factory
 
-    async def default_requester(
-        session: aiohttp.ClientSession, target: LinkTarget
-    ) -> tuple[int | None, str | None]:
+    async def default_requester(session: aiohttp.ClientSession, target: LinkTarget) -> tuple[int | None, str | None]:
         return await _perform_request(session, target.url)
 
     request = requester or default_requester
     semaphore = asyncio.Semaphore(max(1, concurrency))
 
     async with factory() as session:
+
         async def worker(target: LinkTarget) -> LinkCheckResult:
             async with semaphore:
                 status, detail = await request(session, target)
@@ -344,10 +338,7 @@ async def _async_main(args: argparse.Namespace) -> tuple[int, dict[str, object]]
     total = summary.get("total", 0)
     broken = summary.get("broken", 0)
     duration = summary.get("duration", 0.0)
-    print(
-        f"SUMMARY status={summary['status']} total={total} broken={broken} "
-        f"duration={duration}s log={summary['log']}"
-    )
+    print(f"SUMMARY status={summary['status']} total={total} broken={broken} duration={duration}s log={summary['log']}")
 
     exit_code = 0 if not problems else 1
     return exit_code, summary

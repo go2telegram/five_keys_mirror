@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools import build_products
+from tools import build_products  # noqa: E402
 
 DEFAULT_IMAGES_DIR = ROOT / "app" / "catalog" / "images" / "products"
 

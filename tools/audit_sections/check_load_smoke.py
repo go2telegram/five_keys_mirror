@@ -12,7 +12,6 @@ from app.utils.cards import prepare_cards
 
 from . import AuditContext, SectionResult, section
 
-
 _CONCURRENCY = 50
 
 
@@ -59,10 +58,7 @@ def run(ctx: AuditContext) -> SectionResult:
         summary = "Нагрузочный смоук выполнен без ошибок."
 
     p50 = statistics.median(durations) if durations else 0.0
-    if len(durations) >= 2:
-        p95 = statistics.quantiles(durations, n=100)[94]
-    else:
-        p95 = p50
+    p95 = statistics.quantiles(durations, n=100)[94] if len(durations) >= 2 else p50
 
     data: dict[str, Any] = {
         "p50": p50,
@@ -75,7 +71,7 @@ def run(ctx: AuditContext) -> SectionResult:
     if errors:
         details.extend(errors[:5])
 
-    summary += f" P50={p50*1000:.1f}мс, P95={p95*1000:.1f}мс."
+    summary += f" P50={p50 * 1000:.1f}мс, P95={p95 * 1000:.1f}мс."
 
     return SectionResult(
         name="load_smoke",

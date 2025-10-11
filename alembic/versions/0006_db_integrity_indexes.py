@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision = "0006_db_integrity_indexes"
 down_revision = "0005_user_profile_utm"

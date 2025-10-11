@@ -3,8 +3,8 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
-from app.keyboards import kb_back_home
 from app.i18n import resolve_locale
+from app.keyboards import kb_back_home
 from app.link_manager import get_register_link
 from app.texts import Texts
 from app.utils import safe_edit_text

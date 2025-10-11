@@ -18,7 +18,6 @@ import sys
 import time
 from typing import Any, Dict, List
 
-
 SAFE_ENV_KEYS = {"GITHUB_SHA", "RUNNER_OS"}
 MASK_PAT = re.compile(r"(TOKEN|SECRET|KEY|PASSWORD|PASS|DB_URL|DATABASE_URL|BOT_TOKEN)", re.IGNORECASE)
 
@@ -105,11 +104,7 @@ def main(argv: List[str] | None = None) -> int:
     if args.redacted:
         payload["env"] = redacted_env()
     else:
-        payload["env"] = {
-            key: value
-            for key, value in os.environ.items()
-            if not MASK_PAT.search(key)
-        }
+        payload["env"] = {key: value for key, value in os.environ.items() if not MASK_PAT.search(key)}
     (reports_dir / "ci_diagnostics.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

@@ -34,7 +34,7 @@ class BackgroundQueue:
         for index in range(self._workers):
             task = asyncio.create_task(
                 self._worker(),
-                name=f"background-worker-{index+1}",
+                name=f"background-worker-{index + 1}",
             )
             self._tasks.append(task)
 

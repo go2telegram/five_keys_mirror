@@ -9,7 +9,6 @@ from typing import Any, Awaitable, Callable, Deque, Dict, Tuple
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, TelegramObject
 
-
 logger = logging.getLogger("callback.debounce")
 
 

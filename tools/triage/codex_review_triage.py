@@ -14,7 +14,6 @@ import requests
 
 from . import matchers
 
-
 API_URL = "https://api.github.com"
 PR_LABEL_PREFIX = "triage:"
 STATUS_LABELS = {
@@ -255,10 +254,7 @@ def execute_checks() -> Dict[str, Dict[str, object]]:
 def checks_failed(checks: Dict[str, Dict[str, object]], related: Sequence[str]) -> bool:
     if not related:
         return False
-    return any(
-        not checks.get(c, {"success": True})["success"]
-        for c in related
-    )
+    return any(not checks.get(c, {"success": True})["success"] for c in related)
 
 
 def determine_related_checks(comment: ReviewComment) -> List[str]:
@@ -284,9 +280,7 @@ def classify_comment(
     checks: Dict[str, Dict[str, object]],
 ) -> CommentEvaluation:
     related = determine_related_checks(comment)
-    presence, presence_reason = matchers.evaluate_context(
-        comment.file_path, comment.body, excerpt, file_text or ""
-    )
+    presence, presence_reason = matchers.evaluate_context(comment.file_path, comment.body, excerpt, file_text or "")
     if presence == "manual":
         status = "manual-review"
         reason = "Requires manual confirmation of fuzzy match"
@@ -380,9 +374,7 @@ def apply_labels(client: GitHubClient, repo: str, pr_number: int, statuses: Iter
 
 
 def post_summary_comment(client: GitHubClient, repo: str, pr_number: int, summary: str, report_path: Path) -> None:
-    body = (
-        f"Автотриаж: {summary}. Полный отчёт: artifact `{report_path}`."
-    )
+    body = f"Автотриаж: {summary}. Полный отчёт: artifact `{report_path}`."
     client.rest_post(f"/repos/{repo}/issues/{pr_number}/comments", {"body": body})
 
 

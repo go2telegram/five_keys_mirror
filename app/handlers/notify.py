@@ -2,7 +2,6 @@
 
 import logging
 
-from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
@@ -11,6 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo
+from app.storage import commit_safely
 from app.utils import safe_edit_text
 
 router = Router(name="notify")
@@ -43,7 +43,7 @@ async def _is_enabled(user_id: int) -> bool:
 
 async def _render(message: Message | CallbackQuery, enabled: bool) -> None:
     status = "включены" if enabled else "выключены"
-    text = f"Сейчас напоминания {status}.\n\n" "Используйте кнопки ниже, чтобы переключить статус."
+    text = f"Сейчас напоминания {status}.\n\nИспользуйте кнопки ниже, чтобы переключить статус."
     markup = _status_keyboard(enabled)
     if isinstance(message, CallbackQuery):
         if message.message is None:

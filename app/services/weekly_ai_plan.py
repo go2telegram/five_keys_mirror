@@ -1,4 +1,5 @@
 """Weekly AI plan scheduler job."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,9 +14,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.repo import events as events_repo
-from app.repo import profiles as profiles_repo
-from app.repo import subscriptions as subscriptions_repo
+from app.repo import events as events_repo, profiles as profiles_repo, subscriptions as subscriptions_repo
 from app.services import premium_metrics
 from app.services.plan_storage import archive_plan
 
@@ -44,11 +43,7 @@ async def build_ai_plan(profile: dict | None = None) -> PlanPayload:
     focus = profile.get("focus", "энергии")
     tone = profile.get("tone", "спокойный")
     goals = list(profile.get("goals", []))
-    text = (
-        "🧠 Премиум-план на неделю\n"
-        f"Фокус: повышение {focus}. Тон: {tone}.\n"
-        "Следуй шагам и адаптируй под себя."
-    )
+    text = f"🧠 Премиум-план на неделю\nФокус: повышение {focus}. Тон: {tone}.\nСледуй шагам и адаптируй под себя."
     recs = [
         "7–8 часов сна и утренний свет 10 минут",
         "3 прогулки по 30 минут в быстром темпе",
@@ -138,7 +133,7 @@ async def _resolve_profile(provider, user_id: int) -> dict:
         return {}
     if asyncio.iscoroutinefunction(provider):
         return await provider(user_id)
-    if hasattr(provider, "__call__"):
+    if callable(provider):
         result = provider(user_id)
         if asyncio.iscoroutine(result):
             return await result

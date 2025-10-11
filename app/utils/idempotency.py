@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from time import monotonic
 from typing import Any, Awaitable, Callable, Tuple, TypeVar
 
-
 T = TypeVar("T")
 
 
@@ -111,9 +110,7 @@ class InMemoryIdempotency:
             self._shrink()
             return IdempotencyToken(self, key, future, owner=True)
 
-    async def run(
-        self, key: str | None, func: Callable[[], Awaitable[T]]
-    ) -> Tuple[T, bool]:
+    async def run(self, key: str | None, func: Callable[[], Awaitable[T]]) -> Tuple[T, bool]:
         """Execute *func* once per key and return (result, is_owner)."""
 
         token = await self.acquire(key)
@@ -126,9 +123,7 @@ class InMemoryIdempotency:
             await token.complete(result)
             return result, True
 
-    async def _finalize(
-        self, key: str, future: asyncio.Future[Any], *, success: bool
-    ) -> None:
+    async def _finalize(self, key: str, future: asyncio.Future[Any], *, success: bool) -> None:
         if not key:
             return
         async with self._lock:

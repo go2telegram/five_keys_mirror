@@ -1,4 +1,5 @@
 """File-based counters for Premium analytics."""
+
 from __future__ import annotations
 
 import json

@@ -16,8 +16,8 @@ if "app.utils" not in sys.modules:
     _UTILS_STUB.__path__ = [str(Path(__file__).resolve().parents[1] / "app" / "utils")]
     sys.modules["app.utils"] = _UTILS_STUB
 
-import app.utils_media as utils_media
-from app.utils_media import fetch_image_as_file
+import app.utils_media as utils_media  # noqa: E402
+from app.utils_media import fetch_image_as_file  # noqa: E402
 
 if _UTILS_STUB is not None:
     sys.modules.pop("app.utils", None)

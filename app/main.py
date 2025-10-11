@@ -12,39 +12,40 @@ import socket
 import time
 from pathlib import Path
 from typing import Iterable
+
 from aiogram import Bot, Dispatcher, F, Router, __version__ as aiogram_version
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import CallbackQuery
 from aiohttp import web
 
 from app import build_info
+from app.background import start_background_queue, stop_background_queue
+from app.catalog import handlers as h_catalog
 from app.catalog.loader import CATALOG_SHA
 from app.config import settings
-from app.feature_flags import FF_FLOODWAIT_PATCH, feature_flags
 from app.db.session import current_revision, head_revision, init_db, session_scope
-from app.catalog import handlers as h_catalog
+from app.feature_flags import FF_FLOODWAIT_PATCH, feature_flags
 from app.handlers import (
     admin as h_admin,
-    admin_links as h_admin_links,
     admin_audit as h_admin_audit,
     admin_crud as h_admin_crud,
     admin_growth as h_admin_growth,
+    admin_links as h_admin_links,
     admin_triage as h_admin_triage,
     analytics as h_analytics,
-    commerce as h_commerce,
-    callback_fallback as h_callback_fallback,
     assistant as h_assistant,
     calc as h_calc,
     calc_unified as h_calc_unified,
+    callback_fallback as h_callback_fallback,
+    commerce as h_commerce,
     lead as h_lead,
+    message_fallback as h_message_fallback,
     navigator as h_navigator,
     notify as h_notify,
     picker as h_picker,
     premium as h_premium,
     premium_center as h_premium_center,
     profile as h_profile,
-    retention as h_retention,
-    message_fallback as h_message_fallback,
     quiz_deficits as h_quiz_deficits,
     quiz_energy as h_quiz_energy,
     quiz_gut as h_quiz_gut,
@@ -57,13 +58,12 @@ from app.handlers import (
     referral as h_referral,
     reg as h_reg,
     report as h_report,
+    retention as h_retention,
     start as h_start,
     subscription as h_subscription,
     tribute_webhook as h_tw,
 )
-from app.quiz import handlers as quiz_engine_handlers
 from app.logging_config import setup_logging
-from app.background import start_background_queue, stop_background_queue
 from app.middlewares import (
     AuditMiddleware,
     CallbackDebounceMiddleware,
@@ -72,11 +72,12 @@ from app.middlewares import (
     RateLimitMiddleware,
     UpdateDeduplicateMiddleware,
 )
+from app.quiz import handlers as quiz_engine_handlers
 from app.repo import events as events_repo
+from app.router_map import capture_router_map
 from app.scheduler.service import start_scheduler
 from app.utils import safe_edit_text
 from app.utils.telegram_session import FloodWaitRetrySession, log_aiogram_version
-from app.router_map import capture_router_map
 
 try:
     from app.handlers import health as h_health
@@ -220,10 +221,7 @@ def _doctor_host_for_checks(host: str | None) -> str:
     if not raw:
         return "127.0.0.1"
 
-    if raw.startswith("[") and raw.endswith("]"):
-        candidate = raw[1:-1].strip()
-    else:
-        candidate = raw
+    candidate = raw[1:-1].strip() if raw.startswith("[") and raw.endswith("]") else raw
 
     if not candidate:
         return "127.0.0.1"
@@ -244,11 +242,7 @@ def _doctor_host_for_checks(host: str | None) -> str:
 def _collect_migration_files() -> list[str]:
     versions_dir = PROJECT_ROOT / "alembic" / "versions"
     try:
-        paths = sorted(
-            path.name
-            for path in versions_dir.glob("*.py")
-            if path.is_file() and path.name != "__init__.py"
-        )
+        paths = sorted(path.name for path in versions_dir.glob("*.py") if path.is_file() and path.name != "__init__.py")
     except FileNotFoundError:
         doctor_log.warning("doctor: versions directory %s not found", versions_dir)
         return []
@@ -601,22 +595,19 @@ async def main() -> None:
     if settings.DEV_DRY_RUN:
         service_only_reason = "DEV_DRY_RUN"
         service_message = (
-            "DEV_DRY_RUN enabled — telegram init skipped; service endpoints "
-            "ready (/ping, /metrics, /doctor)"
+            "DEV_DRY_RUN enabled — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
         )
     elif not bot_token:
         service_only_reason = "missing BOT_TOKEN"
         service_log = startup_log.warning
         service_message = (
-            "BOT_TOKEN missing — telegram init skipped; service endpoints ready "
-            "(/ping, /metrics, /doctor)"
+            "BOT_TOKEN missing — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
         )
     elif is_placeholder_token:
         service_only_reason = "placeholder BOT_TOKEN"
         service_log = startup_log.warning
         service_message = (
-            "Placeholder BOT_TOKEN detected — telegram init skipped; service "
-            "endpoints ready (/ping, /metrics, /doctor)"
+            "Placeholder BOT_TOKEN detected — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
         )
 
     if service_only_reason is not None:

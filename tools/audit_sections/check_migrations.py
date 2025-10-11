@@ -9,7 +9,6 @@ from typing import Iterable
 
 from . import AuditContext, SectionResult, section
 
-
 ALEMBIC_TMP_PREFIX = "_alembic_tmp_"
 
 

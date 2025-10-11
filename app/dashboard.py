@@ -6,8 +6,8 @@ import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
 from textwrap import dedent
+from typing import Any, Dict, List, Tuple
 from urllib.parse import quote
 
 import plotly.graph_objects as go
@@ -22,7 +22,6 @@ from app.catalog.loader import load_catalog
 from app.config import settings
 from app.db.models import Event, Lead
 from app.db.session import session_scope
-from app.repo import events as events_repo, leads as leads_repo
 from app.growth import attribution as growth_attribution
 from app.link_manager import (
     active_set_name,
@@ -37,6 +36,7 @@ from app.link_manager import (
     set_register_link,
     switch_set,
 )
+from app.repo import events as events_repo, leads as leads_repo
 
 app = FastAPI(title="Five Keys Admin Dashboard")
 
@@ -50,10 +50,7 @@ def _require_token(request: Request) -> None:
     header = request.headers.get("Authorization")
     if header:
         scheme, _, value = header.partition(" ")
-        if scheme.lower() == "bearer":
-            provided = value.strip()
-        else:
-            provided = header.strip()
+        provided = value.strip() if scheme.lower() == "bearer" else header.strip()
     if provided is None:
         provided = request.query_params.get("token")
 
@@ -194,7 +191,12 @@ def _build_ctr_gauge(value: float) -> str:
             },
         )
     )
-    fig.update_layout(height=320, margin=dict(l=40, r=40, t=60, b=40), paper_bgcolor="#0f172a", font=dict(color="#e2e8f0"))
+    fig.update_layout(
+        height=320,
+        margin=dict(l=40, r=40, t=60, b=40),
+        paper_bgcolor="#0f172a",
+        font=dict(color="#e2e8f0"),
+    )
     return to_html(fig, include_plotlyjs=False, full_html=False)
 
 
@@ -238,8 +240,7 @@ def _format_dt(dt: datetime | None) -> str:
 
 def _render_table(rows: List[Tuple[str, str]]) -> str:
     body = "".join(
-        f"<tr><td>{idx + 1}</td><td>{cells[0]}</td><td>{cells[1]}</td></tr>"
-        for idx, cells in enumerate(rows)
+        f"<tr><td>{idx + 1}</td><td>{cells[0]}</td><td>{cells[1]}</td></tr>" for idx, cells in enumerate(rows)
     )
     return body or "<tr><td colspan='3' class='muted'>Нет данных</td></tr>"
 
@@ -322,19 +323,22 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     utm_chart = context["utm_chart"]
     top_products_rows = _render_table(context["top_products"])
     goal_rows = _render_table(context["catalog_goals"])
-    lead_rows_html = "".join(
-        "<tr>"
-        f"<td>{_format_dt(row['created_at'])}</td>"
-        f"<td>{row['name']}</td>"
-        f"<td>{row['phone']}</td>"
-        f"<td>{row['quiz'] or '—'}</td>"
-        f"<td>{row['plan'] or '—'}</td>"
-        f"<td>{row['products'] or '—'}</td>"
-        "</tr>"
-        for row in context["recent_leads"]
-    ) or "<tr><td colspan='6' class='muted'>Нет заявок</td></tr>"
+    lead_rows_html = (
+        "".join(
+            "<tr>"
+            f"<td>{_format_dt(row['created_at'])}</td>"
+            f"<td>{row['name']}</td>"
+            f"<td>{row['phone']}</td>"
+            f"<td>{row['quiz'] or '—'}</td>"
+            f"<td>{row['plan'] or '—'}</td>"
+            f"<td>{row['products'] or '—'}</td>"
+            "</tr>"
+            for row in context["recent_leads"]
+        )
+        or "<tr><td colspan='6' class='muted'>Нет заявок</td></tr>"
+    )
 
-    plotly_script = "<script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script>"
+    plotly_script = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>'
 
     return f"""
 <!DOCTYPE html>
@@ -437,39 +441,39 @@ def _render_dashboard_html(context: Dict[str, Any]) -> str:
     <section class=\"cards\">
       <article class=\"card\">
         <h2>Лиды всего</h2>
-        <div class=\"metric\">{context['leads_total']}</div>
-        <p class=\"muted\">За 7 дней: {context['leads_recent']}</p>
+        <div class=\"metric\">{context["leads_total"]}</div>
+        <p class=\"muted\">За 7 дней: {context["leads_recent"]}</p>
       </article>
       <article class=\"card\">
         <h2>Завершено квизов</h2>
-        <div class=\"metric\">{context['quiz_total']}</div>
+        <div class=\"metric\">{context["quiz_total"]}</div>
       </article>
       <article class=\"card\">
         <h2>Калькуляторы</h2>
-        <div class=\"metric\">{context['calc_total']}</div>
+        <div class=\"metric\">{context["calc_total"]}</div>
       </article>
       <article class=\"card\">
         <h2>Планы рекомендаций</h2>
-        <div class=\"metric\">{context['plans_total']}</div>
+        <div class=\"metric\">{context["plans_total"]}</div>
       </article>
       <article class=\"card\">
         <h2>CTR (квиз → план)</h2>
-        <div class=\"metric\">{context['ctr']:.2f}%</div>
+        <div class=\"metric\">{context["ctr"]:.2f}%</div>
       </article>
       <article class=\"card\">
         <h2>Каталог</h2>
-        <div class=\"metric\">{context['catalog_total']} SKU</div>
-        <p class=\"muted\">Обновлено: {context['catalog_updated']}</p>
+        <div class=\"metric\">{context["catalog_total"]} SKU</div>
+        <p class=\"muted\">Обновлено: {context["catalog_updated"]}</p>
       </article>
       <article class=\"card\">
         <h2>Нагрузочный тест P95</h2>
-        <div class=\"metric\">{context['load_p95']}</div>
-        <p class=\"muted\">Ошибки: {context['load_errors']} · {context['load_timestamp']}</p>
+        <div class=\"metric\">{context["load_p95"]}</div>
+        <p class=\"muted\">Ошибки: {context["load_errors"]} · {context["load_timestamp"]}</p>
       </article>
       <article class=\"card\">
         <h2>UTM регистрации</h2>
-        <div class=\"metric\">{context['utm_total_reg']}</div>
-        <p class=\"muted\">CTR: {context['utm_ctr']:.1f}% · CR: {context['utm_cr']:.1f}%</p>
+        <div class=\"metric\">{context["utm_total_reg"]}</div>
+        <p class=\"muted\">CTR: {context["utm_ctr"]:.1f}% · CR: {context["utm_cr"]:.1f}%</p>
       </article>
     </section>
 
@@ -601,8 +605,6 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "utm_ctr": utm_total.quiz_ctr,
         "utm_cr": utm_total.premium_cr,
     }
-
-
 
 
 def _extract_admin_name(request: Request) -> str:
@@ -1350,7 +1352,7 @@ async def _gather_links_state() -> Dict[str, Any]:
             }
         )
 
-    extra_ids = sorted(pid for pid in overrides.keys() if pid not in seen)
+    extra_ids = sorted(pid for pid in overrides if pid not in seen)
     for pid in extra_ids:
         override = overrides.get(pid)
         link = override or _auto_product_link(pid)
@@ -1400,7 +1402,7 @@ async def links_set_register(
         with audit_actor(admin):
             await set_register_link(payload.url)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "message": "Ссылка регистрации обновлена"}
 
 
@@ -1415,7 +1417,7 @@ async def links_set_product(
         with audit_actor(admin):
             await set_product_link(payload.product_id, payload.url)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "message": f"Override для {payload.product_id} сохранён"}
 
 
@@ -1445,7 +1447,7 @@ async def links_import(
             if payload.products is not None:
                 await set_bulk_links(payload.products)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "message": "Импорт применён"}
 
 
@@ -1460,7 +1462,7 @@ async def links_switch(
         with audit_actor(admin):
             await switch_set(payload.target)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "message": f"Активный сет переключён на {payload.target}"}
 
 

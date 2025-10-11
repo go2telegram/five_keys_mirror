@@ -22,10 +22,7 @@ def temp_files(tmp_path: Path):
 
 def test_build_entries_all_ok(temp_files):
     images_path, descriptions_path, csv_path, txt_path = temp_files
-    images = [
-        {"file": f"image_{i:02d}.jpg", "variants": [f"product-{i:02d}"]}
-        for i in range(38)
-    ]
+    images = [{"file": f"image_{i:02d}.jpg", "variants": [f"product-{i:02d}"]} for i in range(38)]
     descriptions = [
         {
             "id": f"product-{i:02d}",

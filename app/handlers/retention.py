@@ -148,7 +148,10 @@ async def journey_tracker_sleep(callback: CallbackQuery) -> None:
         await commit_safely(session)
     if callback.message:
         await callback.message.answer(
-            "📲 Чтобы включить трекер сна, используй команду <code>/track_sleep 7</code> или введи своё количество часов."
+            (
+                "📲 Чтобы включить трекер сна, используй команду <code>/track_sleep 7</code> "
+                "или введи своё количество часов."
+            )
         )
 
 

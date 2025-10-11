@@ -48,9 +48,7 @@ def test_build_start_payload_encodes_query() -> None:
         }
     )
     assert raw == "utm_source=you+tube&utm_medium=shorts&utm_campaign=winter&utm_content=clip-01"
-    assert encoded == (
-        "utm_source%3Dyou%2Btube%26utm_medium%3Dshorts%26utm_campaign%3Dwinter%26utm_content%3Dclip-01"
-    )
+    assert encoded == ("utm_source%3Dyou%2Btube%26utm_medium%3Dshorts%26utm_campaign%3Dwinter%26utm_content%3Dclip-01")
 
 
 @pytest.mark.parametrize(

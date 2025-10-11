@@ -1,4 +1,3 @@
-from app.storage import commit_safely
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
@@ -7,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
 from app.repo import events as events_repo, referrals as referrals_repo, users as users_repo
+from app.storage import commit_safely
 from app.utils import safe_edit_text
 
 router = Router()

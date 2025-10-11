@@ -55,10 +55,7 @@ def _normalize(obj: Any) -> Any:
     if isinstance(obj, (list, tuple, set)):
         return [_normalize(item) for item in obj]
     if isinstance(obj, dict):
-        return {
-            str(key): _normalize(value)
-            for key, value in sorted(obj.items(), key=lambda item: str(item[0]))
-        }
+        return {str(key): _normalize(value) for key, value in sorted(obj.items(), key=lambda item: str(item[0]))}
     return repr(obj)
 
 

@@ -1,4 +1,5 @@
 """Utilities to persist AI plan revisions."""
+
 from __future__ import annotations
 
 import datetime as dt

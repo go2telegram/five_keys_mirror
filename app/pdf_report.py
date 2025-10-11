@@ -4,6 +4,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from app.config import settings
+from app.utils.cards import prepare_cards, render_product_text
+
 log = logging.getLogger(__name__)
 
 REPORTLAB_OK = False
@@ -15,7 +18,11 @@ Drawing: Any = Any  # type: ignore[assignment]
 colors: Any = SimpleNamespace(HexColor=lambda *_a, **_k: "#000000")
 A4: tuple[float, float] = (0.0, 0.0)
 ParagraphStyle: Any = Any  # type: ignore[assignment]
-getSampleStyleSheet: Any = lambda: {}  # type: ignore[assignment]
+def _dummy_stylesheet() -> dict[str, Any]:
+    return {}
+
+
+getSampleStyleSheet: Any = _dummy_stylesheet  # type: ignore[assignment]
 cm: float = 1.0
 pdfmetrics: Any = SimpleNamespace(
     registerFont=lambda *_a, **_k: None,
@@ -50,8 +57,7 @@ def ensure_reportlab() -> bool:
         from reportlab.graphics.shapes import Drawing as drawing_cls
         from reportlab.lib import colors as colors_module
         from reportlab.lib.pagesizes import A4 as a4_size
-        from reportlab.lib.styles import ParagraphStyle as paragraph_style
-        from reportlab.lib.styles import getSampleStyleSheet as get_stylesheet
+        from reportlab.lib.styles import ParagraphStyle as paragraph_style, getSampleStyleSheet as get_stylesheet
         from reportlab.lib.units import cm as cm_value
         from reportlab.pdfbase import pdfmetrics as pdfmetrics_module
         from reportlab.pdfbase.ttfonts import TTFont as ttfont_cls
@@ -96,9 +102,6 @@ def ensure_reportlab() -> bool:
 def reportlab_error() -> str | None:
     return _REPORTLAB_ERROR
 
-
-from app.config import settings
-from app.utils.cards import prepare_cards, render_product_text
 
 FONTS_DIR = Path(__file__).parent / "fonts"
 FONT_CANDIDATES = [

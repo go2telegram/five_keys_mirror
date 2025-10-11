@@ -5,33 +5,30 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Iterable, Iterator
-
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import tools.build_products as bp
-
-from tools.build_products import (
+import tools.build_products as bp  # noqa: E402
+from tools.build_products import (  # noqa: E402
     ProductBlock,
     _alias_variants,
     _canonical_title,
     _join_paragraphs,
     _normalize_space,
+    _refine_slug,
     _section_for_line,
+    _slug,
     _split_blocks,
     _split_sentences,
     _tokenize_slug,
-    _refine_slug,
-    _slug,
     quote_url,
 )
-
 
 ORDER_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
@@ -43,9 +40,7 @@ def _iter_description_texts(path: Path) -> Iterator[tuple[str, str]]:
         yield str(path), path.read_text(encoding="utf-8")
         return
     if path.is_dir():
-        for file_path in sorted(
-            p for p in path.rglob("*") if p.is_file() and p.suffix.lower() == ".txt"
-        ):
+        for file_path in sorted(p for p in path.rglob("*") if p.is_file() and p.suffix.lower() == ".txt"):
             yield str(file_path), file_path.read_text(encoding="utf-8")
 
 

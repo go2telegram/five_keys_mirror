@@ -7,6 +7,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import aiohttp
+from aiogram import Bot
 from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
 from aiohttp import ClientError
 
@@ -136,9 +137,8 @@ def _collect_image_refs(product: dict) -> list[str]:
             if isinstance(image, str) and image and image not in refs:
                 refs.append(image)
     primary = product.get("image")
-    if isinstance(primary, str) and primary:
-        if primary not in refs:
-            refs.insert(0, primary)
+    if isinstance(primary, str) and primary and primary not in refs:
+        refs.insert(0, primary)
     return refs
 
 

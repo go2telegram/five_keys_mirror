@@ -1,5 +1,4 @@
 import asyncio
-import json
 import textwrap
 from urllib.parse import parse_qs, urlsplit
 
@@ -35,9 +34,7 @@ def _isolate_link_manager(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_register_and_product_overrides(
-    monkeypatch, tmp_path, tmp_path_factory, _isolate_link_manager, **_
-):
+async def test_register_and_product_overrides(monkeypatch, tmp_path, tmp_path_factory, _isolate_link_manager, **_):
     assert await link_manager.get_register_link() == "https://example.com/register"
     with link_manager.audit_actor(101):
         await link_manager.set_register_link("https://demo.example/reg")

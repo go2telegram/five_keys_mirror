@@ -4,18 +4,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-
-import json
-from pathlib import Path
-from types import SimpleNamespace
-
-import pytest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from app.quiz import engine as quiz_engine
-from app.quiz import handlers as quiz_handlers
+from app.quiz import engine as quiz_engine, handlers as quiz_handlers
 from app.quiz.engine import (
     QuizHooks,
     build_answer_callback_data,
@@ -124,17 +117,13 @@ async def test_energy_quiz_flow(monkeypatch):
             markup_dump = _markup_to_snapshot(question_message.reply_markup)
             snapshots.append(markup_dump)
 
-            answer_data = build_answer_callback_data(
-                "energy", question.id, question.options[-1].key
-            )
+            answer_data = build_answer_callback_data("energy", question.id, question.options[-1].key)
             answer_call = FakeCallback(answer_data, question_message)
             await quiz_handlers.quiz_callbacks(answer_call, state)
 
             if idx < len(definition.questions) - 1:
                 question_message = question_message.last_child
-                assert (
-                    question_message is not None
-                ), f"question message {idx + 2} should exist"
+                assert question_message is not None, f"question message {idx + 2} should exist"
             else:
                 # The last question should produce a result message and clear the state.
                 result_message = question_message.answers[-1]["message"]
@@ -145,7 +134,6 @@ async def test_energy_quiz_flow(monkeypatch):
 
         assert await state.get_state() is None
 
-        snapshot_dir = Path(__file__).parent / "snapshots"
         for idx, dump in enumerate(snapshots, start=1):
             expected = _read_snapshot(f"energy_question_{idx}")
             assert dump == expected

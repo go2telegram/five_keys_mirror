@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable
-import os
-import subprocess
-
 
 Status = str
 
@@ -35,7 +34,13 @@ class AuditContext:
         data.update(overrides)
         return AuditContext(**data)
 
-    def run(self, command: Iterable[str], *, cwd: Path | None = None, check: bool = False) -> subprocess.CompletedProcess[str]:
+    def run(
+        self,
+        command: Iterable[str],
+        *,
+        cwd: Path | None = None,
+        check: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env.update(self.env)
         if self.no_net:

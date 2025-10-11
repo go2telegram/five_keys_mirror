@@ -325,14 +325,16 @@ def write_csv(path: Path, entries: Sequence[CatalogEntry]) -> None:
         writer = csv.writer(handle)
         writer.writerow(["image_file", "product_id", "title", "status", "order_velavie_link", "notes"])
         for entry in entries:
-            writer.writerow([
-                entry.image_file or "",
-                entry.product_id,
-                entry.title,
-                entry.status,
-                entry.buy_url or "",
-                entry.notes,
-            ])
+            writer.writerow(
+                [
+                    entry.image_file or "",
+                    entry.product_id,
+                    entry.title,
+                    entry.status,
+                    entry.buy_url or "",
+                    entry.notes,
+                ]
+            )
 
 
 def write_txt(path: Path, entries: Sequence[CatalogEntry]) -> None:
@@ -395,7 +397,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             txt_path=args.txt,
             expect_images=args.expect_images,
         )
-    except SystemExit as exc:
+    except SystemExit:
         raise
     except Exception as exc:  # pragma: no cover - surfaced as SystemExit
         raise SystemExit(str(exc)) from exc

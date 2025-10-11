@@ -1,22 +1,22 @@
 """Handlers for the interactive Premium center."""
+
 from __future__ import annotations
 
 import datetime as dt
 import io
 import logging
 from typing import Iterable, Sequence
+from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
-    InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from zoneinfo import ZoneInfo
 
 try:  # pragma: no cover - optional dependency fallback
     import matplotlib
@@ -31,14 +31,16 @@ from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_premium_cta
 from app.reco.ai_reasoner import edit_ai_plan
-from app.repo import events as events_repo
-from app.repo import habits as habits_repo
-from app.repo import profiles as profiles_repo
-from app.repo import subscriptions as subscriptions_repo
-from app.repo import users as users_repo
+from app.repo import (
+    events as events_repo,
+    habits as habits_repo,
+    profiles as profiles_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 from app.services import premium_metrics
-from app.services.weekly_ai_plan import PlanPayload, build_ai_plan
 from app.services.plan_storage import archive_plan
+from app.services.weekly_ai_plan import PlanPayload, build_ai_plan
 from app.storage import commit_safely
 from app.utils import safe_edit_text
 
@@ -185,13 +187,10 @@ async def _generate_chart(user_id: int) -> BufferedInputFile | None:
     end = dt.datetime.now(dt.timezone.utc)
     start = end - dt.timedelta(days=7)
     async with compat_session(session_scope) as session:
-        events = await habits_repo.events_between(
-            session, user_id, start, end, kinds=("water", "sleep", "stress")
-        )
+        events = await habits_repo.events_between(session, user_id, start, end, kinds=("water", "sleep", "stress"))
     if not events:
         return None
 
-    labels = []
     date_map: dict[dt.date, dict[str, float]] = {}
     for idx in range(6, 0, -1):
         day = (end - dt.timedelta(days=idx)).astimezone(tz).date()

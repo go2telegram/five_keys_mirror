@@ -7,18 +7,18 @@ from app.catalog.api import product_meta
 from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import send_product_cards
 from app.keyboards import kb_back_home, kb_calc_menu
+from app.link_manager import get_register_link
 from app.reco import CTX, product_lines
 from app.repo import events as events_repo, users as users_repo
 from app.storage import SESSIONS, commit_safely, set_last_plan
 from app.utils import safe_edit_text
 from app.utils.premium_cta import send_premium_cta
-from app.link_manager import get_register_link
 
 router = Router()
 
 MSD_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s*(?P<sex>[МмЖж])\s*$")
 
-MSD_PROMPT = "Не удалось распознать ввод. Пример: <code>165 Ж</code>." "\nУкажи рост в сантиметрах и пол (М/Ж)."
+MSD_PROMPT = "Не удалось распознать ввод. Пример: <code>165 Ж</code>.\nУкажи рост в сантиметрах и пол (М/Ж)."
 
 # --- Наборы рекомендаций под калькуляторы ---
 
@@ -128,7 +128,7 @@ async def _process_msd(message: Message) -> None:
         await commit_safely(session)
 
     headline = (
-        f"Ориентир по формуле MSD: <b>{ideal} кг</b>." "\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
+        f"Ориентир по формуле MSD: <b>{ideal} кг</b>.\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     )
     await send_product_cards(
         message,

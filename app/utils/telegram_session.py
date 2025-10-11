@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 import aiogram
 from aiogram.client.session.aiohttp import AiohttpSession

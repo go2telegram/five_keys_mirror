@@ -38,9 +38,8 @@ class InputValidationMiddleware(BaseMiddleware):
         if isinstance(event, Message):
             if not await self._validate_message(event):
                 return None
-        elif isinstance(event, CallbackQuery):
-            if not await self._validate_callback(event):
-                return None
+        elif isinstance(event, CallbackQuery) and not await self._validate_callback(event):
+            return None
         return await handler(event, data)
 
     async def _validate_message(self, message: Message) -> bool:
@@ -85,18 +84,14 @@ class InputValidationMiddleware(BaseMiddleware):
 
     async def _notify_too_long(self, message: Message) -> None:
         length = len(message.text or message.caption or "")
-        self._log.warning(
-            "message too long uid=%s length=%s", getattr(message.from_user, "id", None), length
-        )
+        self._log.warning("message too long uid=%s length=%s", getattr(message.from_user, "id", None), length)
         await message.answer(
             "Сообщение слишком длинное. Отправьте короче или нажмите «Домой».",
             reply_markup=kb_back_home(),
         )
 
     async def _notify_bad_callback(self, callback: CallbackQuery, *, reason: str) -> None:
-        self._log.warning(
-            "bad callback data reason=%s uid=%s", reason, getattr(callback.from_user, "id", None)
-        )
+        self._log.warning("bad callback data reason=%s uid=%s", reason, getattr(callback.from_user, "id", None))
         await callback.answer("Запрос устарел. Нажмите «Домой».", show_alert=True)
         if callback.message is not None:
             await callback.message.answer(
@@ -107,7 +102,7 @@ class InputValidationMiddleware(BaseMiddleware):
 
 def _normalize_text(text: str) -> str:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    normalized = normalized.replace("\u00A0", " ").replace("\u200B", "")
+    normalized = normalized.replace("\u00a0", " ").replace("\u200b", "")
     normalized = _WHITESPACE_RE.sub(" ", normalized)
     normalized = _NEWLINE_EDGES_RE.sub("\n", normalized)
     normalized = re.sub(r"\n{3,}", "\n\n", normalized)

@@ -8,7 +8,6 @@ from app.calculators.engine import CALCULATORS, CalculationContext
 
 from . import AuditContext, SectionResult, section
 
-
 _SCENARIOS: dict[str, Dict[str, Any]] = {
     "water": {"weight": 70, "activity": "moderate", "climate": "temperate"},
     "kcal": {

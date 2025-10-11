@@ -1,4 +1,5 @@
 """Reminder scheduling helpers for water/sleep nudges."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -84,10 +85,7 @@ class ReminderPlanner:
         if self._config.bedtime is None:
             return "😴 Настройте время отбоя, чтобы получить напоминание."
         bedtime_str = self._config.bedtime.strftime("%H:%M")
-        return (
-            "😴 Пора готовиться ко сну!\n"
-            f"В планах лечь в {bedtime_str}, выключаем экраны и отдыхаем."
-        )
+        return f"😴 Пора готовиться ко сну!\nВ планах лечь в {bedtime_str}, выключаем экраны и отдыхаем."
 
 
 def distribute_within(

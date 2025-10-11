@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from tools.audit_sections import AuditContext
-from tools.audit_sections import check_media_urls
+from tools.audit_sections import AuditContext, check_media_urls
 
 ROOT = Path(__file__).resolve().parents[1]
 

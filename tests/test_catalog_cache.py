@@ -92,6 +92,7 @@ def test_catalog_cache_invalidation_on_version_change(monkeypatch):
         "ordered": ["foo"],
         "version": "v2",
     }
+
     async def _second_call():
         await catalog_service.catalog_search("foo")
 

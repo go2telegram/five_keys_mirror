@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import logging
+
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from app.catalog.loader import load_catalog
+from app.link_manager import get_register_link
 from app.storage import touch_throttle
 from app.utils import catalog_summary, safe_edit_text, send_product_cards
-from app.link_manager import get_register_link
 
 router = Router(name="catalog")
 log = logging.getLogger("catalog")
@@ -36,7 +37,7 @@ async def _send_catalog_menu(message: Message) -> None:
     await message.answer("\n".join(lines), reply_markup=markup)
 
 
-def _build_catalog_markup(catalog, discount_url: str | None) -> "InlineKeyboardMarkup":
+def _build_catalog_markup(catalog, discount_url: str | None) -> InlineKeyboardMarkup:
     from aiogram.utils.keyboard import InlineKeyboardBuilder
 
     builder = InlineKeyboardBuilder()

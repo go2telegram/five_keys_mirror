@@ -49,10 +49,7 @@ def main() -> int:
             if image_path:
                 total_files += 1
 
-    print(
-        f"Quiz asset validation completed. Checked {total_files} referenced "
-        f"files, {missing} issues found."
-    )
+    print(f"Quiz asset validation completed. Checked {total_files} referenced files, {missing} issues found.")
     return 0
 
 
@@ -125,4 +122,3 @@ def _flexible_variants(relative: Path) -> list[Path]:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -71,9 +71,7 @@ async def test_quiz_sleep_yaml_flow():
 
     for idx, question in enumerate(definition.questions):
         call = _DummyCallback(current_message)
-        call.data = build_answer_callback_data(
-            "sleep", question.id, question.options[-1].key
-        )
+        call.data = build_answer_callback_data("sleep", question.id, question.options[-1].key)
         await answer_callback(call, state)
 
         if idx < len(definition.questions) - 1:

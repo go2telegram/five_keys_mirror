@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any, AsyncIterator
 
@@ -133,10 +133,8 @@ async def compat_session(scope_factory) -> AsyncIterator[Any]:
             try:
                 yield session
             finally:
-                try:
+                with suppress(StopIteration):
                     next(gen)
-                except StopIteration:
-                    pass
             return
 
         try:

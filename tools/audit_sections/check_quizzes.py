@@ -11,7 +11,6 @@ import yaml
 
 from . import AuditContext, SectionResult, section
 
-
 QUIZ_DIR = Path("app/quiz/data")
 
 
