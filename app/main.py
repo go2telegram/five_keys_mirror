@@ -594,24 +594,37 @@ async def main() -> None:
     bot_token = getattr(settings, "BOT_TOKEN", "") or ""
     token_prefix = str(bot_token).lower()
     is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith("placeholder")
-    dry_run_reason: str | None = None
+    service_only_reason: str | None = None
+    service_log = startup_log.info
+    service_message = ""
     if settings.DEV_DRY_RUN:
-        dry_run_reason = "DEV_DRY_RUN"
+        service_only_reason = "DEV_DRY_RUN"
+        service_message = (
+            "DEV_DRY_RUN enabled — telegram init skipped; service endpoints "
+            "ready (/ping, /metrics, /doctor)"
+        )
     elif not bot_token:
-        dry_run_reason = "missing BOT_TOKEN"
+        service_only_reason = "missing BOT_TOKEN"
+        service_log = startup_log.warning
+        service_message = (
+            "BOT_TOKEN missing — telegram init skipped; service endpoints ready "
+            "(/ping, /metrics, /doctor)"
+        )
     elif is_placeholder_token:
-        dry_run_reason = "placeholder BOT_TOKEN"
+        service_only_reason = "placeholder BOT_TOKEN"
+        service_log = startup_log.warning
+        service_message = (
+            "Placeholder BOT_TOKEN detected — telegram init skipped; service "
+            "endpoints ready (/ping, /metrics, /doctor)"
+        )
 
-    if dry_run_reason is not None:
-        mark("S3: dev dry run mode active")
+    if service_only_reason is not None:
+        mark(f"S3: service-only mode ({service_only_reason})")
         runner: web.AppRunner | None = None
         site: web.BaseSite | None = None
         try:
             runner, site = await _setup_service_app()
-            startup_log.warning(
-                "DEV_DRY_RUN enabled — telegram init skipped%s",
-                f" ({dry_run_reason})" if dry_run_reason else "",
-            )
+            service_log(service_message)
             await _wait_forever()
         except asyncio.CancelledError:
             raise
