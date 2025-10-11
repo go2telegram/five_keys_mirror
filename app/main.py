@@ -29,6 +29,7 @@ from app.handlers import (
     admin_audit as h_admin_audit,
     admin_crud as h_admin_crud,
     admin_growth as h_admin_growth,
+    admin_triage as h_admin_triage,
     analytics as h_analytics,
     commerce as h_commerce,
     callback_fallback as h_callback_fallback,
@@ -692,6 +693,7 @@ async def main() -> None:
         h_admin_audit.router,
         h_admin_crud.router,
         h_admin_growth.router,
+        h_admin_triage.router,
     ]
 
     routers: list[Router] = [
