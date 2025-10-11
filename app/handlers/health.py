@@ -14,6 +14,7 @@ from app import ALLOWED_UPDATES, build_info
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.repo import events as events_repo
+from app.utils.build import get_build_info
 
 router = Router(name="health")
 log_health = logging.getLogger("health")
@@ -37,14 +38,15 @@ if settings.DEBUG_COMMANDS:
         """Provide a short diagnostic report in chat."""
 
         branch = getattr(build_info, "GIT_BRANCH", "unknown")
-        commit = getattr(build_info, "GIT_COMMIT", "unknown")
-        build_time = getattr(build_info, "BUILD_TIME", "unknown")
+        build = get_build_info()
 
         lines = [
             "Doctor report:",
+            "Build",
+            f" - version: {build['version']}",
+            f" - commit: {build['commit']}",
+            f" - timestamp: {build['timestamp']}",
             f"branch: {branch}",
-            f"commit: {commit}",
-            f"build_time: {build_time}",
             f"aiogram: {aiogram_version}",
             f"allowed_updates: {', '.join(ALLOWED_UPDATES)}",
         ]

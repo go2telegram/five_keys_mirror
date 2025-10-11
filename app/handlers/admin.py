@@ -34,8 +34,26 @@ from app.repo import (
     users as users_repo,
 )
 from app.router_map import get_router_map, write_router_map
+from app.utils.build import get_build_info
 
 router = Router()
+
+
+@router.message(Command("version"))
+async def version_command(message: Message) -> None:
+    """Report the current build version."""
+
+    build = get_build_info()
+    text = (
+        "🧩 Версия бота: *{version}*\n"
+        "🧷 Commit: `{commit}`\n"
+        "🕒 Build: {timestamp}"
+    ).format(
+        version=build["version"],
+        commit=build["commit"],
+        timestamp=build["timestamp"],
+    )
+    await message.answer(text, parse_mode="Markdown")
 
 
 def _is_admin(user_id: int | None) -> bool:
