@@ -1,0 +1,470 @@
+render_all	Set up job	﻿2025-10-12T13:20:51.9983788Z Current runner version: '2.328.0'
+render_all	Set up job	2025-10-12T13:20:52.0017671Z ##[group]Runner Image Provisioner
+render_all	Set up job	2025-10-12T13:20:52.0019001Z Hosted Compute Agent
+render_all	Set up job	2025-10-12T13:20:52.0020033Z Version: 20250912.392
+render_all	Set up job	2025-10-12T13:20:52.0021111Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+render_all	Set up job	2025-10-12T13:20:52.0022311Z Build Date: 2025-09-12T15:23:14Z
+render_all	Set up job	2025-10-12T13:20:52.0023678Z ##[endgroup]
+render_all	Set up job	2025-10-12T13:20:52.0024685Z ##[group]Operating System
+render_all	Set up job	2025-10-12T13:20:52.0025597Z Ubuntu
+render_all	Set up job	2025-10-12T13:20:52.0026476Z 24.04.3
+render_all	Set up job	2025-10-12T13:20:52.0027262Z LTS
+render_all	Set up job	2025-10-12T13:20:52.0027965Z ##[endgroup]
+render_all	Set up job	2025-10-12T13:20:52.0028936Z ##[group]Runner Image
+render_all	Set up job	2025-10-12T13:20:52.0029909Z Image: ubuntu-24.04
+render_all	Set up job	2025-10-12T13:20:52.0030775Z Version: 20250929.60.1
+render_all	Set up job	2025-10-12T13:20:52.0032648Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+render_all	Set up job	2025-10-12T13:20:52.0035445Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+render_all	Set up job	2025-10-12T13:20:52.0037679Z ##[endgroup]
+render_all	Set up job	2025-10-12T13:20:52.0039419Z ##[group]GITHUB_TOKEN Permissions
+render_all	Set up job	2025-10-12T13:20:52.0041884Z Contents: write
+render_all	Set up job	2025-10-12T13:20:52.0043187Z Metadata: read
+render_all	Set up job	2025-10-12T13:20:52.0044008Z ##[endgroup]
+render_all	Set up job	2025-10-12T13:20:52.0047130Z Secret source: Actions
+render_all	Set up job	2025-10-12T13:20:52.0048582Z Prepare workflow directory
+render_all	Set up job	2025-10-12T13:20:52.0695664Z Prepare all required actions
+render_all	Set up job	2025-10-12T13:20:52.0752624Z Getting action download info
+render_all	Set up job	2025-10-12T13:20:52.5756342Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+render_all	Set up job	2025-10-12T13:20:52.7658542Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+render_all	Set up job	2025-10-12T13:20:52.9377651Z Complete job name: render_all
+render_all	Checkout	﻿2025-10-12T13:20:53.0186400Z ##[group]Run actions/checkout@v4
+render_all	Checkout	2025-10-12T13:20:53.0187368Z with:
+render_all	Checkout	2025-10-12T13:20:53.0187819Z   fetch-depth: 0
+render_all	Checkout	2025-10-12T13:20:53.0189183Z   token: ***
+render_all	Checkout	2025-10-12T13:20:53.0189686Z   repository: go2telegram/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:53.0190285Z   ssh-strict: true
+render_all	Checkout	2025-10-12T13:20:53.0190736Z   ssh-user: git
+render_all	Checkout	2025-10-12T13:20:53.0191184Z   persist-credentials: true
+render_all	Checkout	2025-10-12T13:20:53.0191694Z   clean: true
+render_all	Checkout	2025-10-12T13:20:53.0192147Z   sparse-checkout-cone-mode: true
+render_all	Checkout	2025-10-12T13:20:53.0192901Z   fetch-tags: false
+render_all	Checkout	2025-10-12T13:20:53.0193491Z   show-progress: true
+render_all	Checkout	2025-10-12T13:20:53.0193978Z   lfs: false
+render_all	Checkout	2025-10-12T13:20:53.0194403Z   submodules: false
+render_all	Checkout	2025-10-12T13:20:53.0194878Z   set-safe-directory: true
+render_all	Checkout	2025-10-12T13:20:53.0195705Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:53.1333514Z Syncing repository: go2telegram/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:53.1337126Z ##[group]Getting Git version info
+render_all	Checkout	2025-10-12T13:20:53.1338054Z Working directory is '/home/runner/work/five_keys_bot/five_keys_bot'
+render_all	Checkout	2025-10-12T13:20:53.1339528Z [command]/usr/bin/git version
+render_all	Checkout	2025-10-12T13:20:53.1421926Z git version 2.51.0
+render_all	Checkout	2025-10-12T13:20:53.1450999Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:53.1467085Z Temporarily overriding HOME='/home/runner/work/_temp/d3d312ee-2b40-4a0d-bf54-095748ed1aac' before making global git config changes
+render_all	Checkout	2025-10-12T13:20:53.1471127Z Adding repository directory to the temporary git global config as a safe directory
+render_all	Checkout	2025-10-12T13:20:53.1475572Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/five_keys_bot/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:53.1524909Z Deleting the contents of '/home/runner/work/five_keys_bot/five_keys_bot'
+render_all	Checkout	2025-10-12T13:20:53.1528063Z ##[group]Initializing the repository
+render_all	Checkout	2025-10-12T13:20:53.1533642Z [command]/usr/bin/git init /home/runner/work/five_keys_bot/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:53.1642439Z hint: Using 'master' as the name for the initial branch. This default branch name
+render_all	Checkout	2025-10-12T13:20:53.1646090Z hint: is subject to change. To configure the initial branch name to use in all
+render_all	Checkout	2025-10-12T13:20:53.1648935Z hint: of your new repositories, which will suppress this warning, call:
+render_all	Checkout	2025-10-12T13:20:53.1651004Z hint:
+render_all	Checkout	2025-10-12T13:20:53.1652104Z hint: 	git config --global init.defaultBranch <name>
+render_all	Checkout	2025-10-12T13:20:53.1654175Z hint:
+render_all	Checkout	2025-10-12T13:20:53.1655440Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+render_all	Checkout	2025-10-12T13:20:53.1657395Z hint: 'development'. The just-created branch can be renamed via this command:
+render_all	Checkout	2025-10-12T13:20:53.1658878Z hint:
+render_all	Checkout	2025-10-12T13:20:53.1659995Z hint: 	git branch -m <name>
+render_all	Checkout	2025-10-12T13:20:53.1661012Z hint:
+render_all	Checkout	2025-10-12T13:20:53.1662324Z hint: Disable this message with "git config set advice.defaultBranchName false"
+render_all	Checkout	2025-10-12T13:20:53.1665517Z Initialized empty Git repository in /home/runner/work/five_keys_bot/five_keys_bot/.git/
+render_all	Checkout	2025-10-12T13:20:53.1668747Z [command]/usr/bin/git remote add origin https://github.com/go2telegram/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:53.1704730Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:53.1707345Z ##[group]Disabling automatic garbage collection
+render_all	Checkout	2025-10-12T13:20:53.1709921Z [command]/usr/bin/git config --local gc.auto 0
+render_all	Checkout	2025-10-12T13:20:53.1742139Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:53.1743991Z ##[group]Setting up auth
+render_all	Checkout	2025-10-12T13:20:53.1749936Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+render_all	Checkout	2025-10-12T13:20:53.1788753Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+render_all	Checkout	2025-10-12T13:20:53.2154134Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+render_all	Checkout	2025-10-12T13:20:53.2188354Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+render_all	Checkout	2025-10-12T13:20:53.2419318Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+render_all	Checkout	2025-10-12T13:20:53.2456573Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:53.2459458Z ##[group]Fetching the repository
+render_all	Checkout	2025-10-12T13:20:53.2478302Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+render_all	Checkout	2025-10-12T13:20:54.2384596Z From https://github.com/go2telegram/five_keys_bot
+render_all	Checkout	2025-10-12T13:20:54.2386993Z  * [new branch]      chore/nightly-menu-render -> origin/chore/nightly-menu-render
+render_all	Checkout	2025-10-12T13:20:54.2389226Z  * [new branch]      codex-wepa13 -> origin/codex-wepa13
+render_all	Checkout	2025-10-12T13:20:54.2391874Z  * [new branch]      codex/achieve-100%-green-ci-pipeline -> origin/codex/achieve-100%-green-ci-pipeline
+render_all	Checkout	2025-10-12T13:20:54.2395935Z  * [new branch]      codex/add-adaptive-autoscaling-support -> origin/codex/add-adaptive-autoscaling-support
+render_all	Checkout	2025-10-12T13:20:54.2400236Z  * [new branch]      codex/add-admin-catalog-report-command -> origin/codex/add-admin-catalog-report-command
+render_all	Checkout	2025-10-12T13:20:54.2429582Z  * [new branch]      codex/add-admin-commands-and-analytics -> origin/codex/add-admin-commands-and-analytics
+render_all	Checkout	2025-10-12T13:20:54.2434385Z  * [new branch]      codex/add-admin-tools-for-catalog-management -> origin/codex/add-admin-tools-for-catalog-management
+render_all	Checkout	2025-10-12T13:20:54.2439505Z  * [new branch]      codex/add-advanced-business-analytics-feature -> origin/codex/add-advanced-business-analytics-feature
+render_all	Checkout	2025-10-12T13:20:54.2455334Z  * [new branch]      codex/add-ai-based-recommendation-explanations -> origin/codex/add-ai-based-recommendation-explanations
+render_all	Checkout	2025-10-12T13:20:54.2460654Z  * [new branch]      codex/add-ai-diagnostics-for-operators -> origin/codex/add-ai-diagnostics-for-operators
+render_all	Checkout	2025-10-12T13:20:54.2465898Z  * [new branch]      codex/add-ai-plan-feature-for-premium-users -> origin/codex/add-ai-plan-feature-for-premium-users
+render_all	Checkout	2025-10-12T13:20:54.2470715Z  * [new branch]      codex/add-ai-self-regulation-feature -> origin/codex/add-ai-self-regulation-feature
+render_all	Checkout	2025-10-12T13:20:54.2498630Z  * [new branch]      codex/add-alembic-safety-checks-for-sqlite -> origin/codex/add-alembic-safety-checks-for-sqlite
+render_all	Checkout	2025-10-12T13:20:54.2503366Z  * [new branch]      codex/add-aliases-table-support -> origin/codex/add-aliases-table-support
+render_all	Checkout	2025-10-12T13:20:54.2508305Z  * [new branch]      codex/add-analytics-warehouse-functionality -> origin/codex/add-analytics-warehouse-functionality
+render_all	Checkout	2025-10-12T13:20:54.2513655Z  * [new branch]      codex/add-auto-governance-feature-for-slo -> origin/codex/add-auto-governance-feature-for-slo
+render_all	Checkout	2025-10-12T13:20:54.2518374Z  * [new branch]      codex/add-auto-lint-and-format-pipeline -> origin/codex/add-auto-lint-and-format-pipeline
+render_all	Checkout	2025-10-12T13:20:54.2523415Z  * [new branch]      codex/add-auto-update-build_info-on-release -> origin/codex/add-auto-update-build_info-on-release
+render_all	Checkout	2025-10-12T13:20:54.2528738Z  * [new branch]      codex/add-automated-anomaly-detection-reporting -> origin/codex/add-automated-anomaly-detection-reporting
+render_all	Checkout	2025-10-12T13:20:54.2534400Z  * [new branch]      codex/add-automatic-a/b-experimentation-feature -> origin/codex/add-automatic-a/b-experimentation-feature
+render_all	Checkout	2025-10-12T13:20:54.2540459Z  * [new branch]      codex/add-automatic-csv-generation-from-catalog -> origin/codex/add-automatic-csv-generation-from-catalog
+render_all	Checkout	2025-10-12T13:20:54.2546536Z  * [new branch]      codex/add-automatic-deployment-and-rollback -> origin/codex/add-automatic-deployment-and-rollback
+render_all	Checkout	2025-10-12T13:20:54.2552466Z  * [new branch]      codex/add-automatic-lead-export-to-google-sheets -> origin/codex/add-automatic-lead-export-to-google-sheets
+render_all	Checkout	2025-10-12T13:20:54.2558304Z  * [new branch]      codex/add-automatic-release-workflow -> origin/codex/add-automatic-release-workflow
+render_all	Checkout	2025-10-12T13:20:54.2563491Z  * [new branch]      codex/add-autonomous-research-feature -> origin/codex/add-autonomous-research-feature
+render_all	Checkout	2025-10-12T13:20:54.2568838Z  * [new branch]      codex/add-build-report-and-threshold-feature -> origin/codex/add-build-report-and-threshold-feature
+render_all	Checkout	2025-10-12T13:20:54.2574224Z  * [new branch]      codex/add-build-summary-json-report -> origin/codex/add-build-summary-json-report
+render_all	Checkout	2025-10-12T13:20:54.2580013Z  * [new branch]      codex/add-build_links_csv-utility-and-readme-examples -> origin/codex/add-build_links_csv-utility-and-readme-examples
+render_all	Checkout	2025-10-12T13:20:54.2586087Z  * [new branch]      codex/add-bulk-link-import/export-feature -> origin/codex/add-bulk-link-import/export-feature
+render_all	Checkout	2025-10-12T13:20:54.2591684Z  * [new branch]      codex/add-calculator-results-storage-feature -> origin/codex/add-calculator-results-storage-feature
+render_all	Checkout	2025-10-12T13:20:54.2597160Z  * [new branch]      codex/add-canary-deployment-feature -> origin/codex/add-canary-deployment-feature
+render_all	Checkout	2025-10-12T13:20:54.2602321Z  * [new branch]      codex/add-catalog-difference-reporting-tool -> origin/codex/add-catalog-difference-reporting-tool
+render_all	Checkout	2025-10-12T13:20:54.2608043Z  * [new branch]      codex/add-catalog-link-crawling-script -> origin/codex/add-catalog-link-crawling-script
+render_all	Checkout	2025-10-12T13:20:54.2613802Z  * [new branch]      codex/add-catalog-report-command-for-operators -> origin/codex/add-catalog-report-command-for-operators
+render_all	Checkout	2025-10-12T13:20:54.2618795Z  * [new branch]      codex/add-catalog-ui-to-bot -> origin/codex/add-catalog-ui-to-bot
+render_all	Checkout	2025-10-12T13:20:54.2623278Z  * [new branch]      codex/add-chaos-testing-and-dr-plan -> origin/codex/add-chaos-testing-and-dr-plan
+render_all	Checkout	2025-10-12T13:20:54.2628243Z  * [new branch]      codex/add-ci-audit-and-auto-fix-workflow -> origin/codex/add-ci-audit-and-auto-fix-workflow
+render_all	Checkout	2025-10-12T13:20:54.2633547Z  * [new branch]      codex/add-ci-check-for-media-urls -> origin/codex/add-ci-check-for-media-urls
+render_all	Checkout	2025-10-12T13:20:54.2656257Z  * [new branch]      codex/add-ci-improvements-for-linting-jobs -> origin/codex/add-ci-improvements-for-linting-jobs
+render_all	Checkout	2025-10-12T13:20:54.2661300Z  * [new branch]      codex/add-compact-admin-links-ui -> origin/codex/add-compact-admin-links-ui
+render_all	Checkout	2025-10-12T13:20:54.2666227Z  * [new branch]      codex/add-compact-admin-links-ui-310avi -> origin/codex/add-compact-admin-links-ui-310avi
+render_all	Checkout	2025-10-12T13:20:54.2671717Z  * [new branch]      codex/add-compact-links-management-interface -> origin/codex/add-compact-links-management-interface
+render_all	Checkout	2025-10-12T13:20:54.2678086Z  * [new branch]      codex/add-content-editor-for-quizzes-and-catalog -> origin/codex/add-content-editor-for-quizzes-and-catalog
+render_all	Checkout	2025-10-12T13:20:54.2684978Z  * [new branch]      codex/add-content-editor-for-quizzes-and-catalog-ri3l4f -> origin/codex/add-content-editor-for-quizzes-and-catalog-ri3l4f
+render_all	Checkout	2025-10-12T13:20:54.2691286Z  * [new branch]      codex/add-cross-ai-communication-feature -> origin/codex/add-cross-ai-communication-feature
+render_all	Checkout	2025-10-12T13:20:54.2697244Z  * [new branch]      codex/add-daily-tips-and-smart-reminders-feature -> origin/codex/add-daily-tips-and-smart-reminders-feature
+render_all	Checkout	2025-10-12T13:20:54.2703169Z  * [new branch]      codex/add-daily-tips-content-for-retention -> origin/codex/add-daily-tips-content-for-retention
+render_all	Checkout	2025-10-12T13:20:54.2708159Z  * [new branch]      codex/add-data-lake-storage-and-etl -> origin/codex/add-data-lake-storage-and-etl
+render_all	Checkout	2025-10-12T13:20:54.2713763Z  * [new branch]      codex/add-deduplication-middleware-for-updates -> origin/codex/add-deduplication-middleware-for-updates
+render_all	Checkout	2025-10-12T13:20:54.2719482Z  * [new branch]      codex/add-dev-up-and-runbook-documentation -> origin/codex/add-dev-up-and-runbook-documentation
+render_all	Checkout	2025-10-12T13:20:54.2724516Z  * [new branch]      codex/add-dev-up-smoke-ci-workflow -> origin/codex/add-dev-up-smoke-ci-workflow
+render_all	Checkout	2025-10-12T13:20:54.2729636Z  * [new branch]      codex/add-docker-healthcheck-and-documentation -> origin/codex/add-docker-healthcheck-and-documentation
+render_all	Checkout	2025-10-12T13:20:54.2735261Z  * [new branch]      codex/add-dry-run-mode-for-development -> origin/codex/add-dry-run-mode-for-development
+render_all	Checkout	2025-10-12T13:20:54.2740060Z  * [new branch]      codex/add-emotional-modeling-feature -> origin/codex/add-emotional-modeling-feature
+render_all	Checkout	2025-10-12T13:20:54.2745535Z  * [new branch]      codex/add-ethics-framework-for-decision-making -> origin/codex/add-ethics-framework-for-decision-making
+render_all	Checkout	2025-10-12T13:20:54.2751223Z  * [new branch]      codex/add-external-service-integrations -> origin/codex/add-external-service-integrations
+render_all	Checkout	2025-10-12T13:20:54.2757062Z  * [new branch]      codex/add-feature-flags-and-a/b-testing-framework -> origin/codex/add-feature-flags-and-a/b-testing-framework
+render_all	Checkout	2025-10-12T13:20:54.2762428Z  * [new branch]      codex/add-federated-learning-support -> origin/codex/add-federated-learning-support
+render_all	Checkout	2025-10-12T13:20:54.2767616Z  * [new branch]      codex/add-filename-normalization-utility -> origin/codex/add-filename-normalization-utility
+render_all	Checkout	2025-10-12T13:20:54.2773134Z  * [new branch]      codex/add-flexible-quiz-image-mode-switch -> origin/codex/add-flexible-quiz-image-mode-switch
+render_all	Checkout	2025-10-12T13:20:54.2778042Z  * [new branch]      codex/add-global-dashboard-feature -> origin/codex/add-global-dashboard-feature
+render_all	Checkout	2025-10-12T13:20:54.2783505Z  * [new branch]      codex/add-global-economy-feature-implementation -> origin/codex/add-global-economy-feature-implementation
+render_all	Checkout	2025-10-12T13:20:54.2789729Z  * [new branch]      codex/add-global-knowledge-synchronization-feature -> origin/codex/add-global-knowledge-synchronization-feature
+render_all	Checkout	2025-10-12T13:20:54.2795828Z  * [new branch]      codex/add-go-live-dress-rehearsal-features -> origin/codex/add-go-live-dress-rehearsal-features
+render_all	Checkout	2025-10-12T13:20:54.2800903Z  * [new branch]      codex/add-gut-deficits-quiz-feature -> origin/codex/add-gut-deficits-quiz-feature
+render_all	Checkout	2025-10-12T13:20:54.2806207Z  * [new branch]      codex/add-habit-tracker-and-reminders-feature -> origin/codex/add-habit-tracker-and-reminders-feature
+render_all	Checkout	2025-10-12T13:20:54.2811737Z  * [new branch]      codex/add-human-collaboration-interface-ui -> origin/codex/add-human-collaboration-interface-ui
+render_all	Checkout	2025-10-12T13:20:54.2817089Z  * [new branch]      codex/add-human-feedback-loop-feature -> origin/codex/add-human-feedback-loop-feature
+render_all	Checkout	2025-10-12T13:20:54.2822259Z  * [new branch]      codex/add-image-mapping-completeness-feature -> origin/codex/add-image-mapping-completeness-feature
+render_all	Checkout	2025-10-12T13:20:54.2827788Z  * [new branch]      codex/add-image-name-collection-feature -> origin/codex/add-image-name-collection-feature
+render_all	Checkout	2025-10-12T13:20:54.2832300Z  * [new branch]      codex/add-immunity-quiz-feature -> origin/codex/add-immunity-quiz-feature
+render_all	Checkout	2025-10-12T13:20:54.2837334Z  * [new branch]      codex/add-intent-understanding-feature -> origin/codex/add-intent-understanding-feature
+render_all	Checkout	2025-10-12T13:20:54.2842370Z  * [new branch]      codex/add-inter-network-diplomacy-feature -> origin/codex/add-inter-network-diplomacy-feature
+render_all	Checkout	2025-10-12T13:20:54.2847979Z  * [new branch]      codex/add-internationalization-support-layer -> origin/codex/add-internationalization-support-layer
+render_all	Checkout	2025-10-12T13:20:54.2853823Z  * [new branch]      codex/add-json-schema-validation-for-catalog -> origin/codex/add-json-schema-validation-for-catalog
+render_all	Checkout	2025-10-12T13:20:54.2858776Z  * [new branch]      codex/add-knowledge-center-feature -> origin/codex/add-knowledge-center-feature
+render_all	Checkout	2025-10-12T13:20:54.2863259Z  * [new branch]      codex/add-link-health-check-feature -> origin/codex/add-link-health-check-feature
+render_all	Checkout	2025-10-12T13:20:54.2869188Z  * [new branch]      codex/add-link-manager-module-with-api -> origin/codex/add-link-manager-module-with-api
+render_all	Checkout	2025-10-12T13:20:54.2875791Z  * [new branch]      codex/add-local-dry-run-mode -> origin/codex/add-local-dry-run-mode
+render_all	Checkout	2025-10-12T13:20:54.2880087Z  * [new branch]      codex/add-local-self-check-before-commits -> origin/codex/add-local-self-check-before-commits
+render_all	Checkout	2025-10-12T13:20:54.2885273Z  * [new branch]      codex/add-makefile-aliases-for-project-setup -> origin/codex/add-makefile-aliases-for-project-setup
+render_all	Checkout	2025-10-12T13:20:54.2891079Z  * [new branch]      codex/add-mapping-joiner-feature-with-csv-and-txt-export -> origin/codex/add-mapping-joiner-feature-with-csv-and-txt-export
+render_all	Checkout	2025-10-12T13:20:54.2896776Z  * [new branch]      codex/add-marketing-creative-generator -> origin/codex/add-marketing-creative-generator
+render_all	Checkout	2025-10-12T13:20:54.2901134Z  * [new branch]      codex/add-meta-orchestrator-feature -> origin/codex/add-meta-orchestrator-feature
+render_all	Checkout	2025-10-12T13:20:54.2906094Z  * [new branch]      codex/add-metrics-endpoint-for-prometheus -> origin/codex/add-metrics-endpoint-for-prometheus
+render_all	Checkout	2025-10-12T13:20:54.2910618Z  * [new branch]      codex/add-migration-runner-on-start -> origin/codex/add-migration-runner-on-start
+render_all	Checkout	2025-10-12T13:20:54.2915134Z  * [new branch]      codex/add-mkdocs-documentation-site -> origin/codex/add-mkdocs-documentation-site
+render_all	Checkout	2025-10-12T13:20:54.2919765Z  * [new branch]      codex/add-multi-agent-collaboration-feature -> origin/codex/add-multi-agent-collaboration-feature
+render_all	Checkout	2025-10-12T13:20:54.2924527Z  * [new branch]      codex/add-network-dashboard-feature -> origin/codex/add-network-dashboard-feature
+render_all	Checkout	2025-10-12T13:20:54.2928853Z  * [new branch]      codex/add-nightly-load-testing-feature -> origin/codex/add-nightly-load-testing-feature
+render_all	Checkout	2025-10-12T13:20:54.2934054Z  * [new branch]      codex/add-onboarding-features-and-improvements -> origin/codex/add-onboarding-features-and-improvements
+render_all	Checkout	2025-10-12T13:20:54.2939431Z  * [new branch]      codex/add-partner-links-and-revenue-validation -> origin/codex/add-partner-links-and-revenue-validation
+render_all	Checkout	2025-10-12T13:20:54.2944681Z  * [new branch]      codex/add-performance-optimizer-middleware -> origin/codex/add-performance-optimizer-middleware
+render_all	Checkout	2025-10-12T13:20:54.2949704Z  * [new branch]      codex/add-personalized-product-recommendations -> origin/codex/add-personalized-product-recommendations
+render_all	Checkout	2025-10-12T13:20:54.2954989Z  * [new branch]      codex/add-pre-commit-hook-for-secret-detection -> origin/codex/add-pre-commit-hook-for-secret-detection
+render_all	Checkout	2025-10-12T13:20:54.2959498Z  * [new branch]      codex/add-predictive-planning-feature -> origin/codex/add-predictive-planning-feature
+render_all	Checkout	2025-10-12T13:20:54.2963993Z  * [new branch]      codex/add-premium-analytics-report -> origin/codex/add-premium-analytics-report
+render_all	Checkout	2025-10-12T13:20:54.2968328Z  * [new branch]      codex/add-premium-upsell-ctas-to-key-points -> origin/codex/add-premium-upsell-ctas-to-key-points
+render_all	Checkout	2025-10-12T13:20:54.2973133Z  * [new branch]      codex/add-product-metrics-tracking-and-dashboard -> origin/codex/add-product-metrics-tracking-and-dashboard
+render_all	Checkout	2025-10-12T13:20:54.2977942Z  * [new branch]      codex/add-product-recommendations-after-sleep-quiz -> origin/codex/add-product-recommendations-after-sleep-quiz
+render_all	Checkout	2025-10-12T13:20:54.2984087Z  * [new branch]      codex/add-production-telemetry-metrics-endpoint -> origin/codex/add-production-telemetry-metrics-endpoint
+render_all	Checkout	2025-10-12T13:20:54.2989256Z  * [new branch]      codex/add-products-importer-feature -> origin/codex/add-products-importer-feature
+render_all	Checkout	2025-10-12T13:20:54.2993884Z  * [new branch]      codex/add-profile,-menu,-and-help-features -> origin/codex/add-profile,-menu,-and-help-features
+render_all	Checkout	2025-10-12T13:20:54.2998319Z  * [new branch]      codex/add-proxy-file-download-with-aiohttp -> origin/codex/add-proxy-file-download-with-aiohttp
+render_all	Checkout	2025-10-12T13:20:54.3003180Z  * [new branch]      codex/add-quiz-results-storage-feature -> origin/codex/add-quiz-results-storage-feature
+render_all	Checkout	2025-10-12T13:20:54.3007691Z  * [new branch]      codex/add-rate-limit-middleware-for-users -> origin/codex/add-rate-limit-middleware-for-users
+render_all	Checkout	2025-10-12T13:20:54.3012459Z  * [new branch]      codex/add-referral-and-gamification-features -> origin/codex/add-referral-and-gamification-features
+render_all	Checkout	2025-10-12T13:20:54.3017743Z  * [new branch]      codex/add-regulation-layer-for-economic-model -> origin/codex/add-regulation-layer-for-economic-model
+render_all	Checkout	2025-10-12T13:20:54.3022370Z  * [new branch]      codex/add-release-runbook-and-env-matrix -> origin/codex/add-release-runbook-and-env-matrix
+render_all	Checkout	2025-10-12T13:20:54.3027971Z  * [new branch]      codex/add-security-and-dependency-management-tooling -> origin/codex/add-security-and-dependency-management-tooling
+render_all	Checkout	2025-10-12T13:20:54.3034777Z  * [new branch]      codex/add-security-and-dependency-management-tooling-s2uali -> origin/codex/add-security-and-dependency-management-tooling-s2uali
+render_all	Checkout	2025-10-12T13:20:54.3040184Z  * [new branch]      codex/add-security-autonomy-feature -> origin/codex/add-security-autonomy-feature
+render_all	Checkout	2025-10-12T13:20:54.3045291Z  * [new branch]      codex/add-self-audit-functionality-to-project -> origin/codex/add-self-audit-functionality-to-project
+render_all	Checkout	2025-10-12T13:20:54.3050772Z  * [new branch]      codex/add-self-optimization-feature-to-configurations -> origin/codex/add-self-optimization-feature-to-configurations
+render_all	Checkout	2025-10-12T13:20:54.3056149Z  * [new branch]      codex/add-self-training-loop-for-models -> origin/codex/add-self-training-loop-for-models
+render_all	Checkout	2025-10-12T13:20:54.3060232Z  * [new branch]      codex/add-semantic-search-feature -> origin/codex/add-semantic-search-feature
+render_all	Checkout	2025-10-12T13:20:54.3065238Z  * [new branch]      codex/add-service-host-and-health-port-configuration -> origin/codex/add-service-host-and-health-port-configuration
+render_all	Checkout	2025-10-12T13:20:54.3070489Z  * [new branch]      codex/add-sleep-quiz-feature-with-yaml-data -> origin/codex/add-sleep-quiz-feature-with-yaml-data
+render_all	Checkout	2025-10-12T13:20:54.3075778Z  * [new branch]      codex/add-sleep-quiz-feature-with-yaml-data-zbdvuz -> origin/codex/add-sleep-quiz-feature-with-yaml-data-zbdvuz
+render_all	Checkout	2025-10-12T13:20:54.3081173Z  * [new branch]      codex/add-smart-reminders-and-daily-tips-feature -> origin/codex/add-smart-reminders-and-daily-tips-feature
+render_all	Checkout	2025-10-12T13:20:54.3086637Z  * [new branch]      codex/add-smoke-tests-for-critical-routes -> origin/codex/add-smoke-tests-for-critical-routes
+render_all	Checkout	2025-10-12T13:20:54.3091304Z  * [new branch]      codex/add-snapshot-tests-for-keyboards -> origin/codex/add-snapshot-tests-for-keyboards
+render_all	Checkout	2025-10-12T13:20:54.3096429Z  * [new branch]      codex/add-stable-slugs-and-aliases-generation -> origin/codex/add-stable-slugs-and-aliases-generation
+render_all	Checkout	2025-10-12T13:20:54.3101780Z  * [new branch]      codex/add-stage-smoke-deployment-without-telegram -> origin/codex/add-stage-smoke-deployment-without-telegram
+render_all	Checkout	2025-10-12T13:20:54.3107048Z  * [new branch]      codex/add-startup-guards-and-/doctor-command -> origin/codex/add-startup-guards-and-/doctor-command
+render_all	Checkout	2025-10-12T13:20:54.3111780Z  * [new branch]      codex/add-stress-quiz-feature-with-tags -> origin/codex/add-stress-quiz-feature-with-tags
+render_all	Checkout	2025-10-12T13:20:54.3116315Z  * [new branch]      codex/add-strict-catalog-check-in-ci -> origin/codex/add-strict-catalog-check-in-ci
+render_all	Checkout	2025-10-12T13:20:54.3121326Z  * [new branch]      codex/add-strict-input-validation-for-handlers -> origin/codex/add-strict-input-validation-for-handlers
+render_all	Checkout	2025-10-12T13:20:54.3126299Z  * [new branch]      codex/add-structured-ai-plan-feature -> origin/codex/add-structured-ai-plan-feature
+render_all	Checkout	2025-10-12T13:20:54.3131003Z  * [new branch]      codex/add-support-for-aliases-normalization -> origin/codex/add-support-for-aliases-normalization
+render_all	Checkout	2025-10-12T13:20:54.3136625Z  * [new branch]      codex/add-tag-derivation-for-calculators-results -> origin/codex/add-tag-derivation-for-calculators-results
+render_all	Checkout	2025-10-12T13:20:54.3141649Z  * [new branch]      codex/add-tag-ontology-and-product-map -> origin/codex/add-tag-ontology-and-product-map
+render_all	Checkout	2025-10-12T13:20:54.3146393Z  * [new branch]      codex/add-test-fallback-for-busy-port-8080 -> origin/codex/add-test-fallback-for-busy-port-8080
+render_all	Checkout	2025-10-12T13:20:54.3150643Z  * [new branch]      codex/add-tests-menu-in-main-menu -> origin/codex/add-tests-menu-in-main-menu
+render_all	Checkout	2025-10-12T13:20:54.3155652Z  * [new branch]      codex/add-timeout-and-retries-for-httpx-clients -> origin/codex/add-timeout-and-retries-for-httpx-clients
+render_all	Checkout	2025-10-12T13:20:54.3161095Z  * [new branch]      codex/add-trust-and-reputation-scoring-for-agents -> origin/codex/add-trust-and-reputation-scoring-for-agents
+render_all	Checkout	2025-10-12T13:20:54.3165752Z  * [new branch]      codex/add-unified-calculators-submenu -> origin/codex/add-unified-calculators-submenu
+render_all	Checkout	2025-10-12T13:20:54.3168490Z  * [new branch]      codex/add-user-behavior-clustering-feature -> origin/codex/add-user-behavior-clustering-feature
+render_all	Checkout	2025-10-12T13:20:54.3172625Z  * [new branch]      codex/add-utm-and-deeplink-builder-feature -> origin/codex/add-utm-and-deeplink-builder-feature
+render_all	Checkout	2025-10-12T13:20:54.3178260Z  * [new branch]      codex/add-utm-attribution-and-deep-link-builder -> origin/codex/add-utm-attribution-and-deep-link-builder
+render_all	Checkout	2025-10-12T13:20:54.3184411Z  * [new branch]      codex/add-utm-attribution-and-deep-link-builder-yhibig -> origin/codex/add-utm-attribution-and-deep-link-builder-yhibig
+render_all	Checkout	2025-10-12T13:20:54.3189832Z  * [new branch]      codex/add-utm-tracking-and-link-builder -> origin/codex/add-utm-tracking-and-link-builder
+render_all	Checkout	2025-10-12T13:20:54.3194450Z  * [new branch]      codex/add-voice-command-recognition -> origin/codex/add-voice-command-recognition
+render_all	Checkout	2025-10-12T13:20:54.3198862Z  * [new branch]      codex/add-voice-command-recognition-vds1b2 -> origin/codex/add-voice-command-recognition-vds1b2
+render_all	Checkout	2025-10-12T13:20:54.3204174Z  * [new branch]      codex/add-weekly-dependencies-auto-update-feature -> origin/codex/add-weekly-dependencies-auto-update-feature
+render_all	Checkout	2025-10-12T13:20:54.3209466Z  * [new branch]      codex/automate-codex-review-triage-process -> origin/codex/automate-codex-review-triage-process
+render_all	Checkout	2025-10-12T13:20:54.3215057Z  * [new branch]      codex/check-project-for-errors-and-inconsistencies -> origin/codex/check-project-for-errors-and-inconsistencies
+render_all	Checkout	2025-10-12T13:20:54.3220621Z  * [new branch]      codex/clean-up-repository-and-auto-sync-scripts -> origin/codex/clean-up-repository-and-auto-sync-scripts
+render_all	Checkout	2025-10-12T13:20:54.3226087Z  * [new branch]      codex/complete-quiz-engine-with-remote-images -> origin/codex/complete-quiz-engine-with-remote-images
+render_all	Checkout	2025-10-12T13:20:54.3231570Z  * [new branch]      codex/complete-unified-quiz-engine-implementation -> origin/codex/complete-unified-quiz-engine-implementation
+render_all	Checkout	2025-10-12T13:20:54.3237149Z  * [new branch]      codex/create-interactive-premium-center-bot -> origin/codex/create-interactive-premium-center-bot
+render_all	Checkout	2025-10-12T13:20:54.3242118Z  * [new branch]      codex/create-release-v1.0.0-with-notes-and-docs -> origin/codex/create-release-v1.0.0-with-notes-and-docs
+render_all	Checkout	2025-10-12T13:20:54.3247162Z  * [new branch]      codex/document-slo-and-implement-alerts -> origin/codex/document-slo-and-implement-alerts
+render_all	Checkout	2025-10-12T13:20:54.3251251Z  * [new branch]      codex/enhance-doctor.ps1-checks -> origin/codex/enhance-doctor.ps1-checks
+render_all	Checkout	2025-10-12T13:20:54.3255698Z  * [new branch]      codex/ensure-ci-pipeline-passes-100%-green -> origin/codex/ensure-ci-pipeline-passes-100%-green
+render_all	Checkout	2025-10-12T13:20:54.3260177Z  * [new branch]      codex/fix-/start-response-issues -> origin/codex/fix-/start-response-issues
+render_all	Checkout	2025-10-12T13:20:54.3264689Z  * [new branch]      codex/fix-alias-population-for-product-images -> origin/codex/fix-alias-population-for-product-images
+render_all	Checkout	2025-10-12T13:20:54.3269756Z  * [new branch]      codex/fix-all-issues-in-code-review-checklist -> origin/codex/fix-all-issues-in-code-review-checklist
+render_all	Checkout	2025-10-12T13:20:54.3273333Z  * [new branch]      codex/fix-blocking-self-audit-in-ci-workflow -> origin/codex/fix-blocking-self-audit-in-ci-workflow
+render_all	Checkout	2025-10-12T13:20:54.3277743Z  * [new branch]      codex/fix-catalog-online-build-in-ci -> origin/codex/fix-catalog-online-build-in-ci
+render_all	Checkout	2025-10-12T13:20:54.3281886Z  * [new branch]      codex/fix-catalog-online-build-issues -> origin/codex/fix-catalog-online-build-issues
+render_all	Checkout	2025-10-12T13:20:54.3286154Z  * [new branch]      codex/fix-ci-bugs-from-codex-review -> origin/codex/fix-ci-bugs-from-codex-review
+render_all	Checkout	2025-10-12T13:20:54.3290910Z  * [new branch]      codex/fix-ci-build-issues-in-catalog-build-process -> origin/codex/fix-ci-build-issues-in-catalog-build-process
+render_all	Checkout	2025-10-12T13:20:54.3295976Z  * [new branch]      codex/fix-ci-checks-to-100%-green-status -> origin/codex/fix-ci-checks-to-100%-green-status
+render_all	Checkout	2025-10-12T13:20:54.3299992Z  * [new branch]      codex/fix-ci-for-ruff-and-gitleaks -> origin/codex/fix-ci-for-ruff-and-gitleaks
+render_all	Checkout	2025-10-12T13:20:54.3304351Z  * [new branch]      codex/fix-ci-for-ruff-and-gitleaks-46wpwz -> origin/codex/fix-ci-for-ruff-and-gitleaks-46wpwz
+render_all	Checkout	2025-10-12T13:20:54.3309010Z  * [new branch]      codex/fix-ci-pipeline-stabilization-issues -> origin/codex/fix-ci-pipeline-stabilization-issues
+render_all	Checkout	2025-10-12T13:20:54.3314310Z  * [new branch]      codex/fix-ci-pipelines-for-imports-and-security -> origin/codex/fix-ci-pipelines-for-imports-and-security
+render_all	Checkout	2025-10-12T13:20:54.3319245Z  * [new branch]      codex/fix-ci-ruff-autofix-to-exit-zero -> origin/codex/fix-ci-ruff-autofix-to-exit-zero
+render_all	Checkout	2025-10-12T13:20:54.3323405Z  * [new branch]      codex/fix-ci-to-enforce-strict-38/38 -> origin/codex/fix-ci-to-enforce-strict-38/38
+render_all	Checkout	2025-10-12T13:20:54.3327827Z  * [new branch]      codex/fix-ci-to-skip-missing-gitleaks-binary -> origin/codex/fix-ci-to-skip-missing-gitleaks-binary
+render_all	Checkout	2025-10-12T13:20:54.3332929Z  * [new branch]      codex/fix-ci-workflow-issues-from-codex-review -> origin/codex/fix-ci-workflow-issues-from-codex-review
+render_all	Checkout	2025-10-12T13:20:54.3337646Z  * [new branch]      codex/fix-codex-review-issues-for-pr-#87 -> origin/codex/fix-codex-review-issues-for-pr-#87
+render_all	Checkout	2025-10-12T13:20:54.3342823Z  * [new branch]      codex/fix-comparison-in-subscription-message-edits -> origin/codex/fix-comparison-in-subscription-message-edits
+render_all	Checkout	2025-10-12T13:20:54.3348163Z  * [new branch]      codex/fix-conflicts-in-pr-merge -> origin/codex/fix-conflicts-in-pr-merge
+render_all	Checkout	2025-10-12T13:20:54.3352408Z  * [new branch]      codex/fix-coupon-validation-mismatch-issue -> origin/codex/fix-coupon-validation-mismatch-issue
+render_all	Checkout	2025-10-12T13:20:54.3357358Z  * [new branch]      codex/fix-critical-and-high-priority-bugs -> origin/codex/fix-critical-and-high-priority-bugs
+render_all	Checkout	2025-10-12T13:20:54.3362308Z  * [new branch]      codex/fix-csv-import/export-issues-in-link-manager -> origin/codex/fix-csv-import/export-issues-in-link-manager
+render_all	Checkout	2025-10-12T13:20:54.3367825Z  * [new branch]      codex/fix-deployment-variable-misconfiguration -> origin/codex/fix-deployment-variable-misconfiguration
+render_all	Checkout	2025-10-12T13:20:54.3372460Z  * [new branch]      codex/fix-energy-quiz-image-handling -> origin/codex/fix-energy-quiz-image-handling
+render_all	Checkout	2025-10-12T13:20:54.3377247Z  * [new branch]      codex/fix-floodwaitretrysession-compatibility -> origin/codex/fix-floodwaitretrysession-compatibility
+render_all	Checkout	2025-10-12T13:20:54.3382160Z  * [new branch]      codex/fix-git-identity-in-release-pipeline -> origin/codex/fix-git-identity-in-release-pipeline
+render_all	Checkout	2025-10-12T13:20:54.3387018Z  * [new branch]      codex/fix-gitleaks-in-requirements-dev.txt -> origin/codex/fix-gitleaks-in-requirements-dev.txt
+render_all	Checkout	2025-10-12T13:20:54.3391943Z  * [new branch]      codex/fix-goal-callback-payload-parsing-bug -> origin/codex/fix-goal-callback-payload-parsing-bug
+render_all	Checkout	2025-10-12T13:20:54.3396755Z  * [new branch]      codex/fix-health-service-binding-issues -> origin/codex/fix-health-service-binding-issues
+render_all	Checkout	2025-10-12T13:20:54.3401861Z  * [new branch]      codex/fix-health-service-exposure-in-docker-compose -> origin/codex/fix-health-service-exposure-in-docker-compose
+render_all	Checkout	2025-10-12T13:20:54.3407431Z  * [new branch]      codex/fix-high-priority-bug-in-image-scanning -> origin/codex/fix-high-priority-bug-in-image-scanning
+render_all	Checkout	2025-10-12T13:20:54.3412653Z  * [new branch]      codex/fix-high-priority-bug-in-merge-train-script -> origin/codex/fix-high-priority-bug-in-merge-train-script
+render_all	Checkout	2025-10-12T13:20:54.3418168Z  * [new branch]      codex/fix-high-priority-bug-in-pdf-dependencies -> origin/codex/fix-high-priority-bug-in-pdf-dependencies
+render_all	Checkout	2025-10-12T13:20:54.3423078Z  * [new branch]      codex/fix-high-priority-bug-in-readme.md -> origin/codex/fix-high-priority-bug-in-readme.md
+render_all	Checkout	2025-10-12T13:20:54.3428443Z  * [new branch]      codex/fix-high-priority-bug-in-redis-feature-flag-decoding -> origin/codex/fix-high-priority-bug-in-redis-feature-flag-decoding
+render_all	Checkout	2025-10-12T13:20:54.3434274Z  * [new branch]      codex/fix-high-priority-bugs-from-codex-review -> origin/codex/fix-high-priority-bugs-from-codex-review
+render_all	Checkout	2025-10-12T13:20:54.3439573Z  * [new branch]      codex/fix-high-priority-bugs-in-catalog-ingestion -> origin/codex/fix-high-priority-bugs-in-catalog-ingestion
+render_all	Checkout	2025-10-12T13:20:54.3444630Z  * [new branch]      codex/fix-high-priority-redis-session-bug -> origin/codex/fix-high-priority-redis-session-bug
+render_all	Checkout	2025-10-12T13:20:54.3449379Z  * [new branch]      codex/fix-images-path-consistency-in-migration -> origin/codex/fix-images-path-consistency-in-migration
+render_all	Checkout	2025-10-12T13:20:54.3454613Z  * [new branch]      codex/fix-immunity-thresholds-in-quiz-flow -> origin/codex/fix-immunity-thresholds-in-quiz-flow
+render_all	Checkout	2025-10-12T13:20:54.3458934Z  * [new branch]      codex/fix-issues-from-codex-review-#79 -> origin/codex/fix-issues-from-codex-review-#79
+render_all	Checkout	2025-10-12T13:20:54.3463581Z  * [new branch]      codex/fix-issues-from-codex-review-on-pr-#105 -> origin/codex/fix-issues-from-codex-review-on-pr-#105
+render_all	Checkout	2025-10-12T13:20:54.3468852Z  * [new branch]      codex/fix-lint-and-tests-after-build-info-integration -> origin/codex/fix-lint-and-tests-after-build-info-integration
+render_all	Checkout	2025-10-12T13:20:54.3473955Z  * [new branch]      codex/fix-linter-errors-and-update-ci -> origin/codex/fix-linter-errors-and-update-ci
+render_all	Checkout	2025-10-12T13:20:54.3478956Z  * [new branch]      codex/fix-load-test-error-handling-in-stress-test-tool -> origin/codex/fix-load-test-error-handling-in-stress-test-tool
+render_all	Checkout	2025-10-12T13:20:54.3484117Z  * [new branch]      codex/fix-media-flow-and-message-order -> origin/codex/fix-media-flow-and-message-order
+render_all	Checkout	2025-10-12T13:20:54.3488688Z  * [new branch]      codex/fix-media-flow-and-message-order-vxcj0u -> origin/codex/fix-media-flow-and-message-order-vxcj0u
+render_all	Checkout	2025-10-12T13:20:54.3493423Z  * [new branch]      codex/fix-media-url-proxy-for-telegram -> origin/codex/fix-media-url-proxy-for-telegram
+render_all	Checkout	2025-10-12T13:20:54.3497529Z  * [new branch]      codex/fix-message-not-modified-error -> origin/codex/fix-message-not-modified-error
+render_all	Checkout	2025-10-12T13:20:54.3501949Z  * [new branch]      codex/fix-missing-imports-in-retention-tests -> origin/codex/fix-missing-imports-in-retention-tests
+render_all	Checkout	2025-10-12T13:20:54.3506897Z  * [new branch]      codex/fix-nested-image-url-generation-issue -> origin/codex/fix-nested-image-url-generation-issue
+render_all	Checkout	2025-10-12T13:20:54.3511206Z  * [new branch]      codex/fix-orm-drop-on-user.referrals -> origin/codex/fix-orm-drop-on-user.referrals
+render_all	Checkout	2025-10-12T13:20:54.3515190Z  * [new branch]      codex/fix-quiz-energy-image-flow -> origin/codex/fix-quiz-energy-image-flow
+render_all	Checkout	2025-10-12T13:20:54.3519392Z  * [new branch]      codex/fix-rate-limiter-for-callback-queries -> origin/codex/fix-rate-limiter-for-callback-queries
+render_all	Checkout	2025-10-12T13:20:54.3524368Z  * [new branch]      codex/fix-readme.md-build-instructions-errors -> origin/codex/fix-readme.md-build-instructions-errors
+render_all	Checkout	2025-10-12T13:20:54.3529315Z  * [new branch]      codex/fix-ruff-autofix-errors-and-reformat -> origin/codex/fix-ruff-autofix-errors-and-reformat
+render_all	Checkout	2025-10-12T13:20:54.3534442Z  * [new branch]      codex/fix-security-sbom-generator-and-resilience -> origin/codex/fix-security-sbom-generator-and-resilience
+render_all	Checkout	2025-10-12T13:20:54.3539490Z  * [new branch]      codex/fix-silent-buttons-and-debounce-clicks -> origin/codex/fix-silent-buttons-and-debounce-clicks
+render_all	Checkout	2025-10-12T13:20:54.3544457Z  * [new branch]      codex/fix-sleep-quiz-hook-registration-issue -> origin/codex/fix-sleep-quiz-hook-registration-issue
+render_all	Checkout	2025-10-12T13:20:54.3548726Z  * [new branch]      codex/fix-subscription-edit-guard -> origin/codex/fix-subscription-edit-guard
+render_all	Checkout	2025-10-12T13:20:54.3553006Z  * [new branch]      codex/fix-subscription-edit-guard-logic -> origin/codex/fix-subscription-edit-guard-logic
+render_all	Checkout	2025-10-12T13:20:54.3557759Z  * [new branch]      codex/fix-telegram-errors-when-sending-raw-urls -> origin/codex/fix-telegram-errors-when-sending-raw-urls
+render_all	Checkout	2025-10-12T13:20:54.3562855Z  * [new branch]      codex/fix-token-handling-issues-in-admin-ui -> origin/codex/fix-token-handling-issues-in-admin-ui
+render_all	Checkout	2025-10-12T13:20:54.3567338Z  * [new branch]      codex/fix-token-leakage-in-dashboard-ui -> origin/codex/fix-token-leakage-in-dashboard-ui
+render_all	Checkout	2025-10-12T13:20:54.3571518Z  * [new branch]      codex/fix-utm-value-preservation-bug -> origin/codex/fix-utm-value-preservation-bug
+render_all	Checkout	2025-10-12T13:20:54.3575713Z  * [new branch]      codex/handle-telegram-network-errors -> origin/codex/handle-telegram-network-errors
+render_all	Checkout	2025-10-12T13:20:54.3580210Z  * [new branch]      codex/harden-startup-port-fallback-and-guard -> origin/codex/harden-startup-port-fallback-and-guard
+render_all	Checkout	2025-10-12T13:20:54.3586035Z  * [new branch]      codex/harden-tests-against-port-and-token-dependencies -> origin/codex/harden-tests-against-port-and-token-dependencies
+render_all	Checkout	2025-10-12T13:20:54.3591101Z  * [new branch]      codex/implement-caching-for-hot-paths -> origin/codex/implement-caching-for-hot-paths
+render_all	Checkout	2025-10-12T13:20:54.3595776Z  * [new branch]      codex/implement-catalog-ingest-v3-features -> origin/codex/implement-catalog-ingest-v3-features
+render_all	Checkout	2025-10-12T13:20:54.3600953Z  * [new branch]      codex/implement-catalog-source-aggregation-feature -> origin/codex/implement-catalog-source-aggregation-feature
+render_all	Checkout	2025-10-12T13:20:54.3606094Z  * [new branch]      codex/implement-ci-lint-autofix-for-prs -> origin/codex/implement-ci-lint-autofix-for-prs
+render_all	Checkout	2025-10-12T13:20:54.3610710Z  * [new branch]      codex/implement-ci-merge-guard-and-self-audit -> origin/codex/implement-ci-merge-guard-and-self-audit
+render_all	Checkout	2025-10-12T13:20:54.3615883Z  * [new branch]      codex/implement-ci-self-diagnosis-and-recovery -> origin/codex/implement-ci-self-diagnosis-and-recovery
+render_all	Checkout	2025-10-12T13:20:54.3620671Z  * [new branch]      codex/implement-commerce-stack-features -> origin/codex/implement-commerce-stack-features
+render_all	Checkout	2025-10-12T13:20:54.3625434Z  * [new branch]      codex/implement-complete-bot-functionality -> origin/codex/implement-complete-bot-functionality
+render_all	Checkout	2025-10-12T13:20:54.3630561Z  * [new branch]      codex/implement-full-catalog-ingestion-from-media -> origin/codex/implement-full-catalog-ingestion-from-media
+render_all	Checkout	2025-10-12T13:20:54.3635610Z  * [new branch]      codex/implement-git-clean-helper-script -> origin/codex/implement-git-clean-helper-script
+render_all	Checkout	2025-10-12T13:20:54.3640163Z  * [new branch]      codex/implement-graceful-shutdown-for-main -> origin/codex/implement-graceful-shutdown-for-main
+render_all	Checkout	2025-10-12T13:20:54.3644774Z  * [new branch]      codex/implement-link-manager-features -> origin/codex/implement-link-manager-features
+render_all	Checkout	2025-10-12T13:20:54.3649239Z  * [new branch]      codex/implement-logging-and-pii-protection -> origin/codex/implement-logging-and-pii-protection
+render_all	Checkout	2025-10-12T13:20:54.3654516Z  * [new branch]      codex/implement-media-proxy-and-fallback-feature -> origin/codex/implement-media-proxy-and-fallback-feature
+render_all	Checkout	2025-10-12T13:20:54.3659420Z  * [new branch]      codex/implement-merge-train-v1.3.1-script -> origin/codex/implement-merge-train-v1.3.1-script
+render_all	Checkout	2025-10-12T13:20:54.3664575Z  * [new branch]      codex/implement-meta-learning-analyzer-module -> origin/codex/implement-meta-learning-analyzer-module
+render_all	Checkout	2025-10-12T13:20:54.3669272Z  * [new branch]      codex/implement-personal-habit-tracker -> origin/codex/implement-personal-habit-tracker
+render_all	Checkout	2025-10-12T13:20:54.3674305Z  * [new branch]      codex/implement-premium-growth-flywheel-features -> origin/codex/implement-premium-growth-flywheel-features
+render_all	Checkout	2025-10-12T13:20:54.3679521Z  * [new branch]      codex/implement-quiz-engine-with-yaml-support -> origin/codex/implement-quiz-engine-with-yaml-support
+render_all	Checkout	2025-10-12T13:20:54.3685093Z  * [new branch]      codex/implement-recommendation-rules-for-38-products -> origin/codex/implement-recommendation-rules-for-38-products
+render_all	Checkout	2025-10-12T13:20:54.3690486Z  * [new branch]      codex/implement-release-automation-pipeline -> origin/codex/implement-release-automation-pipeline
+render_all	Checkout	2025-10-12T13:20:54.3695872Z  * [new branch]      codex/implement-reliable-media-upload-and-caching -> origin/codex/implement-reliable-media-upload-and-caching
+render_all	Checkout	2025-10-12T13:20:54.3700949Z  * [new branch]      codex/implement-retention-journeys-feature -> origin/codex/implement-retention-journeys-feature
+render_all	Checkout	2025-10-12T13:20:54.3705731Z  * [new branch]      codex/implement-revenue-tracking-features -> origin/codex/implement-revenue-tracking-features
+render_all	Checkout	2025-10-12T13:20:54.3710542Z  * [new branch]      codex/implement-scheduler-overlap-protection -> origin/codex/implement-scheduler-overlap-protection
+render_all	Checkout	2025-10-12T13:20:54.3715884Z  * [new branch]      codex/implement-tools-package-with-launch-script -> origin/codex/implement-tools-package-with-launch-script
+render_all	Checkout	2025-10-12T13:20:54.3721488Z  * [new branch]      codex/improve-database-integrity-with-migrations -> origin/codex/improve-database-integrity-with-migrations
+render_all	Checkout	2025-10-12T13:20:54.3726630Z  * [new branch]      codex/improve-resilience-and-speed-features -> origin/codex/improve-resilience-and-speed-features
+render_all	Checkout	2025-10-12T13:20:54.3731160Z  * [new branch]      codex/integrate-build-version-visibility -> origin/codex/integrate-build-version-visibility
+render_all	Checkout	2025-10-12T13:20:54.3735743Z  * [new branch]      codex/integrate-codex-branches-into-main -> origin/codex/integrate-codex-branches-into-main
+render_all	Checkout	2025-10-12T13:20:54.3740342Z  * [new branch]      codex/integrate-human-and-machine-solutions -> origin/codex/integrate-human-and-machine-solutions
+render_all	Checkout	2025-10-12T13:20:54.3745272Z  * [new branch]      codex/integrate-link-manager-for-all-buy-buttons -> origin/codex/integrate-link-manager-for-all-buy-buttons
+render_all	Checkout	2025-10-12T13:20:54.3749871Z  * [new branch]      codex/integrate-telegram-payments-2.0 -> origin/codex/integrate-telegram-payments-2.0
+render_all	Checkout	2025-10-12T13:20:54.3754299Z  * [new branch]      codex/normalize-urls-and-utm-parameters -> origin/codex/normalize-urls-and-utm-parameters
+render_all	Checkout	2025-10-12T13:20:54.3758608Z  * [new branch]      codex/parse-product-descriptions-from-file -> origin/codex/parse-product-descriptions-from-file
+render_all	Checkout	2025-10-12T13:20:54.3763007Z  * [new branch]      codex/promote-strict-builder-to-main -> origin/codex/promote-strict-builder-to-main
+render_all	Checkout	2025-10-12T13:20:54.3767303Z  * [new branch]      codex/promote-strict-builder-to-main-uw2bod -> origin/codex/promote-strict-builder-to-main-uw2bod
+render_all	Checkout	2025-10-12T13:20:54.3771257Z  * [new branch]      codex/recreate-pr-within-codex -> origin/codex/recreate-pr-within-codex
+render_all	Checkout	2025-10-12T13:20:54.3775369Z  * [new branch]      codex/refactor-catalog-schema-and-cleanup -> origin/codex/refactor-catalog-schema-and-cleanup
+render_all	Checkout	2025-10-12T13:20:54.3780251Z  * [new branch]      codex/resolve-final-discrepancies-between-prs-#129-#133 -> origin/codex/resolve-final-discrepancies-between-prs-#129-#133
+render_all	Checkout	2025-10-12T13:20:54.3785591Z  * [new branch]      codex/resolve-merge-conflicts-for-features -> origin/codex/resolve-merge-conflicts-for-features
+render_all	Checkout	2025-10-12T13:20:54.3789746Z  * [new branch]      codex/resolve-merge-conflicts-in-pr -> origin/codex/resolve-merge-conflicts-in-pr
+render_all	Checkout	2025-10-12T13:20:54.3794573Z  * [new branch]      codex/stabilize-ci-and-resolve-pr-conflicts -> origin/codex/stabilize-ci-and-resolve-pr-conflicts
+render_all	Checkout	2025-10-12T13:20:54.3799709Z  * [new branch]      codex/stabilize-ci-environment-and-automate-audits -> origin/codex/stabilize-ci-environment-and-automate-audits
+render_all	Checkout	2025-10-12T13:20:54.3804445Z  * [new branch]      codex/unify-calculator-handlers -> origin/codex/unify-calculator-handlers
+render_all	Checkout	2025-10-12T13:20:54.3808165Z  * [new branch]      codex/unify-calculator-ux-and-api -> origin/codex/unify-calculator-ux-and-api
+render_all	Checkout	2025-10-12T13:20:54.3812209Z  * [new branch]      codex/unify-quiz-callback-data-format -> origin/codex/unify-quiz-callback-data-format
+render_all	Checkout	2025-10-12T13:20:54.3816838Z  * [new branch]      codex/update-ci-to-fail-on-pytest-errors -> origin/codex/update-ci-to-fail-on-pytest-errors
+render_all	Checkout	2025-10-12T13:20:54.3821534Z  * [new branch]      codex/update-documentation-for-build-process -> origin/codex/update-documentation-for-build-process
+render_all	Checkout	2025-10-12T13:20:54.3826560Z  * [new branch]      codex/update-onboarding-message-and-scenario -> origin/codex/update-onboarding-message-and-scenario
+render_all	Checkout	2025-10-12T13:20:54.3831346Z  * [new branch]      codex/update-readme-for-catalog-workflow -> origin/codex/update-readme-for-catalog-workflow
+render_all	Checkout	2025-10-12T13:20:54.3835686Z  * [new branch]      codex/use-local-images-in-catalog -> origin/codex/use-local-images-in-catalog
+render_all	Checkout	2025-10-12T13:20:54.3839913Z  * [new branch]      dependabot/github_actions/actions/checkout-5 -> origin/dependabot/github_actions/actions/checkout-5
+render_all	Checkout	2025-10-12T13:20:54.3844926Z  * [new branch]      dependabot/github_actions/actions/setup-python-6 -> origin/dependabot/github_actions/actions/setup-python-6
+render_all	Checkout	2025-10-12T13:20:54.3850392Z  * [new branch]      dependabot/github_actions/softprops/action-gh-release-2 -> origin/dependabot/github_actions/softprops/action-gh-release-2
+render_all	Checkout	2025-10-12T13:20:54.3855543Z  * [new branch]      dependabot/pip/aiosignal-1.4.0 -> origin/dependabot/pip/aiosignal-1.4.0
+render_all	Checkout	2025-10-12T13:20:54.3858997Z  * [new branch]      dependabot/pip/asyncpg-0.30.0 -> origin/dependabot/pip/asyncpg-0.30.0
+render_all	Checkout	2025-10-12T13:20:54.3862351Z  * [new branch]      dependabot/pip/attrs-25.4.0 -> origin/dependabot/pip/attrs-25.4.0
+render_all	Checkout	2025-10-12T13:20:54.3866024Z  * [new branch]      dependabot/pip/frozenlist-1.8.0 -> origin/dependabot/pip/frozenlist-1.8.0
+render_all	Checkout	2025-10-12T13:20:54.3869702Z  * [new branch]      dependabot/pip/google-auth-2.41.1 -> origin/dependabot/pip/google-auth-2.41.1
+render_all	Checkout	2025-10-12T13:20:54.3873565Z  * [new branch]      dependabot/pip/greenlet-3.2.4 -> origin/dependabot/pip/greenlet-3.2.4
+render_all	Checkout	2025-10-12T13:20:54.3877014Z  * [new branch]      dependabot/pip/gspread-6.2.1 -> origin/dependabot/pip/gspread-6.2.1
+render_all	Checkout	2025-10-12T13:20:54.3880362Z  * [new branch]      dependabot/pip/httpx-0.28.1 -> origin/dependabot/pip/httpx-0.28.1
+render_all	Checkout	2025-10-12T13:20:54.3884118Z  * [new branch]      dependabot/pip/typing-extensions-4.15.0 -> origin/dependabot/pip/typing-extensions-4.15.0
+render_all	Checkout	2025-10-12T13:20:54.3887888Z  * [new branch]      dependabot/pip/uvicorn-0.37.0 -> origin/dependabot/pip/uvicorn-0.37.0
+render_all	Checkout	2025-10-12T13:20:54.3890944Z  * [new branch]      feature/marketing-starter -> origin/feature/marketing-starter
+render_all	Checkout	2025-10-12T13:20:54.3893552Z  * [new branch]      main         -> origin/main
+render_all	Checkout	2025-10-12T13:20:54.3895270Z  * [new tag]         v1.3.0       -> v1.3.0
+render_all	Checkout	2025-10-12T13:20:54.3904695Z [command]/usr/bin/git branch --list --remote origin/main
+render_all	Checkout	2025-10-12T13:20:54.3906553Z   origin/main
+render_all	Checkout	2025-10-12T13:20:54.3909560Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+render_all	Checkout	2025-10-12T13:20:54.3911585Z 997450ed27513f0afed91bf5142cc1071609bce7
+render_all	Checkout	2025-10-12T13:20:54.3915625Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:54.3924712Z ##[group]Determining the checkout info
+render_all	Checkout	2025-10-12T13:20:54.3927134Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:54.3928523Z [command]/usr/bin/git sparse-checkout disable
+render_all	Checkout	2025-10-12T13:20:54.3932581Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+render_all	Checkout	2025-10-12T13:20:54.3939021Z ##[group]Checking out the ref
+render_all	Checkout	2025-10-12T13:20:54.3941335Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+render_all	Checkout	2025-10-12T13:20:54.3944297Z Switched to a new branch 'main'
+render_all	Checkout	2025-10-12T13:20:54.3945888Z branch 'main' set up to track 'origin/main'.
+render_all	Checkout	2025-10-12T13:20:54.3949800Z ##[endgroup]
+render_all	Checkout	2025-10-12T13:20:54.3952853Z [command]/usr/bin/git log -1 --format=%H
+render_all	Checkout	2025-10-12T13:20:54.3954638Z 997450ed27513f0afed91bf5142cc1071609bce7
+render_all	Setup Node.js	﻿2025-10-12T13:20:54.4197956Z ##[group]Run actions/setup-node@v4
+render_all	Setup Node.js	2025-10-12T13:20:54.4198913Z with:
+render_all	Setup Node.js	2025-10-12T13:20:54.4199595Z   node-version: 20
+render_all	Setup Node.js	2025-10-12T13:20:54.4200334Z   always-auth: false
+render_all	Setup Node.js	2025-10-12T13:20:54.4201099Z   check-latest: false
+render_all	Setup Node.js	2025-10-12T13:20:54.4202107Z   token: ***
+render_all	Setup Node.js	2025-10-12T13:20:54.4202966Z ##[endgroup]
+render_all	Setup Node.js	2025-10-12T13:20:54.6213409Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+render_all	Setup Node.js	2025-10-12T13:20:54.6219048Z ##[group]Environment details
+render_all	Setup Node.js	2025-10-12T13:20:57.7197632Z node: v20.19.5
+render_all	Setup Node.js	2025-10-12T13:20:57.7200322Z npm: 10.8.2
+render_all	Setup Node.js	2025-10-12T13:20:57.7200674Z yarn: 1.22.22
+render_all	Setup Node.js	2025-10-12T13:20:57.7201495Z ##[endgroup]
+render_all	Install mermaid-cli	﻿2025-10-12T13:20:57.7309557Z ##[group]Run npm i -g @mermaid-js/mermaid-cli@10
+render_all	Install mermaid-cli	2025-10-12T13:20:57.7309969Z [36;1mnpm i -g @mermaid-js/mermaid-cli@10[0m
+render_all	Install mermaid-cli	2025-10-12T13:20:57.7452061Z shell: /usr/bin/bash -e {0}
+render_all	Install mermaid-cli	2025-10-12T13:20:57.7452352Z ##[endgroup]
+render_all	Install mermaid-cli	2025-10-12T13:21:12.4235537Z npm warn deprecated puppeteer@19.11.1: < 24.15.0 is no longer supported
+render_all	Install mermaid-cli	2025-10-12T13:21:18.6988596Z 
+render_all	Install mermaid-cli	2025-10-12T13:21:18.6989219Z added 188 packages in 21s
+render_all	Install mermaid-cli	2025-10-12T13:21:18.6989627Z 
+render_all	Install mermaid-cli	2025-10-12T13:21:18.6990109Z 39 packages are looking for funding
+render_all	Install mermaid-cli	2025-10-12T13:21:18.6990732Z   run `npm fund` for details
+render_all	Ensure Puppeteer config (no sandbox)	﻿2025-10-12T13:21:18.7360231Z ##[group]Run echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > docs/puppeteer.json
+render_all	Ensure Puppeteer config (no sandbox)	2025-10-12T13:21:18.7361250Z [36;1mecho '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > docs/puppeteer.json[0m
+render_all	Ensure Puppeteer config (no sandbox)	2025-10-12T13:21:18.7403569Z shell: /usr/bin/bash -e {0}
+render_all	Ensure Puppeteer config (no sandbox)	2025-10-12T13:21:18.7403983Z ##[endgroup]
+render_all	Render all *.mmd → *.svg	﻿2025-10-12T13:21:18.7557853Z ##[group]Run set -e
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7558292Z [36;1mset -e[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7558900Z [36;1mfor f in docs/menu_map.mmd docs/menu_map_flows.mmd docs/menu_map_admin.mmd; do[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7559571Z [36;1m  if [ -f "$f" ]; then[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7559987Z [36;1m    out="${f%.mmd}.svg"[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7560597Z [36;1m    mmdc -p docs/puppeteer.json -i "$f" -o "$out" -b transparent -w 1400[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7561276Z [36;1m    echo "✅ Rendered $out"[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7561688Z [36;1m  else[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7562060Z [36;1m    echo "⚠️ $f not found — skipping"[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7562506Z [36;1m  fi[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7563420Z [36;1mdone[0m
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7605238Z shell: /usr/bin/bash -e {0}
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:18.7605656Z ##[endgroup]
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:19.9425643Z Generating single mermaid chart
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:21.8529336Z [@zenuml/core] Store is a function and is not initiated in 1 second.
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0535811Z 
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0536746Z Error: Evaluation failed: Error: Parse error on line 4:
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0537790Z ...сты]  PLAN[🎯 План (AI)]  CATALOG[🛍 К
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0538274Z ----------------------^
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0539753Z Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDEREND', 'DIAMOND_STOP', 'TAGEND', 'TRAPEND', 'INVTRAPEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PS'
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0541704Z     at Parser2.parseError (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:32374:23)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0543868Z     at Parser2.parse2 [as parse] (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:32439:18)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0545780Z     at Diagram.parse (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:12295:19)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0548104Z     at new Diagram (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:12282:12)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0550668Z     at getDiagramFromText$1 (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:12319:12)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0575405Z     at async Object.render$4 [as render] (/opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.js:14675:14)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0577749Z     at ExecutionContext._ExecutionContext_evaluate (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/puppeteer-core/lib/esm/puppeteer/common/ExecutionContext.js:254:15)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0579474Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0603144Z     at async ExecutionContext.evaluate (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/puppeteer-core/lib/esm/puppeteer/common/ExecutionContext.js:143:16)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0606002Z     at async CDPJSHandle.evaluate (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/puppeteer-core/lib/esm/puppeteer/common/JSHandle.js:56:16)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0608597Z     at async CDPElementHandle.$eval (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/node_modules/puppeteer-core/lib/esm/puppeteer/common/ElementHandle.js:86:24)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0610776Z     at async renderMermaid (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/src/index.js:256:22)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0612652Z     at async parseMMD (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/src/index.js:227:20)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0614448Z     at async run (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/src/index.js:491:20)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0615972Z     at async cli (file:///opt/hostedtoolcache/node/20.19.5/x64/lib/node_modules/@mermaid-js/mermaid-cli/src/index.js:192:3)
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0617094Z 
+render_all	Render all *.mmd → *.svg	2025-10-12T13:21:22.0789369Z ##[error]Process completed with exit code 1.
+render_all	Post Checkout	﻿2025-10-12T13:21:22.0924810Z Post job cleanup.
+render_all	Post Checkout	2025-10-12T13:21:22.2209716Z [command]/usr/bin/git version
+render_all	Post Checkout	2025-10-12T13:21:22.2270374Z git version 2.51.0
+render_all	Post Checkout	2025-10-12T13:21:22.2330694Z Temporarily overriding HOME='/home/runner/work/_temp/9f1548be-c2bc-479d-ad4c-a600248722c0' before making global git config changes
+render_all	Post Checkout	2025-10-12T13:21:22.2333070Z Adding repository directory to the temporary git global config as a safe directory
+render_all	Post Checkout	2025-10-12T13:21:22.2338676Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/five_keys_bot/five_keys_bot
+render_all	Post Checkout	2025-10-12T13:21:22.2390733Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+render_all	Post Checkout	2025-10-12T13:21:22.2455310Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+render_all	Post Checkout	2025-10-12T13:21:22.2751508Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+render_all	Post Checkout	2025-10-12T13:21:22.2789668Z http.https://github.com/.extraheader
+render_all	Post Checkout	2025-10-12T13:21:22.2839768Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+render_all	Post Checkout	2025-10-12T13:21:22.2984573Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+render_all	Complete job	﻿2025-10-12T13:21:22.3838271Z Cleaning up orphan processes
