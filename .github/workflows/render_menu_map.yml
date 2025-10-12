@@ -29,20 +29,19 @@ jobs:
       - name: Install mermaid-cli
         run: npm i -g @mermaid-js/mermaid-cli@10
 
-      - name: Render ${{ matrix.file }} → SVG
+      - name: Render ${{ matrix.file }} → SVG (no sandbox)
         run: |
           SRC="docs/${{ matrix.file }}"
-          if [ ! -f "$SRC" ]; then
-            echo "❌ $SRC not found"; exit 1;
-          fi
           OUT="${SRC%.mmd}.svg"
-          mmdc -i "$SRC" -o "$OUT" -b transparent -w 1400
+          test -f "$SRC" || (echo "❌ $SRC not found" && exit 1)
+          test -f docs/puppeteer.json || (echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > docs/puppeteer.json)
+          mmdc -p docs/puppeteer.json -i "$SRC" -o "$OUT" -b transparent -w 1400
           echo "✅ Rendered $OUT"
 
-      - name: Commit SVG if changed
+      - name: Commit SVGs if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/*.svg
-          git diff --cached --quiet || git commit -m "chore(docs): auto-render SVGs from Mermaid sources"
+          git diff --cached --quiet || git commit -m "chore(docs): auto-render SVGs from Mermaid sources (no-sandbox)"
           git push
