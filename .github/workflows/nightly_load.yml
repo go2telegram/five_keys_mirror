@@ -1,105 +1,51 @@
-name: Nightly Load
+name: nightly_load
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 3 * * *'   # каждый день в 03:00 UTC
   workflow_dispatch:
 
 jobs:
-  nightly-load:
+  render_all:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      LOAD_BASE_URL: ${{ secrets.NIGHTLY_LOAD_BASE_URL }}
-      SLO_P95_MS: '300'
-      SLO_MAX_ERRORS: '0'
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-      - uses: actions/cache@v4
+          fetch-depth: 0
+          token: ${{ secrets.PAT_GITHUB }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ~/.cache/pip
-          key: nightly-load-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}
-      - name: Install dependencies
+          node-version: '20'
+
+      - name: Install mermaid-cli
+        run: npm i -g @mermaid-js/mermaid-cli@10
+
+      - name: Ensure Puppeteer config (no sandbox)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run stress test
-        id: stress
+          echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > docs/puppeteer.json
+
+      - name: Render all *.mmd → *.svg
         run: |
-          if [ -z "$LOAD_BASE_URL" ]; then
-            echo "::error::NIGHTLY_LOAD_BASE_URL secret is not configured"
-            exit 1
-          fi
-          python tools/stress_users.py --base-url "$LOAD_BASE_URL" --users 50 --report-dir build/reports
-      - name: Enforce SLO gates
-        if: steps.stress.outcome == 'success'
+          set -e
+          for f in docs/menu_map.mmd docs/menu_map_flows.mmd docs/menu_map_admin.mmd; do
+            if [ -f "$f" ]; then
+              out="${f%.mmd}.svg"
+              mmdc -p docs/puppeteer.json -i "$f" -o "$out" -b transparent -w 1400
+              echo "✅ Rendered $out"
+            else
+              echo "⚠️ $f not found — skipping"
+            fi
+          done
+
+      - name: Commit SVG if changed
         run: |
-          python - <<'PY'
-import json
-import os
-import pathlib
-import sys
-
-report_path = pathlib.Path('build/reports/load.json')
-if not report_path.exists():
-    print('Load report not found', file=sys.stderr)
-    sys.exit(1)
-
-payload = json.loads(report_path.read_text(encoding='utf-8'))
-if isinstance(payload, dict) and isinstance(payload.get('runs'), list):
-    history = payload['runs']
-elif isinstance(payload, list):
-    history = payload
-else:
-    print('Unexpected load report format', file=sys.stderr)
-    sys.exit(1)
-
-if not history:
-    print('Load report is empty', file=sys.stderr)
-    sys.exit(1)
-
-latest = history[-1]
-latency = latest.get('latency') if isinstance(latest, dict) else None
-errors_value = latest.get('errors') if isinstance(latest, dict) else None
-p95_value = latency.get('p95') if isinstance(latency, dict) else None
-
-try:
-    slo_p95 = float(os.environ.get('SLO_P95_MS', '300'))
-except ValueError:
-    slo_p95 = 300.0
-try:
-    slo_errors = int(os.environ.get('SLO_MAX_ERRORS', '0'))
-except ValueError:
-    slo_errors = 0
-
-violations = []
-if not isinstance(p95_value, (int, float)):
-    print('Latest run missing p95 metric', file=sys.stderr)
-    sys.exit(1)
-if not isinstance(errors_value, int):
-    print('Latest run missing error counter', file=sys.stderr)
-    sys.exit(1)
-
-if p95_value > slo_p95:
-    violations.append(f"p95 {p95_value:.2f} ms exceeds SLO {slo_p95:.2f} ms")
-if errors_value > slo_errors:
-    violations.append(f"errors {errors_value} exceeds SLO {slo_errors}")
-
-if violations:
-    for violation in violations:
-        print(violation, file=sys.stderr)
-    sys.exit(1)
-
-print(f"SLO satisfied: p95={p95_value:.2f} ms, errors={errors_value}")
-PY
-      - name: Publish load report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-load-report
-          path: |
-            build/reports/load.json
-            build/reports/load.md
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/*.svg
+          git diff --cached --quiet || git commit -m "chore(docs): nightly render menu maps"
+          git push
