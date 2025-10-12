@@ -1,0 +1,66 @@
+name: codex_dispatch
+on:
+  repository_dispatch:
+    types: [codex_command]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run-codex-command:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+
+      - name: Read payload
+        id: p
+        run: |
+          echo "cmd=${{ github.event.client_payload.cmd }}" >> $GITHUB_OUTPUT
+          echo "msg=${{ github.event.client_payload.msg }}" >> $GITHUB_OUTPUT
+
+      # Примеры команд:
+      # cmd=render_menu  → рендер всех *.mmd (как в nightly)
+      # cmd=build_catalog → make build-products && validate-products
+      # cmd=open_patch_pr → применить дифф из payload и открыть PR с лейблом automerge
+
+      - name: Render menu (Mermaid)
+        if: steps.p.outputs.cmd == 'render_menu'
+        run: |
+          sudo apt-get update && sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+          npm i -g @mermaid-js/mermaid-cli@10.9.1
+          echo '{ "args": ["--no-sandbox","--disable-setuid-sandbox"] }' > puppeteer.json
+          mkdir -p artifacts/menu
+          fail=0
+          for f in $(git ls-files '*.mmd'); do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json || fail=1
+          done
+          if [ $fail -ne 0 ]; then
+            node scripts/mmd_fix.mjs docs/menu_map.mmd || true
+            mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg --puppeteerConfigFile puppeteer.json || true
+          fi
+
+      - name: Build catalog
+        if: steps.p.outputs.cmd == 'build_catalog'
+        run: |
+          make build-products
+          make validate-products
+
+      - name: Apply patch (if provided) & open PR
+        if: steps.p.outputs.cmd == 'open_patch_pr'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex: ${{ steps.p.outputs.msg }}"
+          title: "codex: ${{ steps.p.outputs.msg }}"
+          body: "Opened by Codex via repository_dispatch."
+          branch: "codex-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            docs/**/*.mmd
+            app/**/*
+            scripts/**/*
+            .github/workflows/**/*
