@@ -1,0 +1,23 @@
+flowchart TD
+  START[⚡ Тест]
+  QUESTIONS[📝 Вопросы квиза]
+  SCORE[📊 Подсчёт баллов]
+  ADVICE[💡 AI-совет]
+  RECS[🛍 Рекомендации]
+  MEDIA[🖼️ Медиагруппа]
+  CTA[🎯 CTA и кнопки]
+  PREMIUM[💎 Апселл]
+  HOME[🏠 Домой]
+  REMINDER[⏰ Напоминание]
+
+  START --> QUESTIONS
+  QUESTIONS --> SCORE
+  SCORE --> ADVICE
+  ADVICE --> RECS
+  RECS --> MEDIA
+  MEDIA --> CTA
+  CTA --> PREMIUM
+  PREMIUM --> HOME
+  CTA --> HOME
+  QUESTIONS -->|Не завершил| REMINDER
+  REMINDER --> QUESTIONS

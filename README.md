@@ -94,21 +94,42 @@ pytest -q
 
 ## Карта меню
 
-<img src="./docs/menu_map.svg" alt="Карта меню" width="820">
+<p align="center">
+  <a href="./docs/editor.html?file=menu_map.mmd">
+    <img src="https://img.shields.io/badge/Открыть%20редактор-main-10b981?logo=mermaid" alt="Open prefilled editor (main)">
+  </a>
+  &nbsp;·&nbsp;
+  <a href="./docs/editor.html?file=menu_map_flows.mmd">
+    <img src="https://img.shields.io/badge/Открыть%20редактор-flows-8b5cf6?logo=mermaid" alt="Open prefilled editor (flows)">
+  </a>
+  &nbsp;·&nbsp;
+  <a href="./docs/editor.html?file=menu_map_admin.mmd">
+    <img src="https://img.shields.io/badge/Открыть%20редактор-admin-f59e0b?logo=mermaid" alt="Open prefilled editor (admin)">
+  </a>
+</p>
+
+<p align="center">
+  <img src="./docs/menu_map.svg" alt="Карта меню (главная)" width="820"><br/>
+  <img src="./docs/menu_map_flows.svg" alt="Поток после теста" width="820"><br/>
+  <img src="./docs/menu_map_admin.svg" alt="Админ/ретеншн/аналитика" width="820">
+</p>
 
 Диаграммы навигации лежат в каталоге `docs/`:
 
 - `docs/menu_map.mmd` — текстовая диаграмма на Mermaid (GitHub умеет рендерить её прямо в веб-интерфейсе).
+- `docs/menu_map_flows.mmd` — пользовательские потоки после прохождения тестов.
+- `docs/menu_map_admin.mmd` — карты для ретеншн/аналитики и административных процессов.
 - `docs/menu_map.drawio` — исходник для draw.io, пригоден для редактирования в браузере.
-- `docs/menu_map.svg` — экспортный превью-файл, чтобы быстро посмотреть текущую схему.
+- `docs/menu_map.svg`, `docs/menu_map_flows.svg`, `docs/menu_map_admin.svg` — экспортные превью-файлы, чтобы быстро посмотреть текущие схемы.
 
 Как работать с файлами:
 
-1. Для правок Mermaid откройте `docs/menu_map.mmd` на [mermaid.live](https://mermaid.live/) — скопируйте код, внесите изменения и верните
+1. Для правок Mermaid откройте нужный `.mmd` на [mermaid.live](https://mermaid.live/) — скопируйте код, внесите изменения и верните
    обновлённый текст в репозиторий.
 2. Для draw.io выберите `File → Open from → Device`, укажите `docs/menu_map.drawio`, внесите правки и сохраните обратно
    (файл не требует экспорта — достаточно «Save» в браузере).
-3. После обновления диаграммы обновите `docs/menu_map.svg`, чтобы в репозитории всегда было актуальное превью.
+3. После обновления диаграммы обновите соответствующий `.svg` (локально через `npx @mermaid-js/mermaid-cli ...` или дождитесь автосборки в CI),
+   чтобы в репозитории всегда было актуальное превью.
 
 Иконки и подписи в схеме должны совпадать с основными клавиатурами бота (см. раздел про UI выше), чтобы визуальные обозначения оставались единообразными.
 

@@ -145,9 +145,10 @@ def _collect_image_refs(product: dict) -> list[str]:
 async def _check_remote_media(url: str) -> bool:
     timeout = aiohttp.ClientTimeout(total=4.0)
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session, session.head(
-            url, allow_redirects=True
-        ) as response:
+        async with (
+            aiohttp.ClientSession(timeout=timeout) as session,
+            session.head(url, allow_redirects=True) as response,
+        ):
             status = response.status
             if status == 405:  # Method Not Allowed — trust Telegram to fetch via GET
                 return True

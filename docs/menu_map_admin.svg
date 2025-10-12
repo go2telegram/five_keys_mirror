@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560">
+  <defs>
+    <style>
+      .node { rx: 18; ry: 18; stroke-width: 2; fill: #f9fafb; }
+      .label { font-family: "Inter", "Segoe UI", sans-serif; font-size: 18px; font-weight: 500; fill: #111827; }
+    </style>
+    <marker id="arrow-admin" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#7c3aed" />
+    </marker>
+  </defs>
+
+  <rect class="node" x="460" y="60" width="280" height="80" stroke="#7c3aed" />
+  <text class="label" x="600" y="110" text-anchor="middle">📊 Дашборд</text>
+
+  <rect class="node" x="160" y="210" width="260" height="80" stroke="#2563eb" />
+  <text class="label" x="290" y="260" text-anchor="middle">🧩 Сегменты</text>
+
+  <rect class="node" x="460" y="210" width="280" height="80" stroke="#2563eb" />
+  <text class="label" x="600" y="260" text-anchor="middle">📈 Аналитика</text>
+
+  <rect class="node" x="160" y="340" width="260" height="80" stroke="#f97316" />
+  <text class="label" x="290" y="390" text-anchor="middle">📨 Рассылки</text>
+
+  <rect class="node" x="460" y="340" width="280" height="80" stroke="#16a34a" />
+  <text class="label" x="600" y="390" text-anchor="middle">🔁 Авто-сценарии</text>
+
+  <rect class="node" x="760" y="340" width="260" height="80" stroke="#2563eb" />
+  <text class="label" x="890" y="390" text-anchor="middle">🎯 Ретеншн</text>
+
+  <rect class="node" x="760" y="210" width="260" height="80" stroke="#2563eb" />
+  <text class="label" x="890" y="260" text-anchor="middle">🗒️ Обратная связь</text>
+
+  <rect class="node" x="460" y="440" width="280" height="80" stroke="#2563eb" />
+  <text class="label" x="600" y="490" text-anchor="middle">📤 Экспорт данных</text>
+
+  <path d="M600 140 L290 210" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M600 140 L600 210" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M290 290 L290 340" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M420 260 L460 260 L460 340" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M420 380 L760 380" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M740 380 L760 380" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M890 340 L890 300 L600 300" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M740 260 L760 260" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M890 210 L600 140" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />
+  <path d="M600 290 L600 440" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow-admin)" />

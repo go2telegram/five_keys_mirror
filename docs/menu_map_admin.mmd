@@ -1,0 +1,20 @@
+flowchart TD
+  DASHBOARD[📊 Дашборд]
+  SEGMENTS[🧩 Сегменты]
+  BROADCAST[📨 Рассылки]
+  AUTOMATIONS[🔁 Авто-сценарии]
+  ANALYTICS[📈 Аналитика]
+  RETENTION[🎯 Ретеншн]
+  FEEDBACK[🗒️ Обратная связь]
+  EXPORT[📤 Экспорт данных]
+
+  DASHBOARD --> SEGMENTS
+  DASHBOARD --> ANALYTICS
+  SEGMENTS --> BROADCAST
+  SEGMENTS --> AUTOMATIONS
+  BROADCAST --> RETENTION
+  AUTOMATIONS --> RETENTION
+  RETENTION --> ANALYTICS
+  ANALYTICS --> FEEDBACK
+  FEEDBACK --> DASHBOARD
+  ANALYTICS --> EXPORT
