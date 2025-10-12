@@ -1,0 +1,39 @@
+name: render-menu-map
+on:
+  push:
+    paths:
+      - "docs/*.mmd"
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install mermaid-cli
+        run: npm i -g @mermaid-js/mermaid-cli@10
+
+      - name: Render menu_map.mmd → SVG
+        run: |
+          if [ ! -f docs/menu_map.mmd ]; then
+            echo "❌ docs/menu_map.mmd not found"; exit 1;
+          fi
+          mmdc -i docs/menu_map.mmd -o docs/menu_map.svg -b transparent -w 1400
+          echo "✅ Rendered docs/menu_map.svg"
+
+      - name: Commit SVG if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/menu_map.svg
+          git diff --cached --quiet || git commit -m "chore(docs): auto-render menu_map.svg from .mmd"
+          git push

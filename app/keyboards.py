@@ -5,7 +5,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config import settings
 from app.feature_flags import feature_flags
-from app.products import BUY_URLS, PRODUCTS
 
 # ---------- Главное меню ----------
 
@@ -13,21 +12,21 @@ from app.products import BUY_URLS, PRODUCTS
 def kb_main(*, user_id: int | None = None) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="⚡ Тесты и диагностика", callback_data="menu:tests")
-    kb.button(text="🎯 Персональные рекомендации", callback_data="pick:menu")
+    kb.button(text="⚡ Тесты", callback_data="menu:tests")
+    kb.button(text="🎯 План (AI)", callback_data="pick:menu")
     kb.button(text="🛍 Каталог", callback_data="catalog:menu")
-    kb.button(text="💎 Премиум-доступ", callback_data="menu:premium")
+    kb.button(text="💎 Премиум", callback_data="menu:premium")
     kb.button(text="👤 Профиль", callback_data="profile:open")
 
     nav_footer = feature_flags.is_enabled("FF_NAV_FOOTER", user_id=user_id)
+    kb.button(text="ℹ️ Помощь", callback_data="menu:help")
     if nav_footer:
         kb.button(text="🧭 Навигатор", callback_data="nav:root")
-    kb.button(text="ℹ️ Помощь", callback_data="menu:help")
 
     if nav_footer:
-        kb.adjust(3, 2, 2)
+        kb.adjust(2, 2, 2, 1)
     else:
-        kb.adjust(3, 3)
+        kb.adjust(2, 2, 2)
     return kb.as_markup()
 
 
@@ -207,34 +206,26 @@ def kb_cancel_home() -> InlineKeyboardMarkup:
 
 
 def kb_buylist_pdf(
-    back_cb: str,
+    back_cb: str,  # noqa: ARG001 - legacy parameter
     codes: list[str],
     *,
-    links: Mapping[str, str] | None = None,
+    links: Mapping[str, str] | None = None,  # noqa: ARG001 - legacy parameter
     discount_url: str | None = None,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    for code in codes:
-        p = PRODUCTS.get(code)
-        url = None
-        if links:
-            url = links.get(code)
-        if not url:
-            url = BUY_URLS.get(code)
-        if not p or not url:
-            continue
-        title = p.get("title", code)
-        kb.button(text=f"🛒 Купить {title}", url=url)
-
+    normalized = [code for code in codes if isinstance(code, str) and code]
+    if normalized:
+        payload = ",".join(dict.fromkeys(normalized))
+        kb.button(text="🛒 В корзину", callback_data=f"cart:add_many:{payload}")
     kb.button(text="📄 PDF-план", callback_data="report:last")
     discount = discount_url or settings.velavie_url
     if discount:
-        kb.button(text="🔗 Заказать со скидкой", url=discount)
-    kb.button(text="⬅️ Назад", callback_data=back_cb)
+        kb.button(text="🎟️ Скидка", url=discount)
+    else:
+        kb.button(text="🎟️ Скидка", callback_data="reg:open")
     kb.button(text="🏠 Домой", callback_data="home:main")
 
-    rows = [1] * len(codes)
-    kb.adjust(*(rows + [1, 1, 2]))
+    kb.adjust(2, 2)
     return kb.as_markup()
 
 

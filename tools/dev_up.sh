@@ -3,6 +3,10 @@ set -euo pipefail
 
 export PYTHONPATH="${PYTHONPATH:-.}"
 
+if [[ -z "${MIGRATE_ON_START:-}" ]]; then
+  export MIGRATE_ON_START=1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$PROJECT_ROOT"

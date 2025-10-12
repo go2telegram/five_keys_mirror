@@ -100,6 +100,12 @@ def build_tasks(python: str) -> list[Task]:
             critical=True,
         ),
         Task(
+            key="media_urls",
+            label="Check media URLs",
+            command=[python, "tools/check_media_urls.py", "--quiet"],
+            critical=False,
+        ),
+        Task(
             key="pytest",
             label="Pytest smoke",
             command=[

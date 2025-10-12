@@ -1,0 +1,28 @@
+flowchart TD
+  HOME[🏠 Домой]
+  TESTS[⚡ Тесты]
+  PLAN[🎯 План (AI)]
+  CATALOG[🛍 Каталог]
+  PREMIUM[💎 Премиум]
+  PROFILE[👤 Профиль]
+  HELP[ℹ️ Помощь]
+
+  HOME --> TESTS
+  HOME --> PLAN
+  HOME --> CATALOG
+  HOME --> PREMIUM
+  HOME --> PROFILE
+  HOME --> HELP
+
+  TESTS --> SON[🛌 Сон]
+  TESTS --> ENERGY[⚡ Энергия]
+  TESTS --> IMMUNITY[🛡 Иммунитет]
+  TESTS --> SKIN[🧴 Кожа/суставы]
+  TESTS --> STRESS[😮‍💨 Стресс]
+
+  PLAN --> ADVICE[💡 AI-совет]
+  PLAN --> PREMIUM_UPSELL[💎 Премиум-план]
+  PREMIUM_UPSELL --> HOME
+  CATALOG --> CART[🛒 Корзина]
+  PROFILE --> REMINDERS[⏰ Напоминания]
+  PROFILE --> REF[🔗 Рефералы]
