@@ -1,0 +1,17 @@
+name: label_trusted
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  add-label:
+    if: github.event.pull_request.user.login == 'go2telegram'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: "automerge"

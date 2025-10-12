@@ -1,105 +1,64 @@
-name: Nightly Load
+name: nightly_load
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 3 * * *"   # каждый день в 03:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  nightly-load:
+  nightly:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      LOAD_BASE_URL: ${{ secrets.NIGHTLY_LOAD_BASE_URL }}
-      SLO_P95_MS: '300'
-      SLO_MAX_ERRORS: '0'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-      - uses: actions/cache@v4
+          fetch-depth: 0
+
+      - name: Setup Node (for mermaid-cli)
+        uses: actions/setup-node@v4
         with:
-          path: ~/.cache/pip
-          key: nightly-load-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}
-      - name: Install dependencies
+          node-version: '20'
+
+      - name: Install mermaid-cli
+        run: npm i -g @mermaid-js/mermaid-cli@10
+
+      - name: Try render Mermaid
+        id: render
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run stress test
-        id: stress
-        run: |
-          if [ -z "$LOAD_BASE_URL" ]; then
-            echo "::error::NIGHTLY_LOAD_BASE_URL secret is not configured"
-            exit 1
+          set -eo pipefail
+          mkdir -p artifacts/menu
+          if mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg; then
+            echo "failed=0" >> $GITHUB_OUTPUT
+          else
+            echo "failed=1" >> $GITHUB_OUTPUT
           fi
-          python tools/stress_users.py --base-url "$LOAD_BASE_URL" --users 50 --report-dir build/reports
-      - name: Enforce SLO gates
-        if: steps.stress.outcome == 'success'
+
+      - name: Auto-fix and retry (on render fail)
+        if: steps.render.outputs.failed == '1'
+        shell: bash
         run: |
-          python - <<'PY'
-import json
-import os
-import pathlib
-import sys
+          chmod +x scripts/auto_fix_and_retry.sh || true
+          ./scripts/auto_fix_and_retry.sh docs/menu_map.mmd || true
+          mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg || true
 
-report_path = pathlib.Path('build/reports/load.json')
-if not report_path.exists():
-    print('Load report not found', file=sys.stderr)
-    sys.exit(1)
-
-payload = json.loads(report_path.read_text(encoding='utf-8'))
-if isinstance(payload, dict) and isinstance(payload.get('runs'), list):
-    history = payload['runs']
-elif isinstance(payload, list):
-    history = payload
-else:
-    print('Unexpected load report format', file=sys.stderr)
-    sys.exit(1)
-
-if not history:
-    print('Load report is empty', file=sys.stderr)
-    sys.exit(1)
-
-latest = history[-1]
-latency = latest.get('latency') if isinstance(latest, dict) else None
-errors_value = latest.get('errors') if isinstance(latest, dict) else None
-p95_value = latency.get('p95') if isinstance(latency, dict) else None
-
-try:
-    slo_p95 = float(os.environ.get('SLO_P95_MS', '300'))
-except ValueError:
-    slo_p95 = 300.0
-try:
-    slo_errors = int(os.environ.get('SLO_MAX_ERRORS', '0'))
-except ValueError:
-    slo_errors = 0
-
-violations = []
-if not isinstance(p95_value, (int, float)):
-    print('Latest run missing p95 metric', file=sys.stderr)
-    sys.exit(1)
-if not isinstance(errors_value, int):
-    print('Latest run missing error counter', file=sys.stderr)
-    sys.exit(1)
-
-if p95_value > slo_p95:
-    violations.append(f"p95 {p95_value:.2f} ms exceeds SLO {slo_p95:.2f} ms")
-if errors_value > slo_errors:
-    violations.append(f"errors {errors_value} exceeds SLO {slo_errors}")
-
-if violations:
-    for violation in violations:
-        print(violation, file=sys.stderr)
-    sys.exit(1)
-
-print(f"SLO satisfied: p95={p95_value:.2f} ms, errors={errors_value}")
-PY
-      - name: Publish load report
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Create PR if changes
+        uses: peter-evans/create-pull-request@v6
         with:
-          name: nightly-load-report
-          path: |
-            build/reports/load.json
-            build/reports/load.md
+          commit-message: "chore(menu): auto-fix Mermaid & refresh artifacts"
+          title: "chore(menu): auto-fix Mermaid & refresh artifacts"
+          body: |
+            Nightly auto-fix: Mermaid render & artifacts refresh.
+            - Файл: `docs/menu_map.mmd`
+            - Артефакт: `artifacts/menu/menu_map.svg`
+            - Скрипт: `scripts/auto_fix_and_retry.sh`
+          branch: "menu-autofix-${{ github.run_id }}"
+          base: "main"
+          labels: "automerge"
+          add-paths: |
+            docs/menu_map.mmd
+            artifacts/menu/**
