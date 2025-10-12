@@ -1,0 +1,19 @@
+name: pr_automerge
+
+on:
+  pull_request:
+    types: [labeled, opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: contains(github.event.pull_request.labels.*.name, 'automerge')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-merge when checks are green
+        uses: peter-evans/auto-merge@v3
+        with:
+          merge-method: squash
