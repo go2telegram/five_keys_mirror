@@ -2,7 +2,7 @@ name: nightly_load
 
 on:
   schedule:
-    - cron: "0 3 * * *"   # каждый день в 03:00 UTC
+    - cron: "0 3 * * *"   # ежедневно в 03:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -10,55 +10,78 @@ permissions:
   pull-requests: write
 
 jobs:
-  nightly:
+  render_all:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      - name: Setup Node (for mermaid-cli)
+      - name: Setup Node
         uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        with: { node-version: "20" }
+
+      # Шрифты для кириллицы/emoji
+      - name: Install fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
 
       - name: Install mermaid-cli
-        run: npm i -g @mermaid-js/mermaid-cli@10
+        run: npm i -g @mermaid-js/mermaid-cli@10.9.1
 
-      - name: Try render Mermaid
+      # Puppeteer без sandbox
+      - name: Ensure Puppeteer config (no sandbox)
+        run: |
+          cat > puppeteer.json <<'JSON'
+          { "args": ["--no-sandbox","--disable-setuid-sandbox"] }
+          JSON
+
+      # Первый рендер всех .mmd
+      - name: Render all *.mmd -> *.svg
         id: render
         shell: bash
         run: |
           set -eo pipefail
           mkdir -p artifacts/menu
-          if mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg; then
-            echo "failed=0" >> $GITHUB_OUTPUT
-          else
-            echo "failed=1" >> $GITHUB_OUTPUT
-          fi
+          fail=0
+          for f in $(git ls-files '*.mmd'); do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            if ! mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json; then
+              echo "::warning title=Mermaid render failed::$f"
+              fail=1
+            fi
+          done
+          echo "failed=$fail" >> $GITHUB_OUTPUT
 
-      - name: Auto-fix and retry (on render fail)
+      # Автофикс + повторный рендер только при фейле
+      - name: Auto-fix and retry
         if: steps.render.outputs.failed == '1'
         shell: bash
         run: |
+          node scripts/mmd_fix.mjs docs/menu_map.mmd || true
           chmod +x scripts/auto_fix_and_retry.sh || true
           ./scripts/auto_fix_and_retry.sh docs/menu_map.mmd || true
-          mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg || true
+          mkdir -p artifacts/menu
+          for f in $(git ls-files '*.mmd'); do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json || true
+          done
 
-      - name: Create PR if changes
+      # Создаём PR с изменениями и артефактами
+      - name: Commit SVG if changed
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "chore(menu): auto-fix Mermaid & refresh artifacts"
           title: "chore(menu): auto-fix Mermaid & refresh artifacts"
           body: |
             Nightly auto-fix: Mermaid render & artifacts refresh.
-            - Файл: `docs/menu_map.mmd`
-            - Артефакт: `artifacts/menu/menu_map.svg`
-            - Скрипт: `scripts/auto_fix_and_retry.sh`
+            - fix: normalize EOL, add init directive, escape stray `%`
+            - artifact: artifacts/menu/*.svg
           branch: "menu-autofix-${{ github.run_id }}"
           base: "main"
           labels: "automerge"
           add-paths: |
-            docs/menu_map.mmd
+            docs/**/*.mmd
             artifacts/menu/**
