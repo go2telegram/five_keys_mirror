@@ -85,3 +85,20 @@ jobs:
           add-paths: |
             docs/**/*.mmd
             artifacts/menu/**
+
+      # Создаём PR с изменениями и артефактами
+      - name: Commit SVG if changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(menu): auto-fix Mermaid & refresh artifacts"
+          title: "chore(menu): auto-fix Mermaid & refresh artifacts"
+          body: |
+            Nightly auto-fix: Mermaid render & artifacts refresh.
+            - fix: normalize EOL, add init directive, escape stray `%`
+            - artifact: artifacts/menu/*.svg
+          branch: "menu-autofix-${{ github.run_id }}"
+          base: "main"
+          labels: "automerge"
+          add-paths: |
+            docs/**/*.mmd
+            artifacts/menu/**
