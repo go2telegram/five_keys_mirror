@@ -1,0 +1,109 @@
+name: codex_dispatch
+
+on:
+  repository_dispatch:
+    types: [codex_command]   # вызываем через API: event_type=codex_command
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run-codex-command:
+    # пускаем только команды с правильным shared-key
+    # и(или) от доверенного отправителя (по желанию)
+    if: >
+      (github.event.client_payload.key == secrets.CODEX_SHARED_KEY)
+      && (github.event.sender.login == 'go2telegram' || true)
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Read payload
+        id: p
+        run: |
+          echo "cmd=${{ github.event.client_payload.cmd }}" >> $GITHUB_OUTPUT
+          echo "msg=${{ github.event.client_payload.msg }}" >> $GITHUB_OUTPUT
+          echo "patch_b64=${{ github.event.client_payload.patch_b64 }}" >> $GITHUB_OUTPUT
+
+      # ----- render_menu: отрендерить все *.mmd → *.svg (как nightly) -----
+      - name: Setup for Mermaid
+        if: steps.p.outputs.cmd == 'render_menu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+          npm i -g @mermaid-js/mermaid-cli@10.9.1
+          echo '{ "args": ["--no-sandbox","--disable-setuid-sandbox"] }' > puppeteer.json
+
+      - name: Render *.mmd to SVG
+        if: steps.p.outputs.cmd == 'render_menu'
+        run: |
+          set -eo pipefail
+          mkdir -p artifacts/menu
+          fail=0
+          for f in $(git ls-files '*.mmd'); do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            if ! mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json; then
+              fail=1
+            fi
+          done
+          if [ $fail -ne 0 ]; then
+            node -v || (sudo apt-get update && sudo apt-get install -y nodejs npm)
+            node scripts/mmd_fix.mjs docs/menu_map.mmd || true
+            mmdc -i docs/menu_map.mmd -o artifacts/menu/menu_map.svg --puppeteerConfigFile puppeteer.json || true
+          fi
+
+      - name: PR (render_menu)
+        if: steps.p.outputs.cmd == 'render_menu'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(render): ${{ steps.p.outputs.msg }}"
+          title: "codex(render): ${{ steps.p.outputs.msg }}"
+          body: "Рендер Mermaid + автофикс. Открыто через repository_dispatch."
+          branch: "codex-render-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            docs/**/*.mmd
+            artifacts/menu/**
+
+      # ----- build_catalog: make build-products && validate-products -----
+      - name: Build catalog
+        if: steps.p.outputs.cmd == 'build_catalog'
+        run: |
+          make build-products
+          make validate-products
+
+      - name: PR (build_catalog)
+        if: steps.p.outputs.cmd == 'build_catalog'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(catalog): ${{ steps.p.outputs.msg }}"
+          title: "codex(catalog): ${{ steps.p.outputs.msg }}"
+          body: "Сборка и валидация каталога. Открыто через repository_dispatch."
+          branch: "codex-catalog-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            app/catalog/products.json
+
+      # ----- open_patch_pr: применить патч (base64 unified diff) и открыть PR -----
+      - name: Apply patch
+        if: steps.p.outputs.cmd == 'open_patch_pr' && steps.p.outputs.patch_b64 != ''
+        run: |
+          echo "${{ steps.p.outputs.patch_b64 }}" | base64 -d > codex.patch
+          git apply --index codex.patch
+
+      - name: PR (patch)
+        if: steps.p.outputs.cmd == 'open_patch_pr'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(patch): ${{ steps.p.outputs.msg }}"
+          title: "codex(patch): ${{ steps.p.outputs.msg }}"
+          body: "Патч применён ботом Codex через repository_dispatch."
+          branch: "codex-patch-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
