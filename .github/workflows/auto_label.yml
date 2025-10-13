@@ -13,25 +13,34 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve PR number (by head branch or commit)
+      - name: Resolve PR number (by head or commit)
         id: prnum
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
-            // Try by head branch (common for PR workflows)
+            // 1) PR, который запустил workflow (обычный кейс)
             const headRef = process.env.GITHUB_HEAD_REF || context.ref.replace('refs/heads/','');
-            let prNumber = "";
+            let number = "";
+
             if (headRef) {
-              const { data } = await github.rest.pulls.list({ owner, repo, head: `${owner}:${headRef}`, state: 'open' });
-              if (data && data.length) prNumber = String(data[0].number);
+              const { data } = await github.rest.pulls.list({
+                owner, repo, head: `${owner}:${headRef}`, state: 'open'
+              });
+              if (data.length) number = String(data[0].number);
             }
-            if (!prNumber) {
-              const res = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: context.sha });
-              if (res.data && res.data.length) prNumber = String(res.data[0].number);
+
+            // 2) Fallback: PR, связанный с текущим SHA
+            if (!number) {
+              const res = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner, repo, commit_sha: context.sha
+              });
+              if (res.data.length) number = String(res.data[0].number);
             }
-            core.setOutput('number', prNumber);
+
+            core.setOutput('number', number);
+            if (!number) core.info('PR not found for this context (head/SHA).');
 
       - name: Exit if no PR
         if: steps.prnum.outputs.number == ''
@@ -85,6 +94,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-${{ github.workflow }}-${{ github.run_id }}
+          name: debug-auto_label-${{ github.run_id }}
           path: debug.log
-          if-no-files-found: warn
+          if-no-files-found: ignore
