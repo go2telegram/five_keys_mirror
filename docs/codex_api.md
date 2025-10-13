@@ -45,6 +45,12 @@ gh api repos/go2telegram/five_keys_bot/dispatches \
   --raw-field client_payload='{"cmd":"doctor","fix":true,"msg":"nightly doctor --fix","key":"<SHARED_KEY>"}'
 ```
 
+## Проверка последних прогонов `nightly_doctor`
+
+```bash
+gh run list --workflow nightly_doctor --limit 5
+```
+
 ## Guard-rails
 
 PR не автомёрджится, если изменены:

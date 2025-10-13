@@ -48,9 +48,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      BOT_TOKEN: dummy:000
-      SERVICE_HOST: 127.0.0.1
-      HEALTH_PORT: 0
       NO_NET: 0
       PYTHONWARNINGS: ignore
       MPLBACKEND: Agg
@@ -61,6 +58,16 @@ jobs:
       MEDIA_DESCRIPTIONS_PATH: media/descriptions
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/bootstrap-env
+      - name: Set test env defaults
+        run: |
+          echo "BOT_TOKEN=${BOT_TOKEN:-dummy:000}" >> $GITHUB_ENV
+          echo "SERVICE_HOST=${SERVICE_HOST:-127.0.0.1}" >> $GITHUB_ENV
+          echo "HEALTH_PORT=${HEALTH_PORT:-0}" >> $GITHUB_ENV
+        env:
+          BOT_TOKEN: dummy:000
+          SERVICE_HOST: 127.0.0.1
+          HEALTH_PORT: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -112,6 +119,11 @@ jobs:
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/bootstrap-env
+      - name: Set smoke env defaults
+        run: echo "BOT_TOKEN=${BOT_TOKEN:-dummy:000}" >> $GITHUB_ENV
+        env:
+          BOT_TOKEN: dummy:000
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

@@ -13,6 +13,7 @@ jobs:
   call-codex-doctor:
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/bootstrap-env
       - name: Trigger repository_dispatch (doctor --fix)
         uses: actions/github-script@v7
         with:
@@ -28,5 +29,3 @@ jobs:
               event_type: 'codex_command',
               client_payload: { cmd:'doctor', fix:true, msg:'nightly doctor --fix', key }
             });
-        env:
-          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}

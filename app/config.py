@@ -1,8 +1,10 @@
-from pydantic import AliasChoices, Field, field_validator, model_validator
+from typing import Any
+
+from pydantic import AliasChoices, Field, PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class LegacySettings(BaseSettings):
     BOT_TOKEN: str = ""
     DEV_DRY_RUN: bool = False
     ADMIN_ID: int = 0
@@ -157,7 +159,7 @@ class Settings(BaseSettings):
         return [int(part) for part in parts]
 
     @model_validator(mode="after")
-    def _apply_stage_defaults(self) -> "Settings":
+    def _apply_stage_defaults(self) -> "LegacySettings":
         env = (self.ENVIRONMENT or "").strip().lower()
         if env == "stage":
             stage_flags = {
@@ -177,6 +179,75 @@ class Settings(BaseSettings):
         """Return the primary Velavie landing URL used across menus."""
 
         return self.VELAVIE_URL or self.VILAVI_REF_LINK_DISCOUNT or self.VILAVI_ORDER_NO_REG
+
+
+class Settings(BaseSettings):
+    bot_token: str = Field(default="", alias="BOT_TOKEN")
+    health_port: int = Field(default=8080, alias="HEALTH_PORT")
+    use_redis: bool = Field(default=False, alias="USE_REDIS")
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+
+    telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
+    telegram_chat_id: str | None = Field(default=None, alias="TELEGRAM_CHAT_ID")
+    slack_webhook_url: str | None = Field(default=None, alias="SLACK_WEBHOOK_URL")
+
+    codex_shared_key: str | None = Field(default=None, alias="CODEX_SHARED_KEY")
+
+    sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
+    env_name: str = Field(default="dev", alias="ENV_NAME")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="allow",
+    )
+
+    _legacy: LegacySettings = PrivateAttr(default_factory=LegacySettings)
+
+    def model_post_init(self, __context: Any) -> None:  # pragma: no cover - setup legacy proxy
+        data = {
+            key: value for key, value in self.model_dump(by_alias=True, exclude_none=True).items()
+        }
+        extras = super().__getattribute__("model_extra")
+        if extras:
+            data.update(extras)
+        private = object.__getattribute__(self, "__pydantic_private__")
+        private["_legacy"] = LegacySettings(**data)
+
+    def __getattr__(self, name: str):  # pragma: no cover - fallback logic
+        fields = super().__getattribute__("model_fields")
+        if name in fields:
+            return super().__getattribute__(name)
+        lower_name = name.lower()
+        if lower_name in fields:
+            return super().__getattribute__(lower_name)
+        private = object.__getattribute__(self, "__pydantic_private__")
+        legacy = private.get("_legacy")
+        if legacy is None:  # pragma: no cover - legacy bootstrap
+            legacy = LegacySettings()
+            private["_legacy"] = legacy
+        if hasattr(legacy, name):
+            return getattr(legacy, name)
+        raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
+
+    def __setattr__(self, name: str, value):  # pragma: no cover - fallback logic
+        if name.startswith("_"):
+            return super().__setattr__(name, value)
+        fields = super().__getattribute__("model_fields")
+        if name in fields:
+            return super().__setattr__(name, value)
+        lower_name = name.lower()
+        if lower_name in fields:
+            return super().__setattr__(lower_name, value)
+        private = object.__getattribute__(self, "__pydantic_private__")
+        legacy = private.get("_legacy")
+        if legacy is None:  # pragma: no cover - legacy bootstrap
+            legacy = LegacySettings()
+            private["_legacy"] = legacy
+        if hasattr(legacy, name):
+            setattr(legacy, name, value)
+            return
+        return super().__setattr__(name, value)
 
 
 settings = Settings()
