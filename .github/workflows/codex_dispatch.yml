@@ -44,6 +44,8 @@ jobs:
       - name: Gate (key & sender)
         id: gate
         run: |
+          echo "event=${{ github.event_name }}"
+          echo "actor=${GITHUB_ACTOR}"
           ALLOWED="false"
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             if [ "${{ github.event.client_payload.key }}" = "${{ secrets.CODEX_SHARED_KEY }}" ]; then
@@ -67,6 +69,13 @@ jobs:
           echo "cmd=${{ github.event.client_payload.cmd }}" >> $GITHUB_OUTPUT
           echo "msg=${{ github.event.client_payload.msg }}" >> $GITHUB_OUTPUT
           echo "patch_b64=${{ github.event.client_payload.patch_b64 }}" >> $GITHUB_OUTPUT
+
+      - name: Debug payload
+        if: always()
+        run: |
+          echo "allowed=${{ steps.gate.outputs.allowed }}"
+          echo "cmd=${{ steps.p.outputs.cmd }}"
+          echo "msg=${{ steps.p.outputs.msg }}"
 
       # =============== render_menu ===============
       - name: Setup for Mermaid (Node + fonts + no-sandbox)
