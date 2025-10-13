@@ -206,8 +206,7 @@ class Settings(BaseSettings):
 
     def model_post_init(self, __context: Any) -> None:  # pragma: no cover - setup legacy proxy
         data = {
-            key: value
-            for key, value in self.model_dump(by_alias=True, exclude_none=True).items()
+            key: value for key, value in self.model_dump(by_alias=True, exclude_none=True).items()
         }
         extras = super().__getattribute__("model_extra")
         if extras:
