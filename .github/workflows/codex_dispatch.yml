@@ -272,5 +272,7 @@ jobs:
             debug.log
             puppeteer.json
             artifacts/menu/*
+            artifacts/menu/**/*
             build/reports/*
+            build/reports/**/*
           if-no-files-found: warn
