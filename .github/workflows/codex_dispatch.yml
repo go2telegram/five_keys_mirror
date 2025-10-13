@@ -199,8 +199,8 @@ jobs:
             pyproject.toml
             scripts/lint_autofix.sh
 
-      # =============== auto_label (native) ===============
-      - name: Resolve PR number (by msg 'pr:<num>' or commit SHA)
+      # =============== auto_label (native, no external actions) ===============
+      - name: Resolve PR number (by msg 'pr:<num>' or by commit)
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label'
         id: prnum
         uses: actions/github-script@v7
@@ -208,23 +208,20 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
-            
-            // 1) попробовать номер из msg формата "pr:123"
+
+            // try "pr:<num>" from payload msg
             const raw = `${{ toJSON(steps.p.outputs.msg || "") }}`.replace(/^"|"$/g,"");
             let m = /^pr:(\d+)$/.exec(raw);
-            if (m) {
-              core.setOutput('number', m[1]);
-              return;
-            }
+            if (m) { core.setOutput('number', m[1]); return; }
 
-            // 2) найти связанный PR по текущему SHA
+            // else: find PR associated with this commit
             const { data } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner, repo, commit_sha: context.sha,
+              owner, repo, commit_sha: context.sha
             });
             if (Array.isArray(data) && data.length) {
               core.setOutput('number', String(data[0].number));
             } else {
-              core.info('PR not found for this SHA and msg');
+              core.info('PR not found for this SHA and msg; skip labeling.');
               core.setOutput('number', '');
             }
 
