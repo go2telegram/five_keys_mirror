@@ -1,5 +1,11 @@
 name: codex_dispatch
 
+on:
+  repository_dispatch:
+    types: [codex_command]   # ← ОБЯЗАТЕЛЬНО!
+  workflow_dispatch:         # ← по кнопке из Actions (ручной запуск)
+
+
 jobs:
   run-codex-command:
     runs-on: ubuntu-latest
