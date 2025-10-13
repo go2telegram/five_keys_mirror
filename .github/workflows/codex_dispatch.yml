@@ -37,7 +37,7 @@ jobs:
               return;
             }
             const cmd = payload.cmd || '';
-            const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix', 'auto_label'];
+            const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix', 'auto_label', 'doctor'];
             if (!cmd || !allowed.includes(cmd)) {
               core.setFailed(`Unsupported cmd: ${cmd}`);
               return;
@@ -51,6 +51,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Bootstrap env
+        if: steps.p.outputs.cmd == 'doctor'
+        uses: ./.github/actions/bootstrap-env
 
       - name: Setup Python
         if: contains('build_catalog open_patch_pr lint_autofix', steps.p.outputs.cmd)
@@ -226,3 +230,160 @@ jobs:
             **/*.py
             pyproject.toml
             scripts/lint_autofix.sh
+
+      - name: Doctor report (gather)
+        if: steps.p.outputs.cmd == 'doctor'
+        id: doctor
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const fix   = !!${{ toJSON(github.event.client_payload.fix || false) }};
+
+            const ok = (b)=> b ? "✅" : "❌";
+            const safe = async (fn, def=null)=> { try { return await fn(); } catch(e){ core.info('WARN: '+e.message); return def; } };
+
+            // repo info
+            const repoInfo = await github.rest.repos.get({owner, repo});
+            const allowAutoMerge = repoInfo.data.allow_auto_merge;
+            const isPrivate      = repoInfo.data.private;
+
+            // actions permissions
+            const actsPerm = await safe(()=> github.request('GET /repos/{owner}/{repo}/actions/permissions',{owner,repo}), {data:{enabled:true, allowed_actions:'all'}});
+            const wfPerm   = await safe(()=> github.request('GET /repos/{owner}/{repo}/actions/permissions/workflow',{owner,repo}), {data:{default_workflow_permissions:'write', can_approve_pull_request_reviews:true}});
+
+            // secrets
+            const secrets = await safe(()=> github.rest.actions.listRepoSecrets({owner,repo, per_page:100}), {data:{secrets:[]}});
+            const hasShared = secrets.data.secrets.some(s=> s.name==='CODEX_SHARED_KEY');
+
+            // labels
+            const labels = await safe(()=> github.rest.issues.listLabelsForRepo({owner,repo, per_page:100}), {data:[]});
+            const needLabels = ['automerge','codex','risky','needs-human'];
+            const haveLabels = new Set(labels.data.map(l=>l.name));
+            const missingLabels = needLabels.filter(l=> !haveLabels.has(l));
+
+            // workflows
+            const wfList = await safe(()=> github.rest.actions.listRepoWorkflows({owner,repo, per_page:100}), {data:{workflows:[]}});
+            const haveWF = new Set(wfList.data.workflows.map(w=> w.name));
+            const needWF = ['CI','nightly_load','pr_automerge','codex_dispatch','auto_label','nightly_doctor','notify_doctor_pr'];
+            const missingWF = needWF.filter(n=> !haveWF.has(n));
+
+            // last runs
+            async function lastRun(name){
+              const wf = wfList.data.workflows.find(w=> w.name===name);
+              if(!wf) return {name, exists:false};
+              const runs = await safe(()=> github.rest.actions.listWorkflowRuns({owner,repo, workflow_id: wf.id, per_page:1}), {data:{workflow_runs:[]}});
+              const r = runs.data.workflow_runs[0];
+              return {name, exists:true, status: r?.status, conclusion: r?.conclusion, html_url: r?.html_url};
+            }
+            const runs = [];
+            for (const n of ['CI','nightly_load','pr_automerge','auto_label','nightly_doctor']) {
+              runs.push(await lastRun(n));
+            }
+
+            // branch protection (на private/free может быть 403)
+            let protection = {enabled:false, note:'not enabled or not available'};
+            try {
+              const p = await github.request('GET /repos/{owner}/{repo}/branches/{branch}/protection',{owner,repo,branch:'main'});
+              protection = {enabled:true, strict:p.data?.required_status_checks?.strict ?? false};
+            } catch(e) { core.info('branch protection: '+e.message); }
+
+            // -------- ENV checks (мягко) ----------
+            const env = process.env; // bootstrap-env должен быть вызван ранее в job
+            const envMiss = [];
+            const envWarn = [];
+
+            function empty(v){ return v===undefined || v===null || String(v).trim()===''; }
+            function badUrl(v){ try{ new URL(v); return false; } catch{ return true; } }
+
+            // критичные
+            if (empty(env.BOT_TOKEN)) envMiss.push('BOT_TOKEN is empty');
+            const hp = Number(env.HEALTH_PORT || '8080');
+            if (!(hp > 0 && Number.isFinite(hp))) envMiss.push(`HEALTH_PORT invalid: "${env.HEALTH_PORT}"`);
+
+            if (empty(env.IMAGES_BASE) || badUrl(env.IMAGES_BASE)) envMiss.push('IMAGES_BASE is missing or invalid URL');
+            if (empty(env.QUIZ_IMG_BASE) || badUrl(env.QUIZ_IMG_BASE)) envMiss.push('QUIZ_IMG_BASE is missing or invalid URL');
+
+            // опциональные уведомления
+            const tgPair = [env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID];
+            if (tgPair.some(Boolean) && tgPair.some(empty)) envWarn.push('Telegram notify: set both TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID or clear both');
+            if (!empty(env.SLACK_WEBHOOK_URL) && badUrl(env.SLACK_WEBHOOK_URL)) envWarn.push('SLACK_WEBHOOK_URL looks invalid');
+
+            // redis пожелания
+            if ((env.USE_REDIS||'0') === '1' && empty(env.REDIS_URL)) envMiss.push('USE_REDIS=1 but REDIS_URL is empty');
+
+            // секрет для dispatch
+            if (!hasShared) envMiss.push('missing secret CODEX_SHARED_KEY');
+
+            // составляем общий список проблем
+            const problems = [];
+            if (envMiss.length) problems.push('ENV: ' + envMiss.join('; '));
+            if (missingLabels.length) problems.push('Labels: ' + missingLabels.join(', '));
+            if (missingWF.length) problems.push('Workflows: ' + missingWF.join(', '));
+            for (const r of runs) if (r.exists && r.conclusion && r.conclusion !== 'success') problems.push(`Workflow ${r.name}: ${r.conclusion}`);
+
+            // write report
+            const fs = require('fs'); const path=require('path');
+            const dir = path.join(process.cwd(),'build','reports');
+            fs.mkdirSync(dir,{recursive:true});
+
+            const md = [
+              `# Dev health report`,
+              `*Time:* ${new Date().toISOString()}`,
+              '',
+              `**Repo:** ${owner}/${repo} ${isPrivate?'(private)':''}`,
+              `- Auto-merge (UI): ${ok(allowAutoMerge)}  _(не обязателен — auto-merge workflow работает)_`,
+              `- Actions: enabled=${actsPerm.data.enabled} allowed=${actsPerm.data.allowed_actions}`,
+              `- Workflow perms: default=${wfPerm.data.default_workflow_permissions} can_approve=${wfPerm.data.can_approve_pull_request_reviews}`,
+              '',
+              '## ENV checks',
+              `- BOT_TOKEN: ${ok(!empty(env.BOT_TOKEN))}`,
+              `- HEALTH_PORT: ${ok(hp>0)} (${env.HEALTH_PORT||'8080'})`,
+              `- IMAGES_BASE: ${ok(!empty(env.IMAGES_BASE) && !badUrl(env.IMAGES_BASE))}`,
+              `- QUIZ_IMG_BASE: ${ok(!empty(env.QUIZ_IMG_BASE) && !badUrl(env.QUIZ_IMG_BASE))}`,
+              `- USE_REDIS=${env.USE_REDIS||'0'} REDIS_URL: ${ok((env.USE_REDIS||'0')!=='1' || !empty(env.REDIS_URL))}`,
+              `- CODEX_SHARED_KEY secret: ${ok(hasShared)}`,
+              `- Telegram pair present: ${ok(!(tgPair.some(Boolean) && tgPair.some(empty)))}`,
+              `- Slack webhook URL valid: ${ok(empty(env.SLACK_WEBHOOK_URL) || !badUrl(env.SLACK_WEBHOOK_URL))}`,
+              envWarn.length? ('\n**Warnings:**\n- ' + envWarn.join('\n- ')) : '',
+              '',
+              '## Workflows & labels',
+              `- Labels present: ${ok(missingLabels.length===0)} ${missingLabels.length?('(нет: '+missingLabels.join(', ')+')'):''}`,
+              `- Workflows present: ${ok(missingWF.length===0)} ${missingWF.length?('(нет: '+missingWF.join(', ')+')'):''}`,
+              `- Branch protection(main): ${protection.enabled? 'enabled' : 'disabled'}${protection.enabled?(' strict='+(protection.strict?'on':'off')):''}`,
+              '',
+              '## Last runs',
+              ...runs.map(r=> `- **${r.name}**: ${r.exists? (r.conclusion||r.status||'n/a') : 'нет'} ${r.html_url?(' · '+r.html_url):''}`),
+              '',
+              problems.length? '## ⚠️ Problems' : '## ✅ OK',
+              problems.map(p=> `- ${p}`).join('\n'),
+              '',
+              `Mode: ${fix? 'fix-safe' : 'check-only'}`
+            ].join('\n');
+
+            fs.writeFileSync(path.join(dir,'dev_check.md'), md);
+            fs.writeFileSync(path.join(dir,'dev_check.json'), JSON.stringify({
+              repo:{allowAutoMerge,isPrivate},
+              actions:actsPerm.data,
+              workflowPerms:wfPerm.data,
+              hasShared, missingLabels, missingWF, runs, protection,
+              env: {
+                BOT_TOKEN: !empty(env.BOT_TOKEN),
+                HEALTH_PORT: hp,
+                IMAGES_BASE: env.IMAGES_BASE,
+                QUIZ_IMG_BASE: env.QUIZ_IMG_BASE,
+                USE_REDIS: env.USE_REDIS||'0',
+                REDIS_URL: env.REDIS_URL||'',
+                TELEGRAM_BOT_TOKEN: !!env.TELEGRAM_BOT_TOKEN,
+                TELEGRAM_CHAT_ID: !!env.TELEGRAM_CHAT_ID,
+                SLACK_WEBHOOK_URL: !!env.SLACK_WEBHOOK_URL
+              },
+              envMiss, envWarn,
+              problems
+            },null,2));
+
+            core.setOutput('fix', String(fix));
+            core.setOutput('problems', String(problems.length));
+            core.setOutput('missingLabels', JSON.stringify(missingLabels));
+            core.setOutput('missingWF', JSON.stringify(missingWF));
