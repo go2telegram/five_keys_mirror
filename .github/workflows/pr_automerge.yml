@@ -2,7 +2,10 @@ name: pr_automerge
 
 on:
   pull_request:
-    types: [labeled, opened, synchronize, reopened, ready_for_review]
+    types: [labeled, opened, synchronize, reopened, ready_for_review, edited]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -10,19 +13,15 @@ permissions:
 
 jobs:
   automerge:
-    # Не трогаем PR без лейбла automerge + пускаем только доверенных авторов
     if: >
+      (github.event_name == 'pull_request') &&
       contains(github.event.pull_request.labels.*.name, 'automerge') &&
-      (github.event.pull_request.user.login == 'go2telegram' ||
-       github.actor == 'github-actions[bot]')
-
+      (github.event.pull_request.user.login == 'go2telegram' || github.actor == 'github-actions[bot]')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
-      # 1) Фильтр «рискованных» путей: если что-то из списка тронуто — автомёрдж отключаем
       - name: Paths filter (risky changes)
         id: pf
         uses: dorny/paths-filter@v3
@@ -36,16 +35,86 @@ jobs:
               - 'app/main.py'
               - 'scripts/**'
 
-      # 2) Если были рискованные изменения — снимаем лейбл automerge (PR уйдет на ручной ревью)
       - name: Remove automerge label if risky
         if: steps.pf.outputs.risky == 'true'
         uses: actions-ecosystem/action-remove-labels@v1
-        with:
-          labels: 'automerge'
+        with: { labels: 'automerge' }
 
-      # 3) Авто-мердж безопасных PR когда все проверки зелёные
       - name: Auto-merge when checks are green
         if: steps.pf.outputs.risky != 'true'
         uses: peter-evans/auto-merge@v3
         with:
+          merge-method: squash
+
+  automerge_on_ci_complete:
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find PR by head SHA
+        id: find
+        uses: peter-evans/find-pull-request@v3
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Exit if no PR
+        if: steps.find.outputs.number == ''
+        run: echo "No PR associated with CI run" && exit 0
+
+      - name: Get PR JSON
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {data: pr} = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number("${{ steps.find.outputs.number }}"),
+            });
+            core.setOutput('author', pr.user.login);
+            core.setOutput('labels', JSON.stringify(pr.labels.map(l=>l.name)));
+
+      - name: Check label & author
+        id: gate
+        run: |
+          LABELS='${{ steps.pr.outputs.labels }}'
+          AUTHOR='${{ steps.pr.outputs.author }}'
+          echo "labels=$LABELS"
+          echo "author=$AUTHOR"
+          if [[ "$LABELS" != *automerge* ]]; then
+            echo "no automerge label"; exit 0; fi
+          if [[ "$AUTHOR" != "go2telegram" && "$GITHUB_ACTOR" != "github-actions[bot]" ]]; then
+            echo "not trusted author"; exit 0; fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/pull/${{ steps.find.outputs.number }}/head
+
+      - name: Paths filter (risky changes)
+        id: pf2
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            risky:
+              - '.github/workflows/**'
+              - 'Dockerfile'
+              - 'requirements*.txt'
+              - 'run.py'
+              - 'app/main.py'
+              - 'scripts/**'
+
+      - name: Remove automerge label if risky
+        if: steps.pf2.outputs.risky == 'true'
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: 'automerge'
+          pull-request-number: ${{ steps.find.outputs.number }}
+
+      - name: Auto-merge (CI completed successfully)
+        if: steps.pf2.outputs.risky != 'true'
+        uses: peter-evans/auto-merge@v3
+        with:
+          pull-request: ${{ steps.find.outputs.number }}
           merge-method: squash
