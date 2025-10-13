@@ -1,0 +1,32 @@
+name: nightly_doctor
+
+on:
+  schedule:
+    - cron: "30 2 * * *"   # 02:30 UTC ежедневно
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  call-codex-doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger repository_dispatch (doctor --fix)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const key   = process.env.CODEX_SHARED_KEY;
+            if (!key) {
+              core.setFailed('CODEX_SHARED_KEY not provided'); return;
+            }
+            await github.request('POST /repos/{owner}/{repo}/dispatches', {
+              owner, repo,
+              event_type: 'codex_command',
+              client_payload: { cmd:'doctor', fix:true, msg:'nightly doctor --fix', key }
+            });
+        env:
+          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
