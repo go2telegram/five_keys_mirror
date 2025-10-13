@@ -199,20 +199,55 @@ jobs:
             pyproject.toml
             scripts/lint_autofix.sh
 
-      # -------- auto_label --------
-      - name: Find PR
+      # =============== auto_label (native, без внешних экшенов) ===============
+      - name: Resolve PR number (by commit SHA or msg 'pr:<num>')
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label'
         id: prnum
-        uses: peter-evans/find-pull-request@v3
+        uses: actions/github-script@v7
         with:
-          commit: ${{ github.sha }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            let number = "";
 
-      - name: Add label 'automerge'
+            // 1) попробовать вытащить номер из msg: "pr:123"
+            const msg = `${{ toJSON(steps.p.outputs.msg || "") }}`.replace(/^"|"$/g,"");
+            const m = /^pr:(\d+)$/.exec(msg);
+            if (m) {
+              number = m[1];
+            } else {
+              // 2) найти PR по текущему SHA
+              const { data } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner, repo, commit_sha: context.sha
+              });
+              if (data && data.length) {
+                number = String(data[0].number);
+              }
+            }
+
+            core.setOutput('number', number);
+            if (!number) {
+              core.info('PR not found for this SHA and msg, nothing to label.');
+            }
+
+      - name: Add 'automerge' label (native)
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actions/github-script@v7
         with:
-          labels: automerge
-          number: ${{ steps.prnum.outputs.number }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const number = Number("${{ steps.prnum.outputs.number }}");
+
+            try {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: number,
+                labels: ['automerge']
+              });
+              core.info(`Label 'automerge' added to PR #${number}`);
+            } catch (e) {
+              core.setFailed(`Failed to add label: ${e.message}`);
+            }
 
       # -------- doctor --------
       - name: Doctor report
