@@ -58,7 +58,17 @@ jobs:
       MEDIA_DESCRIPTIONS_PATH: media/descriptions
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/bootstrap-env
+      - name: Bootstrap env
+        run: ./.github/scripts/bootstrap-env.sh
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          IMAGES_BASE: ${{ vars.IMAGES_BASE }}
+          QUIZ_IMG_BASE: ${{ vars.QUIZ_IMG_BASE }}
+          HEALTH_PORT: ${{ vars.HEALTH_PORT }}
       - name: Set test env defaults
         run: |
           echo "BOT_TOKEN=${BOT_TOKEN:-dummy:000}" >> $GITHUB_ENV
@@ -119,7 +129,17 @@ jobs:
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/bootstrap-env
+      - name: Bootstrap env
+        run: ./.github/scripts/bootstrap-env.sh
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          IMAGES_BASE: ${{ vars.IMAGES_BASE }}
+          QUIZ_IMG_BASE: ${{ vars.QUIZ_IMG_BASE }}
+          HEALTH_PORT: ${{ vars.HEALTH_PORT }}
       - name: Set smoke env defaults
         run: echo "BOT_TOKEN=${BOT_TOKEN:-dummy:000}" >> $GITHUB_ENV
         env:
