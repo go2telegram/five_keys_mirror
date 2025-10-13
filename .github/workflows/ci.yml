@@ -24,25 +24,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install formatters
+      - name: Lint autofix
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff==0.14.*
-      - name: Run Ruff autofix
-        # Auto-fixes long lines, imports, and other safe style issues.
-        # Keeps CI green and prevents noisy lint failures.
-        run: ruff check . --fix --unsafe-fixes
-        continue-on-error: false
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+          bash scripts/lint_autofix.sh
       - name: Commit fixed files
         run: |
           git config user.name "chatgpt-codex-connector"
           git config user.email "bot@codex"
           git add -A
-          git diff --cached --quiet || git commit -m "chore: ruff autofix"
+          git diff --cached --quiet || git commit -m "codex(lint): autofix formatting"
           git push || true
-      - name: Ruff report (post-fix)
-        run: ruff check .
-        continue-on-error: true
+      - name: Lint check (post-fix)
+        run: bash scripts/lint_autofix.sh
 
   test:
     runs-on: ubuntu-latest

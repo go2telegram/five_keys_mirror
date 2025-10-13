@@ -61,7 +61,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "cmd",
-        choices=("render_menu", "build_catalog", "open_patch_pr"),
+        choices=("render_menu", "build_catalog", "open_patch_pr", "lint_autofix"),
         help="Команда для выполнения в codex_dispatch.yml",
     )
     parser.add_argument("--msg", required=True, help="Короткое описание действия")
