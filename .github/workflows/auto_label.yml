@@ -13,21 +13,37 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Find PR by head SHA
-        id: find
-        uses: peter-evans/find-pull-request@v3
+      - name: Resolve PR number (from head SHA)
+        id: prnum
+        uses: actions/github-script@v7
         with:
-          commit: ${{ github.event.workflow_run.head_sha }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            // Find PR that triggered this workflow
+            const { data } = await github.rest.pulls.list({
+              owner, repo, head: `${owner}:${{ github.ref_name }}`
+            });
+            if (data.length) {
+              core.setOutput('number', String(data[0].number));
+            } else {
+              // fallback: associated with commit
+              const res = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner, repo, commit_sha: context.sha
+              });
+              if (res.data.length) core.setOutput('number', String(res.data[0].number));
+              else core.setOutput('number', '');
+            }
 
       - name: Exit if no PR
-        if: steps.find.outputs.number == ''
+        if: steps.prnum.outputs.number == ''
         run: echo "No PR for this CI run" && exit 0
 
       - name: Checkout PR head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ steps.find.outputs.number }}/head
+          ref: refs/pull/${{ steps.prnum.outputs.number }}/head
 
       - name: Paths filter (risky changes)
         id: pf
@@ -50,7 +66,7 @@ jobs:
             const {data: pr} = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: Number("${{ steps.find.outputs.number }}"),
+              pull_number: Number("${{ steps.prnum.outputs.number }}"),
             });
             core.setOutput('author', pr.user.login);
 
@@ -58,7 +74,21 @@ jobs:
         if: |
           steps.pf.outputs.risky != 'true' &&
           (steps.pr.outputs.author == 'go2telegram' || steps.pr.outputs.author == 'github-actions[bot]')
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actions/github-script@v7
         with:
-          labels: automerge
-          number: ${{ steps.find.outputs.number }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const number = Number("${{ steps.prnum.outputs.number }}");
+            await github.rest.issues.addLabels({
+              owner, repo, issue_number: number, labels: ['automerge']
+            });
+
+      - name: Upload debug (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            debug.log
+          if-no-files-found: warn

@@ -46,20 +46,36 @@ jobs:
         with:
           merge-method: squash
 
+      - name: Upload debug (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            debug.log
+          if-no-files-found: warn
+
   automerge_on_ci_complete:
     if: >
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Find PR by head SHA
-        id: find
-        uses: peter-evans/find-pull-request@v3
+      - name: Resolve PR by SHA
+        id: prnum
+        uses: actions/github-script@v7
         with:
-          commit: ${{ github.event.workflow_run.head_sha }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const { data } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: context.sha
+            });
+            if (data.length) core.setOutput('number', String(data[0].number));
+            else core.setOutput('number', '');
 
       - name: Exit if no PR
-        if: steps.find.outputs.number == ''
+        if: steps.prnum.outputs.number == ''
         run: echo "No PR associated with CI run" && exit 0
 
       - name: Get PR JSON
@@ -70,7 +86,7 @@ jobs:
             const {data: pr} = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: Number("${{ steps.find.outputs.number }}"),
+              pull_number: Number("${{ steps.prnum.outputs.number }}"),
             });
             core.setOutput('author', pr.user.login);
             core.setOutput('labels', JSON.stringify(pr.labels.map(l=>l.name)));
@@ -90,7 +106,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/pull/${{ steps.find.outputs.number }}/head
+          ref: refs/pull/${{ steps.prnum.outputs.number }}/head
 
       - name: Paths filter (risky changes)
         id: pf2
@@ -110,11 +126,20 @@ jobs:
         uses: actions-ecosystem/action-remove-labels@v1
         with:
           labels: 'automerge'
-          pull-request-number: ${{ steps.find.outputs.number }}
+          pull-request-number: ${{ steps.prnum.outputs.number }}
 
       - name: Auto-merge (CI completed successfully)
         if: steps.pf2.outputs.risky != 'true'
         uses: peter-evans/auto-merge@v3
         with:
-          pull-request: ${{ steps.find.outputs.number }}
+          pull-request: ${{ steps.prnum.outputs.number }}
           merge-method: squash
+
+      - name: Upload debug (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            debug.log
+          if-no-files-found: warn
