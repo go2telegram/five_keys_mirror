@@ -67,7 +67,9 @@ async def lead_name(m: Message, state: FSMContext):
 async def lead_phone(m: Message, state: FSMContext):
     phone = m.text.strip()
     if not PHONE_RE.match(phone):
-        error_text = "Похоже, номер в необычном формате. Введите ещё раз (пример: +7 999 123-45-67)."
+        error_text = (
+            "Похоже, номер в необычном формате. Введите ещё раз (пример: +7 999 123-45-67)."
+        )
         await m.answer(error_text)
         return
     await state.update_data(phone=phone)

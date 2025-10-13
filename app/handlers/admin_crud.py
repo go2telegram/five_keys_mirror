@@ -13,7 +13,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.config import settings
 from app.db.session import compat_session, session_scope
 from app.keyboards import kb_back_home
-from app.repo import referrals as referrals_repo, subscriptions as subscriptions_repo, users as users_repo
+from app.repo import (
+    referrals as referrals_repo,
+    subscriptions as subscriptions_repo,
+    users as users_repo,
+)
 from app.storage import commit_safely
 from app.utils import safe_edit_text
 
@@ -248,9 +252,7 @@ async def sub_get(message: Message) -> None:
     if subscription is None:
         text = "No active subscription"
     else:
-        text = (
-            f"Plan {subscription.plan}\nSince {_format_dt(subscription.since)}\nUntil {_format_dt(subscription.until)}"
-        )
+        text = f"Plan {subscription.plan}\nSince {_format_dt(subscription.since)}\nUntil {_format_dt(subscription.until)}"
     await message.answer(text, reply_markup=kb_back_home("home:main"))
 
 
@@ -343,7 +345,9 @@ async def _render_referrals(user_id: int, page: int, period: str):
             lines.append(line)
     text = "\n".join(lines)
     encoded_period = _encode_query(period)
-    markup = _build_pagination_markup("crud:refs:page", page, total_pages, f"{user_id}:{encoded_period}")
+    markup = _build_pagination_markup(
+        "crud:refs:page", page, total_pages, f"{user_id}:{encoded_period}"
+    )
     return text, markup
 
 

@@ -179,7 +179,9 @@ def kb_products_cta_home(back_cb: str, *, discount_url: str | None = None) -> In
 # ---------- CTA с PDF + консультация ----------
 
 
-def kb_products_cta_home_pdf(back_cb: str, *, discount_url: str | None = None) -> InlineKeyboardMarkup:
+def kb_products_cta_home_pdf(
+    back_cb: str, *, discount_url: str | None = None
+) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     discount = discount_url or settings.velavie_url
     if discount:

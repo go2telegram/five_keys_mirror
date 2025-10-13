@@ -257,7 +257,11 @@ def _doctor_host_for_checks(host: str | None) -> str:
 def _collect_migration_files() -> list[str]:
     versions_dir = PROJECT_ROOT / "alembic" / "versions"
     try:
-        paths = sorted(path.name for path in versions_dir.glob("*.py") if path.is_file() and path.name != "__init__.py")
+        paths = sorted(
+            path.name
+            for path in versions_dir.glob("*.py")
+            if path.is_file() and path.name != "__init__.py"
+        )
     except FileNotFoundError:
         doctor_log.warning("doctor: versions directory %s not found", versions_dir)
         return []
@@ -611,27 +615,23 @@ async def main() -> None:
 
     bot_token = getattr(settings, "BOT_TOKEN", "") or ""
     token_prefix = str(bot_token).lower()
-    is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith("placeholder")
+    is_placeholder_token = token_prefix.startswith("dummy") or token_prefix.startswith(
+        "placeholder"
+    )
     service_only_reason: str | None = None
     service_log = startup_log.info
     service_message = ""
     if settings.DEV_DRY_RUN:
         service_only_reason = "DEV_DRY_RUN"
-        service_message = (
-            "DEV_DRY_RUN enabled — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
-        )
+        service_message = "DEV_DRY_RUN enabled — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
     elif not bot_token:
         service_only_reason = "missing BOT_TOKEN"
         service_log = startup_log.warning
-        service_message = (
-            "BOT_TOKEN missing — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
-        )
+        service_message = "BOT_TOKEN missing — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
     elif is_placeholder_token:
         service_only_reason = "placeholder BOT_TOKEN"
         service_log = startup_log.warning
-        service_message = (
-            "Placeholder BOT_TOKEN detected — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
-        )
+        service_message = "Placeholder BOT_TOKEN detected — telegram init skipped; service endpoints ready (/ping, /metrics, /doctor)"
 
     if service_only_reason is not None:
         mark(f"S3: service-only mode ({service_only_reason})")

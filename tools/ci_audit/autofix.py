@@ -18,7 +18,9 @@ _RUFF_STEP = {
     "run": "ruff check . --fix\nruff format .",
 }
 
-_SECURITY_STEP_RUN = 'python tools/security_audit.py --summary || echo "WARN: security audit returned warn"'
+_SECURITY_STEP_RUN = (
+    'python tools/security_audit.py --summary || echo "WARN: security audit returned warn"'
+)
 
 
 @dataclass

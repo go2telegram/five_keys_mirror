@@ -57,7 +57,12 @@ async def _find_existing_order(
 ) -> Order | None:
     """Return the latest order with the same ``txn_id`` if it exists."""
 
-    stmt = select(Order).where(Order.user_id == user_id, Order.provider == provider).order_by(Order.id.desc()).limit(20)
+    stmt = (
+        select(Order)
+        .where(Order.user_id == user_id, Order.provider == provider)
+        .order_by(Order.id.desc())
+        .limit(20)
+    )
     result = await session.execute(stmt)
     for record in result.scalars():
         payload = record.items_json or {}

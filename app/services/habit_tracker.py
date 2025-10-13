@@ -161,7 +161,9 @@ async def streak_for_kind(
     )
 
 
-async def all_streaks(session: AsyncSession, user_id: int, tz: str | dt.tzinfo) -> Dict[str, HabitStreak]:
+async def all_streaks(
+    session: AsyncSession, user_id: int, tz: str | dt.tzinfo
+) -> Dict[str, HabitStreak]:
     tzinfo = _ensure_tz(tz)
     result: Dict[str, HabitStreak] = {}
     for kind in habits_repo.HabitKind:

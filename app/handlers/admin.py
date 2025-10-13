@@ -21,10 +21,7 @@ from app.db.session import (
 )
 from app.feature_flags import feature_flags
 from app.link_manager import active_set_name
-from app.middlewares import (
-    is_callback_trace_enabled,
-    set_callback_trace_enabled,
-)
+from app.middlewares import is_callback_trace_enabled, set_callback_trace_enabled
 from app.repo import (
     events as events_repo,
     leads as leads_repo,
@@ -241,7 +238,9 @@ async def debug_callbacks(message: Message, command: CommandObject) -> None:
         return
 
     status = "включен" if current else "выключен"
-    await message.answer("ℹ️ Callback trace сейчас {status}. Используй /debug_callbacks on|off.".format(status=status))
+    await message.answer(
+        "ℹ️ Callback trace сейчас {status}. Используй /debug_callbacks on|off.".format(status=status)
+    )
 
 
 @router.message(Command("routers"))
@@ -258,7 +257,8 @@ async def routers_dump(message: Message) -> None:
     for idx, entry in enumerate(snapshot, start=1):
         event_counts = ", ".join(f"{event.event}:{len(event.handlers)}" for event in entry.patterns)
         lines.append(
-            f"{idx}. {entry.name} — {entry.handlers_count} handlers" + (f" ({event_counts})" if event_counts else "")
+            f"{idx}. {entry.name} — {entry.handlers_count} handlers"
+            + (f" ({event_counts})" if event_counts else "")
         )
 
     path = write_router_map(Path("build/reports/routers.json"))
@@ -298,7 +298,11 @@ async def toggle_flag(message: Message, command: CommandObject) -> None:
     snapshot = feature_flags.snapshot()
     defaults = feature_flags.defaults()
     state = "ON" if snapshot.get(flag, False) else "OFF"
-    note = " (по умолчанию)" if snapshot.get(flag, False) == defaults.get(flag, False) else " (override)"
+    note = (
+        " (по умолчанию)"
+        if snapshot.get(flag, False) == defaults.get(flag, False)
+        else " (override)"
+    )
 
     overview = _format_flag_snapshot()
     await message.answer(

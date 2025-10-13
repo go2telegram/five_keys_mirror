@@ -49,7 +49,9 @@ def main() -> int:
             if image_path:
                 total_files += 1
 
-    print(f"Quiz asset validation completed. Checked {total_files} referenced files, {missing} issues found.")
+    print(
+        f"Quiz asset validation completed. Checked {total_files} referenced files, {missing} issues found."
+    )
     return 0
 
 

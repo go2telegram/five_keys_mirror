@@ -52,7 +52,9 @@ def _energy_outcome(total: int) -> tuple[str, str, str, list[str]]:
     )
 
 
-async def _on_finish_energy(user_id: int, definition: QuizDefinition, result: QuizResultContext) -> bool:
+async def _on_finish_energy(
+    user_id: int, definition: QuizDefinition, result: QuizResultContext
+) -> bool:
     level_key, level_label, ctx, rec_codes = _energy_outcome(result.total_score)
     lines = product_lines(rec_codes[:3], ctx)
 

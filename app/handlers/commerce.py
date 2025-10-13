@@ -264,9 +264,10 @@ async def _mrr_report_lines(*, session) -> list[str]:
 
     from app.db.models import CommerceSubscription
 
-    stmt = select(func.count(CommerceSubscription.id), func.coalesce(func.sum(CommerceSubscription.amount), 0.0)).where(
-        CommerceSubscription.status == "active"
-    )
+    stmt = select(
+        func.count(CommerceSubscription.id),
+        func.coalesce(func.sum(CommerceSubscription.amount), 0.0),
+    ).where(CommerceSubscription.status == "active")
     total_subs, total_amount = (await session.execute(stmt)).one()
     return [
         f"Активных подписок: {total_subs}",

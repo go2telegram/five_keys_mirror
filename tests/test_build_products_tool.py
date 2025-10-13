@@ -186,7 +186,11 @@ def test_dedupe_products_removes_duplicates() -> None:
             "name": " Product Alpha ",
             "order": {"velavie_link": " https://shop.example.com/a "},
         },
-        {"title": "Product Alpha", "name": "Product Alpha", "order": {"velavie_link": "https://shop.example.com/a"}},
+        {
+            "title": "Product Alpha",
+            "name": "Product Alpha",
+            "order": {"velavie_link": "https://shop.example.com/a"},
+        },
         {
             "title": "Product Bravo",
             "name": "Product Bravo",
@@ -197,5 +201,11 @@ def test_dedupe_products_removes_duplicates() -> None:
     deduped = bp._dedupe_products([product.copy() for product in base_products], dedupe=True)
     assert [item["title"] for item in deduped] == ["Product Alpha", "Product Bravo"]
 
-    without_dedupe = bp._dedupe_products([product.copy() for product in base_products], dedupe=False)
-    assert [item["title"] for item in without_dedupe] == ["Product Alpha", "Product Alpha", "Product Bravo"]
+    without_dedupe = bp._dedupe_products(
+        [product.copy() for product in base_products], dedupe=False
+    )
+    assert [item["title"] for item in without_dedupe] == [
+        "Product Alpha",
+        "Product Alpha",
+        "Product Bravo",
+    ]

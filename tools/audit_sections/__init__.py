@@ -80,7 +80,9 @@ def section(
 ) -> Callable[[AuditContext], SectionResult]:
     """Decorator to attach a canonical name to a section function."""
 
-    def decorator(inner: Callable[[AuditContext], SectionResult]) -> Callable[[AuditContext], SectionResult]:
+    def decorator(
+        inner: Callable[[AuditContext], SectionResult]
+    ) -> Callable[[AuditContext], SectionResult]:
         def wrapper(ctx: AuditContext) -> SectionResult:
             result = inner(ctx)
             if result.name != name:

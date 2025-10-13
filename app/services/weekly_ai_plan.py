@@ -14,7 +14,11 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.config import settings
 from app.db.session import compat_session, session_scope
-from app.repo import events as events_repo, profiles as profiles_repo, subscriptions as subscriptions_repo
+from app.repo import (
+    events as events_repo,
+    profiles as profiles_repo,
+    subscriptions as subscriptions_repo,
+)
 from app.services import premium_metrics
 from app.services.plan_storage import archive_plan
 

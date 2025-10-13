@@ -132,7 +132,9 @@ async def _finish(
 
     user = target.from_user
     texts = _texts_from_user(user)
-    context = CalculationContext(data=data, user_id=user.id, username=getattr(user, "username", None))
+    context = CalculationContext(
+        data=data, user_id=user.id, username=getattr(user, "username", None)
+    )
     result: CalculationResult = definition.build_result(context)
     discount_link = await get_register_link()
     plan_data = dict(result.plan_payload)
@@ -163,7 +165,9 @@ async def _finish(
     SESSIONS.pop(user.id, None)
 
 
-async def _handle_input(message: Message, definition: CalculatorDefinition, session: SessionData) -> None:
+async def _handle_input(
+    message: Message, definition: CalculatorDefinition, session: SessionData
+) -> None:
     index = int(session.get("step_index", 0))
     step = definition.steps[index]
     if not isinstance(step, InputStep):
@@ -174,7 +178,9 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         value = step.parser(text)
     except ValueError:
         texts = _texts_from_user(message.from_user)
-        markup = _step_keyboard(definition.slug, step, allow_back=index > 0, texts=texts).as_markup()
+        markup = _step_keyboard(
+            definition.slug, step, allow_back=index > 0, texts=texts
+        ).as_markup()
         await message.answer(f"{step.error}\n\n{step.prompt}", reply_markup=markup)
         return
 
@@ -182,7 +188,9 @@ async def _handle_input(message: Message, definition: CalculatorDefinition, sess
         error = validator(value)
         if error:
             texts = _texts_from_user(message.from_user)
-            markup = _step_keyboard(definition.slug, step, allow_back=index > 0, texts=texts).as_markup()
+            markup = _step_keyboard(
+                definition.slug, step, allow_back=index > 0, texts=texts
+            ).as_markup()
             await message.answer(f"{error}\n\n{step.prompt}", reply_markup=markup)
             return
 
@@ -231,7 +239,9 @@ async def _handle_choice(
         await _send_step(callback, definition, session, replace=True)
 
 
-async def _handle_back(callback: CallbackQuery, definition: CalculatorDefinition, session: SessionData) -> None:
+async def _handle_back(
+    callback: CallbackQuery, definition: CalculatorDefinition, session: SessionData
+) -> None:
     index = int(session.get("step_index", 0))
     if index <= 0:
         await callback.answer()
@@ -250,7 +260,9 @@ async def _handle_back(callback: CallbackQuery, definition: CalculatorDefinition
     await _send_step(callback, definition, session, replace=True)
 
 
-async def _handle_repeat(callback: CallbackQuery, definition: CalculatorDefinition, session: SessionData) -> None:
+async def _handle_repeat(
+    callback: CallbackQuery, definition: CalculatorDefinition, session: SessionData
+) -> None:
     await callback.answer()
     await _send_step(callback, definition, session, replace=True)
 
@@ -332,7 +344,9 @@ async def _dispatch_callback(callback: CallbackQuery) -> None:
 
     if action == "opt" and len(rest) == 2:
         step_key, option_key = rest
-        await _handle_choice(callback, definition, session, step_key=step_key, option_key=option_key)
+        await _handle_choice(
+            callback, definition, session, step_key=step_key, option_key=option_key
+        )
         return
 
     await callback.answer()

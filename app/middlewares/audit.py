@@ -80,7 +80,9 @@ class AuditMiddleware(BaseMiddleware):
                     )
                 elif event.callback_query:
                     callback = event.callback_query
-                    chat_id = getattr(callback.message.chat, "id", None) if callback.message else None
+                    chat_id = (
+                        getattr(callback.message.chat, "id", None) if callback.message else None
+                    )
                     _log_cb(event.update_id, callback, chat_id)
             elif isinstance(event, Message):
                 _log_msg(

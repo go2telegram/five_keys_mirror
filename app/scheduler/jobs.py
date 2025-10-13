@@ -55,7 +55,9 @@ async def send_daily_tips(bot: Bot) -> None:
         for setting in settings:
             tz = retention_logic.ensure_timezone(setting.timezone)
             local_now = now.astimezone(tz)
-            if not retention_logic.should_send_tip(local_now, setting.tips_time, setting.last_tip_sent_at):
+            if not retention_logic.should_send_tip(
+                local_now, setting.tips_time, setting.last_tip_sent_at
+            ):
                 continue
             tip = await retention_repo.pick_tip(session, exclude_id=setting.last_tip_id)
             if tip is None:
@@ -336,10 +338,18 @@ async def export_analytics_snapshot() -> Path | None:
         quiz_7d = await events_repo.stats(session, name="quiz_finish", since=week_ago)
         plans_24h = await events_repo.stats(session, name="plan_generated", since=day_ago)
         plans_7d = await events_repo.stats(session, name="plan_generated", since=week_ago)
-        retention_test_24h = await events_repo.stats(session, name="retention_test_nudge", since=day_ago)
-        retention_test_7d = await events_repo.stats(session, name="retention_test_nudge", since=week_ago)
-        retention_premium_24h = await events_repo.stats(session, name="retention_premium_nudge", since=day_ago)
-        retention_premium_7d = await events_repo.stats(session, name="retention_premium_nudge", since=week_ago)
+        retention_test_24h = await events_repo.stats(
+            session, name="retention_test_nudge", since=day_ago
+        )
+        retention_test_7d = await events_repo.stats(
+            session, name="retention_test_nudge", since=week_ago
+        )
+        retention_premium_24h = await events_repo.stats(
+            session, name="retention_premium_nudge", since=day_ago
+        )
+        retention_premium_7d = await events_repo.stats(
+            session, name="retention_premium_nudge", since=week_ago
+        )
 
         total_leads_stmt = select(func.count(Lead.id))
         total_leads = (await session.execute(total_leads_stmt)).scalar_one()
@@ -348,7 +358,9 @@ async def export_analytics_snapshot() -> Path | None:
 
         active_subs_stmt = select(func.count(Subscription.user_id)).where(Subscription.until > now)
         active_subs = (await session.execute(active_subs_stmt)).scalar_one()
-        new_subs_stmt = select(func.count(Subscription.user_id)).where(Subscription.since >= week_ago)
+        new_subs_stmt = select(func.count(Subscription.user_id)).where(
+            Subscription.since >= week_ago
+        )
         new_subs = (await session.execute(new_subs_stmt)).scalar_one()
 
     payload = {

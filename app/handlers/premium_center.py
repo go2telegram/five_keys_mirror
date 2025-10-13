@@ -10,12 +10,7 @@ from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import (
-    BufferedInputFile,
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 try:  # pragma: no cover - optional dependency fallback
@@ -187,7 +182,9 @@ async def _generate_chart(user_id: int) -> BufferedInputFile | None:
     end = dt.datetime.now(dt.timezone.utc)
     start = end - dt.timedelta(days=7)
     async with compat_session(session_scope) as session:
-        events = await habits_repo.events_between(session, user_id, start, end, kinds=("water", "sleep", "stress"))
+        events = await habits_repo.events_between(
+            session, user_id, start, end, kinds=("water", "sleep", "stress")
+        )
     if not events:
         return None
 
@@ -388,7 +385,9 @@ def _parse_value(message: Message, default: float) -> float | None:
 async def _log_habit(message: Message, kind: str, value: float) -> None:
     async with compat_session(session_scope) as session:
         await habits_repo.add_event(session, message.from_user.id, kind, value)
-        await events_repo.log(session, message.from_user.id, "habit_track", {"kind": kind, "value": value})
+        await events_repo.log(
+            session, message.from_user.id, "habit_track", {"kind": kind, "value": value}
+        )
         await commit_safely(session)
     premium_metrics.record_tracker_event()
 

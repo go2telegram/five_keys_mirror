@@ -12,7 +12,9 @@ def test_stress_quiz_definition():
     assert quiz.cover == "stress/cover.png"
     assert 5 <= len(quiz.questions) <= 7
 
-    collected_tags = {tag for question in quiz.questions for option in question.options for tag in option.tags}
+    collected_tags = {
+        tag for question in quiz.questions for option in question.options for tag in option.tags
+    }
     expected_tags = {"stress_support", "theanine", "magnesium", "adaptogens", "reduce_caffeine"}
     assert expected_tags.issubset(collected_tags)
 

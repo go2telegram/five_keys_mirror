@@ -48,9 +48,7 @@ CALLBACK_RE = re.compile(
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REMOTE_BASE = (
-    "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/quizzes"
-)
+DEFAULT_REMOTE_BASE = "https://raw.githubusercontent.com/go2telegram/media/1312d74492d26a8de5b8a65af38293fe6bf8ccc5/media/quizzes"
 
 _quiz_mode = os.getenv("QUIZ_IMAGE_MODE", "remote").strip().lower()
 QUIZ_IMAGE_MODE = _quiz_mode if _quiz_mode in {"remote", "local"} else "remote"
@@ -349,7 +347,11 @@ async def answer_callback(
         return
 
     option = next(
-        (candidate for candidate in current_question.options if candidate.key == payload.answer_key),
+        (
+            candidate
+            for candidate in current_question.options
+            if candidate.key == payload.answer_key
+        ),
         None,
     )
     if option is None:
@@ -392,7 +394,9 @@ async def answer_callback(
         if not handled:
             await _send_default_result(call, definition, result_context, tip=tip)
         elif message and tip:
-            tags_line = ", ".join(result_context.threshold.tags) if result_context.threshold.tags else "—"
+            tags_line = (
+                ", ".join(result_context.threshold.tags) if result_context.threshold.tags else "—"
+            )
             tip_lines = [
                 f"💡 AI совет: {tip}",
                 "",
@@ -561,7 +565,9 @@ def _validate_thresholds(name: str, thresholds: list[QuizThreshold]) -> None:
     prev_max: int | None = None
     for threshold in thresholds:
         if threshold.min > threshold.max:
-            raise ValueError(f"Quiz {name} has invalid threshold range: {threshold.min}>{threshold.max}")
+            raise ValueError(
+                f"Quiz {name} has invalid threshold range: {threshold.min}>{threshold.max}"
+            )
         if prev_max is not None and threshold.min > prev_max + 1:
             logger.warning(
                 "Quiz %s thresholds have gaps between %s and %s",
@@ -593,7 +599,9 @@ async def _send_cover(message: Message, definition: QuizDefinition) -> None:
     await message.answer(caption)
 
 
-async def _send_question(message: Message, definition: QuizDefinition, index: int) -> Message | None:
+async def _send_question(
+    message: Message, definition: QuizDefinition, index: int
+) -> Message | None:
     total = len(definition.questions)
     question = definition.questions[index]
 
@@ -654,7 +662,9 @@ async def _record_question_state(
     await state.set_state(_question_state(index))
 
 
-async def _handle_step_timeout(call: CallbackQuery, state: FSMContext, definition: QuizDefinition) -> None:
+async def _handle_step_timeout(
+    call: CallbackQuery, state: FSMContext, definition: QuizDefinition
+) -> None:
     await state.clear()
 
     builder = InlineKeyboardBuilder()
@@ -918,7 +928,9 @@ def _flexible_image_lookup(relative: str) -> Path | None:
     return None
 
 
-def _materialize_answers(definition: QuizDefinition, answer_keys: dict[str, str]) -> dict[str, QuizOption]:
+def _materialize_answers(
+    definition: QuizDefinition, answer_keys: dict[str, str]
+) -> dict[str, QuizOption]:
     mapping: dict[str, QuizOption] = {}
     for question in definition.questions:
         key = answer_keys.get(question.id)
@@ -946,7 +958,9 @@ def _question_state(index: int) -> State:
     return State(f"{QuizSession.__name__}:Q{index + 1}")
 
 
-def _recalculate_progress(definition: QuizDefinition, answers: dict[str, str]) -> tuple[int, list[str]]:
+def _recalculate_progress(
+    definition: QuizDefinition, answers: dict[str, str]
+) -> tuple[int, list[str]]:
     score = 0
     tags: list[str] = []
     for question in definition.questions:

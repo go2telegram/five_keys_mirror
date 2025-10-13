@@ -43,7 +43,13 @@ class HabitEvent:
 
     @classmethod
     def from_model(cls, model: TrackEvent) -> "HabitEvent":
-        return cls(id=model.id, user_id=model.user_id, kind=HabitKind.parse(model.kind), value=model.value, ts=model.ts)
+        return cls(
+            id=model.id,
+            user_id=model.user_id,
+            kind=HabitKind.parse(model.kind),
+            value=model.value,
+            ts=model.ts,
+        )
 
 
 async def add_event(
@@ -97,7 +103,9 @@ async def events_between(
     return [HabitEvent.from_model(model) for model in result.scalars()]
 
 
-async def last_event(session: AsyncSession, user_id: int, kind: str | HabitKind) -> HabitEvent | None:
+async def last_event(
+    session: AsyncSession, user_id: int, kind: str | HabitKind
+) -> HabitEvent | None:
     """Fetch the latest event of the given kind for a user."""
 
     habit = HabitKind.parse(kind)

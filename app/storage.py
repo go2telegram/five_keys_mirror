@@ -38,6 +38,7 @@ if USE_REDIS:
 
     def _run_async(coro: Awaitable[Any] | asyncio.Future[Any]) -> Any:
         return asyncio.run_coroutine_threadsafe(coro, _redis_loop).result()
+
 else:
     _redis_loop = None
 

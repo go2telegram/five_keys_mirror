@@ -31,7 +31,9 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(length=32), nullable=True),
         sa.Column("coupon_code", sa.String(length=32), nullable=True),
         sa.Column("utm_json", _json, nullable=False, server_default=_json_default),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=_ts_default),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=_ts_default
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_orders_user_id", "orders", ["user_id"])
@@ -57,7 +59,9 @@ def upgrade() -> None:
     )
 
     with op.batch_alter_table("subscriptions", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("status", sa.String(length=16), nullable=False, server_default="active"))
+        batch_op.add_column(
+            sa.Column("status", sa.String(length=16), nullable=False, server_default="active")
+        )
         batch_op.add_column(
             sa.Column(
                 "started_at",
@@ -75,7 +79,9 @@ def upgrade() -> None:
         sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("plan", sa.String(length=32), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="active"),
-        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False, server_default=_ts_default),
+        sa.Column(
+            "started_at", sa.DateTime(timezone=True), nullable=False, server_default=_ts_default
+        ),
         sa.Column("renewed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("txn_id", sa.String(length=64), nullable=True),
         sa.Column("amount", sa.Float(asdecimal=False), nullable=False, server_default=sa.text("0")),

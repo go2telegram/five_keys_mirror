@@ -22,7 +22,9 @@ def _resolve_admin_ids() -> set[int]:
     if settings.ADMIN_ID:
         admins.add(int(settings.ADMIN_ID))
     extra = settings.ADMIN_USER_IDS or []
-    iterator = extra if isinstance(extra, Iterable) and not isinstance(extra, (str, bytes)) else [extra]
+    iterator = (
+        extra if isinstance(extra, Iterable) and not isinstance(extra, (str, bytes)) else [extra]
+    )
     for item in iterator:
         try:
             admins.add(int(item))
@@ -43,7 +45,9 @@ class RateLimitMiddleware(BaseMiddleware):
     ) -> None:
         super().__init__()
         self._default_limit = default_limit
-        self._command_limits = {key.lstrip("/"): value for key, value in (command_limits or {}).items()}
+        self._command_limits = {
+            key.lstrip("/"): value for key, value in (command_limits or {}).items()
+        }
         self._admins = {int(admin) for admin in (admin_ids or _resolve_admin_ids()) if admin}
         self._buckets: dict[tuple[str, int], deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
@@ -67,7 +71,9 @@ class RateLimitMiddleware(BaseMiddleware):
         if isinstance(event, Message):
             command = self._extract_command(event)
             if command and command in self._command_limits:
-                allowed, retry_after = await self._touch_bucket((command, user_id), self._command_limits[command])
+                allowed, retry_after = await self._touch_bucket(
+                    (command, user_id), self._command_limits[command]
+                )
                 if not allowed:
                     await self._notify(event, retry_after)
                     return None
@@ -86,7 +92,10 @@ class RateLimitMiddleware(BaseMiddleware):
             if len(bucket) >= count:
                 retry_after = window - (now - bucket[0])
                 self._log.warning(
-                    "rate limit triggered scope=%s user=%s retry_after=%.2f", key[0], key[1], max(retry_after, 0.0)
+                    "rate limit triggered scope=%s user=%s retry_after=%.2f",
+                    key[0],
+                    key[1],
+                    max(retry_after, 0.0),
                 )
                 return False, max(retry_after, 0.0)
             bucket.append(now)

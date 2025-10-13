@@ -103,8 +103,12 @@ _STATUS_EMOJI = {
 
 def _parse_args(argv: Iterable[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fast", action="store_true", help="Пропустить линтеры и нагрузочный смоук")
-    parser.add_argument("--ci", action="store_true", help="CI-режим: выход с ошибкой при критических проблемах")
+    parser.add_argument(
+        "--fast", action="store_true", help="Пропустить линтеры и нагрузочный смоук"
+    )
+    parser.add_argument(
+        "--ci", action="store_true", help="CI-режим: выход с ошибкой при критических проблемах"
+    )
     parser.add_argument(
         "--ci-merge",
         action="store_true",
@@ -211,14 +215,19 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     if context.no_net:
-        print("WARN: Self-audit running in no-network mode; external checks downgraded.", file=sys.stderr)
+        print(
+            "WARN: Self-audit running in no-network mode; external checks downgraded.",
+            file=sys.stderr,
+        )
 
     results: Dict[str, SectionResult] = {}
     timings: Dict[str, float] = {}
 
     for name, handler in _SECTION_HANDLERS.items():
         if args.fast and name in _FAST_SKIPS:
-            results[name] = SectionResult(name=name, status="skip", summary="Пропущено в режиме --fast.")
+            results[name] = SectionResult(
+                name=name, status="skip", summary="Пропущено в режиме --fast."
+            )
             continue
         start = time.perf_counter()
         try:
@@ -258,13 +267,19 @@ def main(argv: Iterable[str] | None = None) -> int:
         "sections": {name: result.to_dict() for name, result in results.items()},
         "timings": timings,
     }
-    json_path.write_text(json.dumps(json_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(json_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
     timings_path = reports_dir / TIMINGS_REPORT
-    timings_path.write_text(json.dumps(timings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    timings_path.write_text(
+        json.dumps(timings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
     critical_errors = [
-        name for name, result in results.items() if result.status in {"error", "fail"} and name in _CRITICAL_FOR_CI
+        name
+        for name, result in results.items()
+        if result.status in {"error", "fail"} and name in _CRITICAL_FOR_CI
     ]
     status_counts: Dict[str, int] = {}
     for result in results.values():

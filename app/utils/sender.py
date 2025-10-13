@@ -70,14 +70,18 @@ class ChatSender:
 
         return _send
 
-    def send_photo(self, chat_id: int, photo: InputFile | BufferedInputFile | bytes, **kwargs: Any) -> Step:
+    def send_photo(
+        self, chat_id: int, photo: InputFile | BufferedInputFile | bytes, **kwargs: Any
+    ) -> Step:
         async def _send():
             bot = self._resolve_bot()
             return await bot.send_photo(chat_id, photo, **kwargs)
 
         return _send
 
-    def send_document(self, chat_id: int, document: InputFile | BufferedInputFile | bytes, **kwargs: Any) -> Step:
+    def send_document(
+        self, chat_id: int, document: InputFile | BufferedInputFile | bytes, **kwargs: Any
+    ) -> Step:
         async def _send():
             bot = self._resolve_bot()
             return await bot.send_document(chat_id, document, **kwargs)

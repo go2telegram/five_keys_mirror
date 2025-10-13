@@ -53,7 +53,11 @@ async def test_canary_rollout_distribution(tmp_path) -> None:
     await manager.initialize()
 
     total = 1000
-    enabled = sum(1 for user_id in range(1, total + 1) if manager.is_enabled("FF_NEW_ONBOARDING", user_id=user_id))
+    enabled = sum(
+        1
+        for user_id in range(1, total + 1)
+        if manager.is_enabled("FF_NEW_ONBOARDING", user_id=user_id)
+    )
     share = enabled / total
 
     assert 0.25 <= share <= 0.35

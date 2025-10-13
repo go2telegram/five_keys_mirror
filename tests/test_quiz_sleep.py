@@ -10,12 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from app.quiz.engine import (
-    answer_callback,
-    build_answer_callback_data,
-    load_quiz,
-    start_quiz,
-)
+from app.quiz.engine import answer_callback, build_answer_callback_data, load_quiz, start_quiz
 
 
 class _DummyMessage:
@@ -36,7 +31,9 @@ class _DummyMessage:
         self.last_child = child
         return child
 
-    async def answer_photo(self, photo: str, caption: str, **kwargs) -> "_DummyMessage":  # noqa: ANN003
+    async def answer_photo(
+        self, photo: str, caption: str, **kwargs
+    ) -> "_DummyMessage":  # noqa: ANN003
         self.photos.append({"photo": photo, "caption": caption, "kwargs": kwargs})
         child = _DummyMessage(self.chat.id)
         self.last_child = child

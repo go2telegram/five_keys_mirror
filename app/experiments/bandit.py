@@ -51,4 +51,7 @@ class EpsilonGreedyBandit:
         return arm
 
     def to_dict(self) -> Dict[str, dict[str, float | int]]:
-        return {name: {"shows": arm.shows, "clicks": arm.clicks, "ctr": arm.ctr} for name, arm in self.arms.items()}
+        return {
+            name: {"shows": arm.shows, "clicks": arm.clicks, "ctr": arm.ctr}
+            for name, arm in self.arms.items()
+        }

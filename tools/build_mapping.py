@@ -202,7 +202,9 @@ def _iter_image_tokens(entry: ImageEntry) -> Iterable[str]:
                 yield swapped
 
 
-def _build_candidate_map(descriptions: Sequence[DescriptionEntry]) -> dict[str, list[DescriptionEntry]]:
+def _build_candidate_map(
+    descriptions: Sequence[DescriptionEntry],
+) -> dict[str, list[DescriptionEntry]]:
     mapping: dict[str, list[DescriptionEntry]] = {}
     for desc in descriptions:
         forms = {
@@ -323,7 +325,9 @@ def build_catalog_entries(
 def write_csv(path: Path, entries: Sequence[CatalogEntry]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["image_file", "product_id", "title", "status", "order_velavie_link", "notes"])
+        writer.writerow(
+            ["image_file", "product_id", "title", "status", "order_velavie_link", "notes"]
+        )
         for entry in entries:
             writer.writerow(
                 [
@@ -383,7 +387,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--csv", type=Path, required=True)
     parser.add_argument("--txt", type=Path, required=True)
     parser.add_argument("--expect-images", type=int)
-    parser.add_argument("--fail-on-mismatch", action="store_true", help="Reserved for compatibility")
+    parser.add_argument(
+        "--fail-on-mismatch", action="store_true", help="Reserved for compatibility"
+    )
     return parser.parse_args(argv)
 
 

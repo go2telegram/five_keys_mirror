@@ -114,7 +114,9 @@ async def tips_time(message: Message, command: CommandObject) -> None:
             {"time": desired.strftime("%H:%M")},
         )
         await commit_safely(session)
-    await message.answer(f"Время советов обновлено: {desired.strftime('%H:%M')} по твоему часовому поясу")
+    await message.answer(
+        f"Время советов обновлено: {desired.strftime('%H:%M')} по твоему часовому поясу"
+    )
 
 
 @router.callback_query(F.data.regexp(r"^tips:like:\d+$"))

@@ -52,7 +52,9 @@ def _immunity_outcome(total: int) -> tuple[str, str, str, list[str]]:
         )
     return (
         "severe",
-        ("\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 \u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"),
+        (
+            "\u0418\u043c\u043c\u0443\u043d\u0438\u0442\u0435\u0442 \u043e\u0441\u043b\u0430\u0431\u043b\u0451\u043d"
+        ),
         "immunity_low",
         ["VITEN", "T8_BLEND", "D3"],
     )

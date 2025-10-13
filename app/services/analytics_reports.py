@@ -63,7 +63,9 @@ def _ensure_export_dir(directory: Path) -> bool:
         return False
 
 
-def export_csv(filename: str, headers: Sequence[str], rows: Iterable[Sequence[object]]) -> Path | None:
+def export_csv(
+    filename: str, headers: Sequence[str], rows: Iterable[Sequence[object]]
+) -> Path | None:
     """Write a CSV snapshot under :mod:`var/exports` and return the path."""
 
     if not _ensure_export_dir(EXPORT_DIR):
@@ -139,7 +141,9 @@ def aggregate_cohorts(
         if created.tzinfo is None:
             created = created.replace(tzinfo=dt.timezone.utc)
         week_start = created.date() - dt.timedelta(days=created.weekday())
-        row = cohorts.setdefault(week_start, CohortRow(week_start=week_start, new_users=0, conversions=0))
+        row = cohorts.setdefault(
+            week_start, CohortRow(week_start=week_start, new_users=0, conversions=0)
+        )
         row.new_users += 1
         cohort_lookup[user.id] = week_start
 
@@ -234,7 +238,9 @@ def export_cohort_csv(rows: Sequence[CohortRow]) -> Path | None:
         )
         for row in rows
     ]
-    return export_csv("cohorts_" + timestamp + ".csv", ["week", "new_users", "conversions", "rate"], csv_rows)
+    return export_csv(
+        "cohorts_" + timestamp + ".csv", ["week", "new_users", "conversions", "rate"], csv_rows
+    )
 
 
 def export_ctr_csv(rows: Sequence[CTRRow]) -> Path | None:

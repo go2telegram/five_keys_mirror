@@ -26,7 +26,9 @@ class PremiumSubscription:
     def is_active(self, as_of: dt.datetime) -> bool:
         if as_of.tzinfo is None:
             as_of = as_of.replace(tzinfo=dt.timezone.utc)
-        start = self.started if self.started.tzinfo else self.started.replace(tzinfo=dt.timezone.utc)
+        start = (
+            self.started if self.started.tzinfo else self.started.replace(tzinfo=dt.timezone.utc)
+        )
         end = self.until if self.until.tzinfo else self.until.replace(tzinfo=dt.timezone.utc)
         return start <= as_of < end
 
@@ -60,7 +62,9 @@ class PremiumReport:
         lines.append(f"MRR: {self.mrr:.2f} ₽")
         lines.append(f"Активных подписок: {self.active_subs}")
         if self.new_subs_per_day:
-            newest = ", ".join(f"{day:%d.%m}: {count}" for day, count in sorted(self.new_subs_per_day.items()))
+            newest = ", ".join(
+                f"{day:%d.%m}: {count}" for day, count in sorted(self.new_subs_per_day.items())
+            )
             lines.append(f"Новые/день: {newest}")
         else:
             lines.append("Новые/день: нет данных")

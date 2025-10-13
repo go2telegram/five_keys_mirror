@@ -18,7 +18,9 @@ router = Router()
 
 MSD_INPUT_RE = re.compile(r"^\s*(?P<height>\d{2,3})\s*(?P<sex>[МмЖж])\s*$")
 
-MSD_PROMPT = "Не удалось распознать ввод. Пример: <code>165 Ж</code>.\nУкажи рост в сантиметрах и пол (М/Ж)."
+MSD_PROMPT = (
+    "Не удалось распознать ввод. Пример: <code>165 Ж</code>.\nУкажи рост в сантиметрах и пол (М/Ж)."
+)
 
 # --- Наборы рекомендаций под калькуляторы ---
 
@@ -117,7 +119,9 @@ async def _process_msd(message: Message) -> None:
     }
 
     async with compat_session(session_scope) as session:
-        await users_repo.get_or_create_user(session, message.from_user.id, message.from_user.username)
+        await users_repo.get_or_create_user(
+            session, message.from_user.id, message.from_user.username
+        )
         await set_last_plan(session, message.from_user.id, plan_payload)
         await events_repo.log(
             session,
@@ -127,9 +131,7 @@ async def _process_msd(message: Message) -> None:
         )
         await commit_safely(session)
 
-    headline = (
-        f"Ориентир по формуле MSD: <b>{ideal} кг</b>.\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
-    )
+    headline = f"Ориентир по формуле MSD: <b>{ideal} кг</b>.\nФормула — это ориентир. Фокус на составе тела (мышцы ≠ жир)."
     await send_product_cards(
         message,
         "Итог: идеальный вес по MSD",

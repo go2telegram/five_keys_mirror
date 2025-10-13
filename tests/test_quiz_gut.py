@@ -15,7 +15,9 @@ def test_gut_quiz_definition():
 
     assert definition.cover == "gut/cover.png"
     assert len(definition.questions) == 5
-    assert all(question.image and question.image.startswith("gut/") for question in definition.questions)
+    assert all(
+        question.image and question.image.startswith("gut/") for question in definition.questions
+    )
 
     tags = {tag for threshold in definition.thresholds for tag in threshold.tags}
     assert tags == {"gut", "digest_support", "fiber", "probiotic", "collagen", "vitamins"}

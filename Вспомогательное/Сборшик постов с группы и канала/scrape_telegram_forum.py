@@ -360,12 +360,22 @@ async def export_forum(client: TelegramClient, channel: types.Channel):
         with topics_csv.open("w", newline="", encoding="utf-8") as f:
             w = csv.writer(f, delimiter=";")
             w.writerow(["topic_id", "title", "msgs_total", "last_date", "emoji_id"])
-            w.writerow([0, "Общий поток", len(msgs), (msgs and to_local(msgs[-1].date, TIMEZONE)) or "", ""])
+            w.writerow(
+                [
+                    0,
+                    "Общий поток",
+                    len(msgs),
+                    (msgs and to_local(msgs[-1].date, TIMEZONE)) or "",
+                    "",
+                ]
+            )
     else:
         for t in tqdm(topics, desc="Топики"):
             msgs = await fetch_history_in_topic(client, channel, t.id, limit=1500)
             if msgs:
-                t.date_last_msg = to_local(sorted(msgs, key=lambda m: (m.date or datetime.min))[-1].date, TIMEZONE)
+                t.date_last_msg = to_local(
+                    sorted(msgs, key=lambda m: (m.date or datetime.min))[-1].date, TIMEZONE
+                )
             for m in pick_samples(msgs, SAMPLES_PER_TOPIC, SAMPLE_MODE):
                 samples.append(
                     SampleMsg(
@@ -382,7 +392,9 @@ async def export_forum(client: TelegramClient, channel: types.Channel):
             w = csv.writer(f, delimiter=";")
             w.writerow(["topic_id", "title", "msgs_total", "last_date", "emoji_id"])
             for t in topics:
-                w.writerow([t.id, t.title, t.total_msgs, t.date_last_msg or "", t.icon_emoji_id or ""])
+                w.writerow(
+                    [t.id, t.title, t.total_msgs, t.date_last_msg or "", t.icon_emoji_id or ""]
+                )
 
     samples_csv = EXPORT_DIR / "samples.csv"
     with samples_csv.open("w", newline="", encoding="utf-8") as f:

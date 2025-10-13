@@ -166,7 +166,9 @@ def resolve_chat(app: Client, chat_ref: str, invite_link: str | None = None):
         chat = app.join_chat(invite_link)
         print(f"[i] Вступил в {chat.title} (id {chat.id})")
         return chat
-    raise SystemExit("PEER_ID_INVALID: аккаунт не состоит в чате. Вступи вручную или укажи MITO_INVITE в .env.")
+    raise SystemExit(
+        "PEER_ID_INVALID: аккаунт не состоит в чате. Вступи вручную или укажи MITO_INVITE в .env."
+    )
 
 
 def main():
@@ -250,7 +252,16 @@ def main():
     # Добавим темы из ручного маппинга, даже если в видимой истории нет сообщений
     for tid, title in TOPIC_TITLES.items():
         _ = by_tid.setdefault(
-            tid, {"title": title, "count": 0, "last": None, "head": [], "tail": [], "links": set(), "len_sum": 0}
+            tid,
+            {
+                "title": title,
+                "count": 0,
+                "last": None,
+                "head": [],
+                "tail": [],
+                "links": set(),
+                "len_sum": 0,
+            },
         )
         if by_tid[tid].get("title") is None:
             by_tid[tid]["title"] = title
@@ -310,7 +321,9 @@ def main():
     write_csv(EXPORT_DIR / "links.csv", ["topic_id", "topic_title", "url"], rows_links)
 
     write_csv(
-        EXPORT_DIR / "stats.csv", ["topic_id", "topic_title", "msgs_total", "last_date", "avg_text_len"], rows_stats
+        EXPORT_DIR / "stats.csv",
+        ["topic_id", "topic_title", "msgs_total", "last_date", "avg_text_len"],
+        rows_stats,
     )
 
     (EXPORT_DIR / "export.json").write_text(

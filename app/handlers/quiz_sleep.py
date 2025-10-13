@@ -8,12 +8,7 @@ from app.db.session import compat_session, session_scope
 from app.handlers.quiz_common import safe_edit, send_product_cards
 from app.link_manager import get_register_link
 from app.products import GOAL_MAP
-from app.quiz.engine import (
-    QuizDefinition,
-    QuizHooks,
-    QuizResultContext,
-    register_quiz_hooks,
-)
+from app.quiz.engine import QuizDefinition, QuizHooks, QuizResultContext, register_quiz_hooks
 from app.reco import product_lines
 from app.repo import events as events_repo, retention as retention_repo, users as users_repo
 from app.services import get_reco
@@ -29,7 +24,10 @@ router = Router()
 # ----------------------------
 SLEEP_QUESTIONS = [
     ("Ложитесь ли вы спать до 23:00?", [("Да", 0), ("Иногда", 2), ("Редко/Нет", 4)]),
-    ("Сколько экранного времени перед сном (телефон, ТВ, ноут)?", [("<30 мин", 0), ("30–60 мин", 2), (">1 ч", 4)]),
+    (
+        "Сколько экранного времени перед сном (телефон, ТВ, ноут)?",
+        [("<30 мин", 0), ("30–60 мин", 2), (">1 ч", 4)],
+    ),
     ("Пьёте кофеин (кофе/чай/энергетики) после 16:00?", [("Нет", 0), ("Иногда", 2), ("Часто", 4)]),
     ("Просыпаетесь ли ночью или тяжело засыпаете снова?", [("Нет", 0), ("Иногда", 2), ("Да", 4)]),
     ("Чувствуете усталость даже после 7–8 ч сна?", [("Редко", 0), ("Иногда", 2), ("Часто", 4)]),
@@ -45,7 +43,10 @@ SLEEP_QUESTIONS = [
         "Используете ли кровать только для сна и отдыха (без работы и сериалов)?",
         [("Да", 0), ("Иногда", 2), ("Часто", 4)],
     ),
-    ("Бывают ли тяжёлые ужины/перекусы позднее чем за 2 часа до сна?", [("Редко", 0), ("Иногда", 2), ("Часто", 4)]),
+    (
+        "Бывают ли тяжёлые ужины/перекусы позднее чем за 2 часа до сна?",
+        [("Редко", 0), ("Иногда", 2), ("Часто", 4)],
+    ),
 ]
 
 
@@ -63,7 +64,9 @@ def _merge_tags(result: QuizResultContext) -> list[str]:
 
 
 def _register_yaml_hooks() -> None:
-    async def _on_finish_sleep(user_id: int, definition: QuizDefinition, result: QuizResultContext) -> bool:
+    async def _on_finish_sleep(
+        user_id: int, definition: QuizDefinition, result: QuizResultContext
+    ) -> bool:
         origin = result.origin
         message = origin.message if origin and origin.message else None
         if not message:

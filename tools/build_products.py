@@ -398,7 +398,9 @@ def _load_description_texts(
         local_path = Path(DEFAULT_DESCRIPTIONS_PATH)
         if local_path.exists():
             return _list_local_texts(local_path)
-    return _load_description_texts(descriptions_url=DEFAULT_DESCRIPTIONS_URL, descriptions_path=None)
+    return _load_description_texts(
+        descriptions_url=DEFAULT_DESCRIPTIONS_URL, descriptions_path=None
+    )
 
 
 def _normalize_heading(value: str) -> str:
@@ -794,7 +796,9 @@ def _list_local_images(images_dir: Path) -> list[str]:
         relative = file.relative_to(images_dir)
         normalized_path, trimmed = _normalize_image_relative_path(relative)
         if trimmed and not warned:
-            logging.warning("Nested images directory detected under %s — treating as flattened", images_dir)
+            logging.warning(
+                "Nested images directory detected under %s — treating as flattened", images_dir
+            )
             warned = True
         normalized.append(normalized_path.as_posix())
     return sorted(set(normalized))
@@ -849,7 +853,11 @@ def _match_image(slug_value: str, candidates: list[str]) -> ImageMatch | None:
             score = 1
         elif sanitized_slug and sanitized == sanitized_slug:
             score = 2
-        elif sanitized_slug and sanitized.startswith(sanitized_slug) and "main" in sanitized[len(sanitized_slug) :]:
+        elif (
+            sanitized_slug
+            and sanitized.startswith(sanitized_slug)
+            and "main" in sanitized[len(sanitized_slug) :]
+        ):
             score = 3
         elif alias_intersection:
             score = 4
@@ -1054,7 +1062,9 @@ def build_catalog(
     normalized.sort(key=lambda item: str(item.get("title", "")))
     destination = output or CATALOG_PATH
     payload = {"products": normalized}
-    destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    destination.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     count = len(normalized)
     if resolved_expect_count is not None and count != resolved_expect_count:
         mismatch = f"Built product count mismatch: expected {resolved_expect_count}, got {count}"
@@ -1130,7 +1140,9 @@ def _parse_expect_count(value: str) -> int | str:
     try:
         parsed = int(normalized)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError("--expect-count must be an integer or 'from=images'") from exc
+        raise argparse.ArgumentTypeError(
+            "--expect-count must be an integer or 'from=images'"
+        ) from exc
     if parsed < 0:
         raise argparse.ArgumentTypeError("--expect-count must be non-negative")
     return parsed
@@ -1159,7 +1171,9 @@ def _build_cli(argv: Sequence[str]) -> argparse.Namespace:
     build_parser.add_argument("--images-dir", default=None)
     build_parser.add_argument("--output", type=Path, default=None)
     build_parser.add_argument("--dedupe", choices=("on", "off"), default="on")
-    build_parser.add_argument("--strict-images", action="store_true", help="Fail if a product image cannot be resolved")
+    build_parser.add_argument(
+        "--strict-images", action="store_true", help="Fail if a product image cannot be resolved"
+    )
     build_parser.add_argument(
         "--strict-descriptions",
         action="store_true",

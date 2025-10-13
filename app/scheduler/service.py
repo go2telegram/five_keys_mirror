@@ -78,7 +78,9 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         try:
             weekly_trigger = _parse_weekly_spec(getattr(settings, "WEEKLY_PLAN_CRON", ""))
         except ValueError:
-            logging.getLogger("scheduler").warning("invalid WEEKLY_PLAN_CRON, falling back to Monday 10:00")
+            logging.getLogger("scheduler").warning(
+                "invalid WEEKLY_PLAN_CRON, falling back to Monday 10:00"
+            )
             weekly_trigger = CronTrigger(day_of_week="mon", hour=10, minute=0)
         scheduler.add_job(
             weekly_ai_plan_job,
@@ -115,9 +117,13 @@ def start_scheduler(bot: Bot) -> AsyncIOScheduler:
         analytics_cron = getattr(settings, "ANALYTICS_EXPORT_CRON", None)
         if analytics_cron:
             try:
-                analytics_trigger = CronTrigger.from_crontab(analytics_cron, timezone=settings.TIMEZONE)
+                analytics_trigger = CronTrigger.from_crontab(
+                    analytics_cron, timezone=settings.TIMEZONE
+                )
             except ValueError:
-                logging.getLogger("scheduler").warning("invalid ANALYTICS_EXPORT_CRON, falling back to 21:00")
+                logging.getLogger("scheduler").warning(
+                    "invalid ANALYTICS_EXPORT_CRON, falling back to 21:00"
+                )
                 analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)
         else:
             analytics_trigger = CronTrigger(hour=21, minute=0, timezone=settings.TIMEZONE)

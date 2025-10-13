@@ -43,7 +43,9 @@ async def test_dev_dry_run_skips_bot_initialization(monkeypatch):
 
     monkeypatch.setattr(app_main, "start_scheduler", _fail_scheduler)
 
-    start_background_mock = AsyncMock(side_effect=AssertionError("background queue should be skipped"))
+    start_background_mock = AsyncMock(
+        side_effect=AssertionError("background queue should be skipped")
+    )
     monkeypatch.setattr(app_main, "start_background_queue", start_background_mock)
 
     await app_main.main()

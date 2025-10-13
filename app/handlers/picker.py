@@ -181,7 +181,9 @@ async def pick_life(c: CallbackQuery):
 # --- ШАГ 4: уровень → ограничения ---
 
 
-@router.callback_query(F.data.regexp(r"^pick:lvl:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro)$"))
+@router.callback_query(
+    F.data.regexp(r"^pick:lvl:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro)$")
+)
 async def pick_level(c: CallbackQuery):
     await c.answer()
     _, _, goal_key, age, life, level = c.data.split(":")
@@ -189,7 +191,9 @@ async def pick_level(c: CallbackQuery):
 
     kb = InlineKeyboardBuilder()
     kb.button(text="Нет", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:none")
-    kb.button(text="Аллергия на травы", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs")
+    kb.button(
+        text="Аллергия на травы", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:herbs"
+    )
     kb.button(text="Веган", callback_data=f"pick:all:{goal_key}:{age}:{life}:{level}:vegan")
     _extend_with_back_home(kb, f"pick:life:{goal_key}:{age}:{life}")
     kb.adjust(3, 2)
@@ -200,7 +204,9 @@ async def pick_level(c: CallbackQuery):
 
 
 @router.callback_query(
-    F.data.regexp(r"^pick:all:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan)$")
+    F.data.regexp(
+        r"^pick:all:[a-z_]+:(u30|30_50|50p):(office|active):(basic|pro):(none|herbs|vegan)$"
+    )
 )
 async def pick_allergies(c: CallbackQuery):
     await c.answer()
@@ -208,9 +214,15 @@ async def pick_allergies(c: CallbackQuery):
     SESSIONS.setdefault(c.from_user.id, {}).setdefault("pick", {})["allerg"] = allerg
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="Лето", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:summer")
-    kb.button(text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter")
-    kb.button(text="Другое", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other")
+    kb.button(
+        text="Лето", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:summer"
+    )
+    kb.button(
+        text="Зима", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:winter"
+    )
+    kb.button(
+        text="Другое", callback_data=f"pick:season:{goal_key}:{age}:{life}:{level}:{allerg}:other"
+    )
     _extend_with_back_home(kb, f"pick:lvl:{goal_key}:{age}:{life}:{level}")
     kb.adjust(3, 2)
     await _safe_edit(c, "Сезон:", kb.as_markup())
@@ -231,10 +243,17 @@ async def pick_season(c: CallbackQuery):
 
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="💡 Лайт (1–2 поз.)", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:lite"
+        text="💡 Лайт (1–2 поз.)",
+        callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:lite",
     )
-    kb.button(text="⚖ Стандарт", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std")
-    kb.button(text="🚀 Про", callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro")
+    kb.button(
+        text="⚖ Стандарт",
+        callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:std",
+    )
+    kb.button(
+        text="🚀 Про",
+        callback_data=f"pick:budget:{goal_key}:{age}:{life}:{level}:{allerg}:{season}:pro",
+    )
     _extend_with_back_home(kb, f"pick:all:{goal_key}:{age}:{life}:{level}:{allerg}")
     kb.adjust(3, 2)
     await _safe_edit(c, "Бюджет:", kb.as_markup())

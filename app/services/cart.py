@@ -28,6 +28,7 @@ if USE_REDIS and cart_get is not None:
 
     def _run_async(awaitable: Any) -> Any:
         return asyncio.run_coroutine_threadsafe(awaitable, _redis_loop).result()
+
 else:
     _redis_loop = None
 

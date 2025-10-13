@@ -73,7 +73,9 @@ class DummyMessage:
 
 
 class DummyCallback:
-    def __init__(self, data: str, message: DummyMessage, user_id: int = 1, username: str | None = "tester"):
+    def __init__(
+        self, data: str, message: DummyMessage, user_id: int = 1, username: str | None = "tester"
+    ):
         self.data = data
         self.message = message
         self.from_user = SimpleNamespace(id=user_id, username=username)
@@ -143,7 +145,9 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
         hook_calls = []
 
         async def _on_finish(user_id, definition, result):
-            hook_calls.append((user_id, definition.name, result.total_score, tuple(sorted(result.collected_tags))))
+            hook_calls.append(
+                (user_id, definition.name, result.total_score, tuple(sorted(result.collected_tags)))
+            )
             return False
 
         register_quiz_hooks("sample", QuizHooks(on_finish=_on_finish))
@@ -165,14 +169,18 @@ def test_quiz_happy_path(monkeypatch, quiz_tmp):
             current_message = entry_message.children[-1]
 
             for idx, question in enumerate(definition.questions):
-                callback_data = build_answer_callback_data("sample", question.id, question.options[0].key)
+                callback_data = build_answer_callback_data(
+                    "sample", question.id, question.options[0].key
+                )
                 callback = DummyCallback(callback_data, current_message)
                 await answer_callback(callback, state)
                 if idx < len(definition.questions) - 1:
                     current_message = current_message.children[-1]
 
             assert await state.get_state() is None
-            assert hook_calls == [(callback.from_user.id, "sample", 5, ("tag1", "tag2", "tag3", "tag4", "tag5"))]
+            assert hook_calls == [
+                (callback.from_user.id, "sample", 5, ("tag1", "tag2", "tag3", "tag4", "tag5"))
+            ]
         finally:
             await state.storage.close()
 
@@ -209,7 +217,9 @@ def test_quiz_back_navigation(monkeypatch, quiz_tmp):
             first_question = definition.questions[0]
 
             first_callback = DummyCallback(
-                build_answer_callback_data("sample", first_question.id, first_question.options[0].key),
+                build_answer_callback_data(
+                    "sample", first_question.id, first_question.options[0].key
+                ),
                 current_message,
             )
             await answer_callback(first_callback, state)

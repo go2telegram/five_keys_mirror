@@ -66,9 +66,17 @@ async def link_builder(message: Message, command: CommandObject) -> None:
         username = ""
 
     if username:
-        deeplink = f"https://t.me/{username}?start={encoded_payload}" if encoded_payload else f"https://t.me/{username}"
+        deeplink = (
+            f"https://t.me/{username}?start={encoded_payload}"
+            if encoded_payload
+            else f"https://t.me/{username}"
+        )
     else:
-        deeplink = f"https://t.me/<bot>?start={encoded_payload}" if encoded_payload else "https://t.me/<bot>"
+        deeplink = (
+            f"https://t.me/<bot>?start={encoded_payload}"
+            if encoded_payload
+            else "https://t.me/<bot>"
+        )
 
     bullets = "\n".join(f"• {key}: {params.get(key, '—')}" for key in attribution.UTM_KEYS)
 

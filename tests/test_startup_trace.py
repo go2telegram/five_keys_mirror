@@ -59,7 +59,9 @@ class _DummyBot:
 
 
 @pytest.mark.anyio("asyncio")
-async def test_startup_trace(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+async def test_startup_trace(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     monkeypatch.setenv("SERVICE_HOST", "127.0.0.1")
     monkeypatch.setenv("HEALTH_PORT", "0")
     monkeypatch.setattr(settings, "BOT_TOKEN", "TEST:FAKE", raising=False)

@@ -53,7 +53,9 @@ if settings.DEBUG_COMMANDS:
 
         try:
             webhook = await message.bot.get_webhook_info()
-            lines.append(f"webhook: {webhook.url or 'none'} (pending={webhook.pending_update_count})")
+            lines.append(
+                f"webhook: {webhook.url or 'none'} (pending={webhook.pending_update_count})"
+            )
         except Exception as exc:  # pragma: no cover - network issues during tests
             webhook = None
             log_health.warning("doctor webhook check failed: %s", exc)

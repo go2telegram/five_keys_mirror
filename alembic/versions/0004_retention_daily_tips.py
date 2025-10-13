@@ -94,13 +94,17 @@ def upgrade() -> None:
     op.create_table(
         "retention_settings",
         sa.Column("user_id", sa.BigInteger(), primary_key=True),
-        sa.Column("timezone", sa.String(length=64), nullable=False, server_default=sa.text("'UTC'")),
+        sa.Column(
+            "timezone", sa.String(length=64), nullable=False, server_default=sa.text("'UTC'")
+        ),
         sa.Column("tips_enabled", sa.Boolean(), nullable=False, server_default=sa.text("TRUE")),
         sa.Column("tips_time", sa.Time(), nullable=False, server_default=sa.text("'10:00'")),
         sa.Column("last_tip_sent_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_tip_id", sa.Integer(), nullable=True),
         sa.Column("water_enabled", sa.Boolean(), nullable=False, server_default=sa.text("TRUE")),
-        sa.Column("water_window_start", sa.Time(), nullable=False, server_default=sa.text("'09:00'")),
+        sa.Column(
+            "water_window_start", sa.Time(), nullable=False, server_default=sa.text("'09:00'")
+        ),
         sa.Column("water_window_end", sa.Time(), nullable=False, server_default=sa.text("'21:00'")),
         sa.Column("water_last_sent_date", sa.Date(), nullable=True),
         sa.Column("water_sent_count", sa.SmallInteger(), nullable=False, server_default="0"),

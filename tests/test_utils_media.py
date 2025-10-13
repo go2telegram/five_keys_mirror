@@ -25,7 +25,9 @@ if _UTILS_STUB is not None:
 
 
 class _DummyResponse:
-    def __init__(self, *, status: int = 200, headers: dict[str, str] | None = None, body: bytes = b""):
+    def __init__(
+        self, *, status: int = 200, headers: dict[str, str] | None = None, body: bytes = b""
+    ):
         self.status = status
         self.headers = headers or {}
         self._body = body
@@ -33,7 +35,9 @@ class _DummyResponse:
     async def __aenter__(self) -> "_DummyResponse":
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: D401 - signature required by context manager
+    async def __aexit__(
+        self, exc_type, exc, tb
+    ) -> None:  # noqa: D401 - signature required by context manager
         return None
 
     async def read(self) -> bytes:
@@ -63,14 +67,18 @@ class _DummySession:
     async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: D401
         return None
 
-    def get(self, url: str, *, allow_redirects: bool = True) -> _DummyRequestManager:  # noqa: ARG002 - parity with aiohttp
+    def get(
+        self, url: str, *, allow_redirects: bool = True
+    ) -> _DummyRequestManager:  # noqa: ARG002 - parity with aiohttp
         if not self._outcomes:
             raise AssertionError("No configured outcomes for DummySession")
         outcome = self._outcomes.pop(0)
         return _DummyRequestManager(outcome)
 
 
-def _patch_session(monkeypatch: pytest.MonkeyPatch, outcomes: Iterable[_DummyResponse | Exception]) -> None:
+def _patch_session(
+    monkeypatch: pytest.MonkeyPatch, outcomes: Iterable[_DummyResponse | Exception]
+) -> None:
     def _factory(*args, **kwargs) -> _DummySession:  # noqa: ARG001 - signature parity with aiohttp
         return _DummySession(outcomes)
 

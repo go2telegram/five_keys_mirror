@@ -8,7 +8,9 @@ from app import pdf_report
 
 
 def _ensure_register_url(monkeypatch) -> None:
-    monkeypatch.setattr(pdf_report.settings, "BASE_REGISTER_URL", "https://example.com/register", raising=False)
+    monkeypatch.setattr(
+        pdf_report.settings, "BASE_REGISTER_URL", "https://example.com/register", raising=False
+    )
 
 
 def test_build_pdf_minimal_plan(monkeypatch):
@@ -64,7 +66,15 @@ def test_build_pdf_full_plan(monkeypatch):
         products=["<b>OMEGA3</b> — поддерживает сердце"],
         notes="Наблюдай за самочувствием.",
         footer="Five Keys",
-        intake_rows=[{"name": "OMEGA3", "morning": True, "day": False, "evening": True, "note": "по инструкции"}],
+        intake_rows=[
+            {
+                "name": "OMEGA3",
+                "morning": True,
+                "day": False,
+                "evening": True,
+                "note": "по инструкции",
+            }
+        ],
         order_url="https://example.com/order",
         channel_note="Подключайся к сообществу",
         recommended_products=["OMEGA3"],

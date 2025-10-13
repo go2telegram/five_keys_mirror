@@ -52,8 +52,12 @@ class RetentionManager:
         pushes = {row.flow: row.last_sent for row in result.scalars()}
         return RetentionState(user_id=user_id, last_pushes=pushes)
 
-    async def remember_push(self, session: AsyncSession, user_id: int, kind: str, when: dt.datetime) -> None:
-        stmt = select(RetentionPush).where(RetentionPush.user_id == user_id, RetentionPush.flow == kind)
+    async def remember_push(
+        self, session: AsyncSession, user_id: int, kind: str, when: dt.datetime
+    ) -> None:
+        stmt = select(RetentionPush).where(
+            RetentionPush.user_id == user_id, RetentionPush.flow == kind
+        )
         result = await session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -62,7 +66,9 @@ class RetentionManager:
             model.last_sent = when
         await session.flush()
 
-    def evaluate(self, state: RetentionState, now: dt.datetime | None = None) -> list[RetentionPushPayload]:
+    def evaluate(
+        self, state: RetentionState, now: dt.datetime | None = None
+    ) -> list[RetentionPushPayload]:
         now = now or dt.datetime.now(dt.timezone.utc)
         if now.tzinfo is None:
             now = now.replace(tzinfo=dt.timezone.utc)
@@ -72,7 +78,9 @@ class RetentionManager:
             self.inactivity_threshold is not None
             and not state.has_premium
             and _should_trigger(state.last_activity, self.inactivity_threshold, now)
-            and _should_send_again(state.last_pushes.get(self.FLOW_ENERGY), state.last_activity, now)
+            and _should_send_again(
+                state.last_pushes.get(self.FLOW_ENERGY), state.last_activity, now
+            )
         ):
             pushes.append(
                 RetentionPushPayload(
@@ -86,7 +94,9 @@ class RetentionManager:
             self.premium_threshold is not None
             and not state.has_premium
             and _should_trigger(state.last_energy_test, self.premium_threshold, now)
-            and _should_send_again(state.last_pushes.get(self.FLOW_PREMIUM), state.last_energy_test, now)
+            and _should_send_again(
+                state.last_pushes.get(self.FLOW_PREMIUM), state.last_energy_test, now
+            )
         ):
             pushes.append(
                 RetentionPushPayload(
@@ -99,7 +109,9 @@ class RetentionManager:
         return pushes
 
 
-def _should_trigger(last_event: dt.datetime | None, threshold: dt.timedelta, now: dt.datetime) -> bool:
+def _should_trigger(
+    last_event: dt.datetime | None, threshold: dt.timedelta, now: dt.datetime
+) -> bool:
     if last_event is None:
         return True
     if last_event.tzinfo is None:

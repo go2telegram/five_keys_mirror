@@ -22,7 +22,13 @@ log = logging.getLogger(__name__)
 def _clean_lines(lines: list[str]) -> list[str]:
     out = []
     for s in lines:
-        s = s.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("&nbsp;", " ")
+        s = (
+            s.replace("<b>", "")
+            .replace("</b>", "")
+            .replace("<i>", "")
+            .replace("</i>", "")
+            .replace("&nbsp;", " ")
+        )
         out.append(s)
     return out
 
@@ -122,7 +128,9 @@ async def pdf_cmd(m: Message):
             )
             await commit_safely(session)
     if not plan:
-        await m.answer("Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации.")
+        await m.answer(
+            "Нет актуального плана. Пройдите тест или калькулятор, чтобы я собрал рекомендации."
+        )
         return
 
     key = make_idempotency_key("pdf", m.from_user.id, "cmd")
