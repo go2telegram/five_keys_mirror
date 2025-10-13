@@ -9,6 +9,7 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'needs-human')
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/bootstrap-env
       - name: Send Telegram message
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
         run: |
@@ -16,9 +17,6 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             --data-urlencode "text=${TEXT}" >/dev/null
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Send Slack message
         if: env.SLACK_WEBHOOK_URL != ''
@@ -26,5 +24,3 @@ jobs:
           jq -nc --arg text "🚑 doctor: найдены проблемы\nPR: ${{ github.event.pull_request.html_url }}\nАвтор: ${{ github.event.pull_request.user.login }}\nБранч: ${{ github.event.pull_request.head.ref }}" \
             '{text: $text}' \
           | curl -s -X POST -H 'Content-type: application/json' --data @- "${SLACK_WEBHOOK_URL}" >/dev/null
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
