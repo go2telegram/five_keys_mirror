@@ -1,0 +1,114 @@
+name: env_guard
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify .env.example keys
+        run: |
+          set -e
+          REQUIRED_KEYS=(
+            BOT_TOKEN DEV_DRY_RUN HEALTH_PORT ADMIN_ID ADMIN_USER_IDS LEADS_CHAT_ID
+            DB_URL MIGRATE_ON_START TIMEZONE LOG_LEVEL LOG_DIR VELAVIE_URL
+            VILAVI_REF_LINK_DISCOUNT VILAVI_ORDER_NO_REG BASE_PRODUCT_URL BASE_REGISTER_URL
+            RUN_TRIBUTE_WEBHOOK TRIBUTE_PORT TRIBUTE_API_KEY TRIBUTE_LINK_BASIC TRIBUTE_LINK_PRO
+            SUB_BASIC_PRICE SUB_PRO_PRICE DEBUG_COMMANDS FF_FLOODWAIT_PATCH IMAGES_MODE
+            IMAGES_BASE IMAGES_DIR QUIZ_IMAGE_MODE QUIZ_IMG_BASE STAGE_MEDIA_REF STAGE_IMAGES_BASE
+            STAGE_QUIZ_IMG_BASE STAGE_SENTRY_DSN STAGE_SENTRY_TRACES_SAMPLE_RATE PROD_MEDIA_REF
+            PROD_IMAGES_BASE PROD_QUIZ_IMG_BASE PROD_SENTRY_DSN PROD_SENTRY_TRACES_SAMPLE_RATE
+            AI_PLAN_MODEL WEEKLY_PLAN_CRON PLAN_ARCHIVE_DIR USE_REDIS REDIS_URL CODEX_SHARED_KEY
+            TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID SLACK_WEBHOOK_URL
+          )
+          missing=()
+          for key in "${REQUIRED_KEYS[@]}"; do
+            if ! grep -Eq "^${key}=" .env.example; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing keys in .env.example: ${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Validate .env.example values
+        run: |
+          python <<'PY'
+import re
+from pathlib import Path
+from urllib.parse import urlparse
+
+values = {}
+for line in Path('.env.example').read_text().splitlines():
+    if not line or line.strip().startswith('#'):
+        continue
+    if '=' not in line:
+        continue
+    key, value = line.split('=', 1)
+    values[key.strip()] = value.strip()
+
+health_port = values.get('HEALTH_PORT', '')
+if health_port:
+    if not health_port.isdigit() or int(health_port) <= 0:
+        raise SystemExit(f"HEALTH_PORT must be positive integer, got '{health_port}'")
+
+for key in ('IMAGES_BASE', 'QUIZ_IMG_BASE'):
+    val = values.get(key, '').strip()
+    if val:
+        parsed = urlparse(val)
+        if not parsed.scheme or not parsed.netloc:
+            raise SystemExit(f"{key} has invalid URL: '{val}'")
+PY
+
+      - name: Ensure secrets & vars configured
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: secrets } = await github.rest.actions.listRepoSecrets({ owner, repo, per_page: 100 });
+            const secretNames = secrets.secrets.map(s => s.name);
+            const requiredSecrets = ['BOT_TOKEN', 'CODEX_SHARED_KEY'];
+            const missingSecrets = requiredSecrets.filter(name => !secretNames.includes(name));
+            if (missingSecrets.length) {
+              core.setFailed('Missing repository secrets: ' + missingSecrets.join(', '));
+              return;
+            }
+
+            const { data: vars } = await github.rest.actions.listRepoVariables({ owner, repo, per_page: 100 });
+            const varMap = new Map(vars.variables.map(v => [v.name, v.value]));
+
+            function ensurePort(name) {
+              if (!varMap.has(name)) return;
+              const value = (varMap.get(name) || '').trim();
+              if (!value) return;
+              const num = Number(value);
+              if (!Number.isFinite(num) || num <= 0) {
+                core.setFailed(`${name} repository variable must be positive integer, got '${value}'`);
+              }
+            }
+
+            function ensureUrl(name) {
+              if (!varMap.has(name)) return;
+              const value = (varMap.get(name) || '').trim();
+              if (!value) return;
+              try {
+                new URL(value);
+              } catch (err) {
+                core.setFailed(`${name} repository variable must be valid URL, got '${value}'`);
+              }
+            }
+
+            ensurePort('HEALTH_PORT');
+            ensureUrl('IMAGES_BASE');
+            ensureUrl('QUIZ_IMG_BASE');
