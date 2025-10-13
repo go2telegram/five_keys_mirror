@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Bootstrap env
-        run: ./.github/scripts/bootstrap-env.sh
+        run: .github/scripts/bootstrap-env.sh
         env:
           BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
           CODEX_SHARED_KEY:     ${{ secrets.CODEX_SHARED_KEY }}

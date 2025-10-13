@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bootstrap env
-        run: ./.github/scripts/bootstrap-env.sh
+        run: .github/scripts/bootstrap-env.sh
         env:
           BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
           CODEX_SHARED_KEY:     ${{ secrets.CODEX_SHARED_KEY }}
@@ -170,7 +170,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bootstrap env
-        run: ./.github/scripts/bootstrap-env.sh
+        run: .github/scripts/bootstrap-env.sh
         env:
           BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
           CODEX_SHARED_KEY:     ${{ secrets.CODEX_SHARED_KEY }}
