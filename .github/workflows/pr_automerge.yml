@@ -51,8 +51,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-${{ github.workflow }}-${{ github.run_id }}
-          path: |
-            debug.log
+          path: debug.log
           if-no-files-found: warn
 
   automerge_on_ci_complete:
@@ -61,7 +60,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve PR by SHA
+      - name: Resolve PR by SHA (native)
         id: prnum
         uses: actions/github-script@v7
         with:
@@ -140,6 +139,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-${{ github.workflow }}-${{ github.run_id }}
-          path: |
-            debug.log
+          path: debug.log
           if-no-files-found: warn

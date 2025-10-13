@@ -13,27 +13,25 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve PR number (from head SHA)
+      - name: Resolve PR number (by head branch or commit)
         id: prnum
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
-            // Find PR that triggered this workflow
-            const { data } = await github.rest.pulls.list({
-              owner, repo, head: `${owner}:${{ github.ref_name }}`
-            });
-            if (data.length) {
-              core.setOutput('number', String(data[0].number));
-            } else {
-              // fallback: associated with commit
-              const res = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                owner, repo, commit_sha: context.sha
-              });
-              if (res.data.length) core.setOutput('number', String(res.data[0].number));
-              else core.setOutput('number', '');
+            // Try by head branch (common for PR workflows)
+            const headRef = process.env.GITHUB_HEAD_REF || context.ref.replace('refs/heads/','');
+            let prNumber = "";
+            if (headRef) {
+              const { data } = await github.rest.pulls.list({ owner, repo, head: `${owner}:${headRef}`, state: 'open' });
+              if (data && data.length) prNumber = String(data[0].number);
             }
+            if (!prNumber) {
+              const res = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: context.sha });
+              if (res.data && res.data.length) prNumber = String(res.data[0].number);
+            }
+            core.setOutput('number', prNumber);
 
       - name: Exit if no PR
         if: steps.prnum.outputs.number == ''
@@ -70,7 +68,7 @@ jobs:
             });
             core.setOutput('author', pr.user.login);
 
-      - name: Add automerge label (safe PR)
+      - name: Add 'automerge' label (native)
         if: |
           steps.pf.outputs.risky != 'true' &&
           (steps.pr.outputs.author == 'go2telegram' || steps.pr.outputs.author == 'github-actions[bot]')
@@ -80,15 +78,13 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
             const number = Number("${{ steps.prnum.outputs.number }}");
-            await github.rest.issues.addLabels({
-              owner, repo, issue_number: number, labels: ['automerge']
-            });
+            await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['automerge'] });
+            core.info(`Label 'automerge' added to PR #${number}`);
 
       - name: Upload debug (always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: debug-${{ github.workflow }}-${{ github.run_id }}
-          path: |
-            debug.log
+          path: debug.log
           if-no-files-found: warn
