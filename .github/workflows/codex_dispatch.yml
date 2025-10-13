@@ -101,9 +101,7 @@ jobs:
 
       - name: Lint autofix
         if: steps.p.outputs.cmd == 'lint_autofix'
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
-          bash scripts/lint_autofix.sh
+        run: bash scripts/lint_autofix.sh
 
       - name: PR (render_menu)
         if: steps.p.outputs.cmd == 'render_menu'
@@ -149,10 +147,11 @@ jobs:
         with:
           commit-message: "codex(lint): autofix formatting"
           title: "codex(lint): autofix formatting"
-          body: "Автопочинка форматирования. Открыто через repository_dispatch."
+          body: "Auto-format via black/isort from repository_dispatch."
           branch: "codex-lint-${{ github.run_id }}"
           base: "main"
           labels: "codex,automerge"
           add-paths: |
             **/*.py
+            pyproject.toml
             scripts/lint_autofix.sh
