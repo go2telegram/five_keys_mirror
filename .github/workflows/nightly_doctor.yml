@@ -13,7 +13,17 @@ jobs:
   call-codex-doctor:
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/bootstrap-env
+      - name: Bootstrap env
+        run: ./.github/scripts/bootstrap-env.sh
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          IMAGES_BASE: ${{ vars.IMAGES_BASE }}
+          QUIZ_IMG_BASE: ${{ vars.QUIZ_IMG_BASE }}
+          HEALTH_PORT: ${{ vars.HEALTH_PORT }}
       - name: Trigger repository_dispatch (doctor --fix)
         uses: actions/github-script@v7
         with:
