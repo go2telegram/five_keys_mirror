@@ -37,7 +37,7 @@ jobs:
               return;
             }
             const cmd = payload.cmd || '';
-            const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix'];
+            const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix', 'auto_label'];
             if (!cmd || !allowed.includes(cmd)) {
               core.setFailed(`Unsupported cmd: ${cmd}`);
               return;
@@ -102,6 +102,77 @@ jobs:
       - name: Lint autofix
         if: steps.p.outputs.cmd == 'lint_autofix'
         run: bash scripts/lint_autofix.sh
+
+      # ----- auto_label: повесить automerge на безопасный PR -----
+      - name: Auto-label (from SHA)
+        if: steps.p.outputs.cmd == 'auto_label' && steps.p.outputs.msg == ''
+        uses: peter-evans/find-pull-request@v3
+        id: find_from_sha
+        with:
+          commit: ${{ github.sha }}
+
+      - name: Resolve PR number
+        if: steps.p.outputs.cmd == 'auto_label'
+        id: prnum
+        run: |
+          NUM="${{ steps.find_from_sha.outputs.number }}"
+          if [ -z "$NUM" ]; then
+            # ожидаем, что в msg прокинут номер в виде "pr:123"
+            MSG='${{ steps.p.outputs.msg }}'
+            if [[ "$MSG" =~ ^pr:([0-9]+)$ ]]; then
+              NUM="${BASH_REMATCH[1]}"
+            fi
+          fi
+          if [ -z "$NUM" ]; then
+            echo "PR number not resolved"; exit 0
+          fi
+          echo "number=$NUM" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR head
+        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/pull/${{ steps.prnum.outputs.number }}/head
+
+      - name: Paths filter (risky changes)
+        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        id: pf_autolabel
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            risky:
+              - '.github/workflows/**'
+              - 'Dockerfile'
+              - 'requirements*.txt'
+              - 'run.py'
+              - 'app/main.py'
+              - 'scripts/**'
+
+      - name: Get PR author
+        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        id: pr_author
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const num = Number("${{ steps.prnum.outputs.number }}");
+            const {data: pr} = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: num,
+            });
+            core.setOutput('author', pr.user.login);
+
+      - name: Add automerge label
+        if: |
+          steps.p.outputs.cmd == 'auto_label' &&
+          steps.prnum.outputs.number != '' &&
+          steps.pf_autolabel.outputs.risky != 'true' &&
+          (steps.pr_author.outputs.author == 'go2telegram' || steps.pr_author.outputs.author == 'github-actions[bot]')
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: automerge
+          number: ${{ steps.prnum.outputs.number }}
 
       - name: PR (render_menu)
         if: steps.p.outputs.cmd == 'render_menu'
