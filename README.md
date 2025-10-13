@@ -526,3 +526,7 @@ Docker-compose поднимет Postgres, выполнит миграции и �
 - `python -m app.main` — основной вход.
 - `alembic current` — проверить версию схемы.
 - `make dev` / `make migrate msg=...` — см. Makefile.
+
+## Документация
+
+- [CODEX_DISPATCH.md](docs/CODEX_DISPATCH.md) — вызовы GitHub Actions через `repository_dispatch`
