@@ -20,14 +20,54 @@ jobs:
       - name: Bootstrap env
         run: ./.github/scripts/bootstrap-env.sh
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          IMAGES_BASE: ${{ vars.IMAGES_BASE }}
-          QUIZ_IMG_BASE: ${{ vars.QUIZ_IMG_BASE }}
-          HEALTH_PORT: ${{ vars.HEALTH_PORT }}
+          BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
+          CODEX_SHARED_KEY:     ${{ secrets.CODEX_SHARED_KEY }}
+          TRIBUTE_API_KEY:      ${{ secrets.TRIBUTE_API_KEY }}
+          STAGE_SENTRY_DSN:     ${{ secrets.STAGE_SENTRY_DSN }}
+          PROD_SENTRY_DSN:      ${{ secrets.PROD_SENTRY_DSN }}
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL:    ${{ secrets.SLACK_WEBHOOK_URL }}
+          DB_URL:               ${{ secrets.DB_URL }}
+          REDIS_URL:            ${{ secrets.REDIS_URL }}
+          HEALTH_PORT:          ${{ vars.HEALTH_PORT }}
+          DEV_DRY_RUN:          ${{ vars.DEV_DRY_RUN }}
+          ADMIN_ID:             ${{ vars.ADMIN_ID }}
+          ADMIN_USER_IDS:       ${{ vars.ADMIN_USER_IDS }}
+          MIGRATE_ON_START:     ${{ vars.MIGRATE_ON_START }}
+          TIMEZONE:             ${{ vars.TIMEZONE }}
+          LOG_LEVEL:            ${{ vars.LOG_LEVEL }}
+          LOG_DIR:              ${{ vars.LOG_DIR }}
+          VELAVIE_URL:          ${{ vars.VELAVIE_URL }}
+          VILAVI_REF_LINK_DISCOUNT: ${{ vars.VILAVI_REF_LINK_DISCOUNT }}
+          VILAVI_ORDER_NO_REG:  ${{ vars.VILAVI_ORDER_NO_REG }}
+          BASE_REGISTER_URL:    ${{ vars.BASE_REGISTER_URL }}
+          LEADS_CHAT_ID:        ${{ vars.LEADS_CHAT_ID }}
+          RUN_TRIBUTE_WEBHOOK:  ${{ vars.RUN_TRIBUTE_WEBHOOK }}
+          TRIBUTE_PORT:         ${{ vars.TRIBUTE_PORT }}
+          TRIBUTE_LINK_BASIC:   ${{ vars.TRIBUTE_LINK_BASIC }}
+          TRIBUTE_LINK_PRO:     ${{ vars.TRIBUTE_LINK_PRO }}
+          SUB_BASIC_PRICE:      ${{ vars.SUB_BASIC_PRICE }}
+          SUB_PRO_PRICE:        ${{ vars.SUB_PRO_PRICE }}
+          DEBUG_COMMANDS:       ${{ vars.DEBUG_COMMANDS }}
+          FF_FLOODWAIT_PATCH:   ${{ vars.FF_FLOODWAIT_PATCH }}
+          IMAGES_MODE:          ${{ vars.IMAGES_MODE }}
+          IMAGES_BASE:          ${{ vars.IMAGES_BASE }}
+          IMAGES_DIR:           ${{ vars.IMAGES_DIR }}
+          QUIZ_IMAGE_MODE:      ${{ vars.QUIZ_IMAGE_MODE }}
+          QUIZ_IMG_BASE:        ${{ vars.QUIZ_IMG_BASE }}
+          STAGE_MEDIA_REF:      ${{ vars.STAGE_MEDIA_REF }}
+          STAGE_IMAGES_BASE:    ${{ vars.STAGE_IMAGES_BASE }}
+          STAGE_QUIZ_IMG_BASE:  ${{ vars.STAGE_QUIZ_IMG_BASE }}
+          STAGE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.STAGE_SENTRY_TRACES_SAMPLE_RATE }}
+          PROD_MEDIA_REF:       ${{ vars.PROD_MEDIA_REF }}
+          PROD_IMAGES_BASE:     ${{ vars.PROD_IMAGES_BASE }}
+          PROD_QUIZ_IMG_BASE:   ${{ vars.PROD_QUIZ_IMG_BASE }}
+          PROD_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.PROD_SENTRY_TRACES_SAMPLE_RATE }}
+          AI_PLAN_MODEL:        ${{ vars.AI_PLAN_MODEL }}
+          WEEKLY_PLAN_CRON:     ${{ vars.WEEKLY_PLAN_CRON }}
+          PLAN_ARCHIVE_DIR:     ${{ vars.PLAN_ARCHIVE_DIR }}
+          USE_REDIS:            ${{ vars.USE_REDIS }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

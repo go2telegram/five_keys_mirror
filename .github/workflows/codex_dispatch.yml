@@ -12,77 +12,123 @@ permissions:
   pull-requests: write
 
 jobs:
-  dispatch:
+  run-codex-command:
     runs-on: ubuntu-latest
     steps:
-      - name: Bootstrap env
-        run: ./.github/scripts/bootstrap-env.sh
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Gate (key & sender)
+        id: gate
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          IMAGES_BASE: ${{ vars.IMAGES_BASE }}
-          QUIZ_IMG_BASE: ${{ vars.QUIZ_IMG_BASE }}
-          HEALTH_PORT: ${{ vars.HEALTH_PORT }}
-      - name: Parse command
+        run: |
+          ALLOWED="false"
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            if [ "${{ github.event.client_payload.key }}" = "${CODEX_SHARED_KEY}" ]; then
+              if [ "${GITHUB_ACTOR}" = "go2telegram" ] || [ "${GITHUB_ACTOR}" = "github-actions[bot]" ]; then
+                ALLOWED="true"
+              else
+                echo "not trusted sender: ${GITHUB_ACTOR}"
+              fi
+            else
+              echo "wrong or empty key"
+            fi
+          else
+            echo "not repository_dispatch (event=${{ github.event_name }})"
+          fi
+          echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
+
+      - name: Read payload
+        if: steps.gate.outputs.allowed == 'true'
         id: p
+        run: |
+          echo "cmd=${{ github.event.client_payload.cmd }}" >> $GITHUB_OUTPUT
+          echo "msg=${{ github.event.client_payload.msg }}" >> $GITHUB_OUTPUT
+          echo "patch_b64=${{ github.event.client_payload.patch_b64 }}" >> $GITHUB_OUTPUT
+
+      - name: Validate command
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            const payload = context.payload.client_payload || {};
-            const expectedKey = process.env.CODEX_SHARED_KEY;
-            if (!expectedKey) {
-              core.setFailed('Secret CODEX_SHARED_KEY is not configured');
-              return;
-            }
-            if (!payload.key) {
-              core.setFailed('client_payload.key is required');
-              return;
-            }
-            if (payload.key !== expectedKey) {
-              core.setFailed('Invalid client payload key');
-              return;
-            }
-            const cmd = payload.cmd || '';
+            const cmd = '${{ steps.p.outputs.cmd }}';
             const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix', 'auto_label', 'doctor'];
             if (!cmd || !allowed.includes(cmd)) {
               core.setFailed(`Unsupported cmd: ${cmd}`);
-              return;
             }
-            core.setOutput('cmd', cmd);
-            core.setOutput('msg', payload.msg || '');
-            core.setOutput('patch_b64', payload.patch_b64 || '');
-
-      - name: Checkout
-        if: steps.p.outputs.cmd != ''
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Bootstrap env
-        if: steps.p.outputs.cmd == 'doctor'
-        uses: ./.github/actions/bootstrap-env
+        if: steps.gate.outputs.allowed == 'true'
+        run: ./.github/scripts/bootstrap-env.sh
+        env:
+          BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
+          CODEX_SHARED_KEY:     ${{ secrets.CODEX_SHARED_KEY }}
+          TRIBUTE_API_KEY:      ${{ secrets.TRIBUTE_API_KEY }}
+          STAGE_SENTRY_DSN:     ${{ secrets.STAGE_SENTRY_DSN }}
+          PROD_SENTRY_DSN:      ${{ secrets.PROD_SENTRY_DSN }}
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL:    ${{ secrets.SLACK_WEBHOOK_URL }}
+          DB_URL:               ${{ secrets.DB_URL }}
+          REDIS_URL:            ${{ secrets.REDIS_URL }}
+          HEALTH_PORT:          ${{ vars.HEALTH_PORT }}
+          DEV_DRY_RUN:          ${{ vars.DEV_DRY_RUN }}
+          ADMIN_ID:             ${{ vars.ADMIN_ID }}
+          ADMIN_USER_IDS:       ${{ vars.ADMIN_USER_IDS }}
+          MIGRATE_ON_START:     ${{ vars.MIGRATE_ON_START }}
+          TIMEZONE:             ${{ vars.TIMEZONE }}
+          LOG_LEVEL:            ${{ vars.LOG_LEVEL }}
+          LOG_DIR:              ${{ vars.LOG_DIR }}
+          VELAVIE_URL:          ${{ vars.VELAVIE_URL }}
+          VILAVI_REF_LINK_DISCOUNT: ${{ vars.VILAVI_REF_LINK_DISCOUNT }}
+          VILAVI_ORDER_NO_REG:  ${{ vars.VILAVI_ORDER_NO_REG }}
+          BASE_REGISTER_URL:    ${{ vars.BASE_REGISTER_URL }}
+          LEADS_CHAT_ID:        ${{ vars.LEADS_CHAT_ID }}
+          RUN_TRIBUTE_WEBHOOK:  ${{ vars.RUN_TRIBUTE_WEBHOOK }}
+          TRIBUTE_PORT:         ${{ vars.TRIBUTE_PORT }}
+          TRIBUTE_LINK_BASIC:   ${{ vars.TRIBUTE_LINK_BASIC }}
+          TRIBUTE_LINK_PRO:     ${{ vars.TRIBUTE_LINK_PRO }}
+          SUB_BASIC_PRICE:      ${{ vars.SUB_BASIC_PRICE }}
+          SUB_PRO_PRICE:        ${{ vars.SUB_PRO_PRICE }}
+          DEBUG_COMMANDS:       ${{ vars.DEBUG_COMMANDS }}
+          FF_FLOODWAIT_PATCH:   ${{ vars.FF_FLOODWAIT_PATCH }}
+          IMAGES_MODE:          ${{ vars.IMAGES_MODE }}
+          IMAGES_BASE:          ${{ vars.IMAGES_BASE }}
+          IMAGES_DIR:           ${{ vars.IMAGES_DIR }}
+          QUIZ_IMAGE_MODE:      ${{ vars.QUIZ_IMAGE_MODE }}
+          QUIZ_IMG_BASE:        ${{ vars.QUIZ_IMG_BASE }}
+          STAGE_MEDIA_REF:      ${{ vars.STAGE_MEDIA_REF }}
+          STAGE_IMAGES_BASE:    ${{ vars.STAGE_IMAGES_BASE }}
+          STAGE_QUIZ_IMG_BASE:  ${{ vars.STAGE_QUIZ_IMG_BASE }}
+          STAGE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.STAGE_SENTRY_TRACES_SAMPLE_RATE }}
+          PROD_MEDIA_REF:       ${{ vars.PROD_MEDIA_REF }}
+          PROD_IMAGES_BASE:     ${{ vars.PROD_IMAGES_BASE }}
+          PROD_QUIZ_IMG_BASE:   ${{ vars.PROD_QUIZ_IMG_BASE }}
+          PROD_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.PROD_SENTRY_TRACES_SAMPLE_RATE }}
+          AI_PLAN_MODEL:        ${{ vars.AI_PLAN_MODEL }}
+          WEEKLY_PLAN_CRON:     ${{ vars.WEEKLY_PLAN_CRON }}
+          PLAN_ARCHIVE_DIR:     ${{ vars.PLAN_ARCHIVE_DIR }}
+          USE_REDIS:            ${{ vars.USE_REDIS }}
 
       - name: Setup Python
-        if: contains('build_catalog open_patch_pr lint_autofix', steps.p.outputs.cmd)
+        if: steps.gate.outputs.allowed == 'true' && contains('build_catalog open_patch_pr lint_autofix', steps.p.outputs.cmd)
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Setup Node
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install Mermaid CLI
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         run: npm i -g @mermaid-js/mermaid-cli@10
 
       - name: Render menu diagrams
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         run: |
           npx @mermaid-js/mermaid-cli \
             -i docs/menu_map.mmd \
@@ -90,19 +136,19 @@ jobs:
             -b transparent -w 1400
 
       - name: Install dependencies (build_catalog)
-        if: steps.p.outputs.cmd == 'build_catalog'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'build_catalog'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Build catalog
-        if: steps.p.outputs.cmd == 'build_catalog'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'build_catalog'
         run: |
           python tools/build_products.py build
           python tools/build_products.py validate
 
       - name: Apply patch
-        if: steps.p.outputs.cmd == 'open_patch_pr'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'open_patch_pr'
         run: |
           if [ -z "${{ steps.p.outputs.patch_b64 }}" ]; then
             echo "patch_b64 is required for open_patch_pr" >&2
@@ -113,19 +159,19 @@ jobs:
           git add -A
 
       - name: Lint autofix
-        if: steps.p.outputs.cmd == 'lint_autofix'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'lint_autofix'
         run: bash scripts/lint_autofix.sh
 
       # ----- auto_label: повесить automerge на безопасный PR -----
       - name: Auto-label (from SHA)
-        if: steps.p.outputs.cmd == 'auto_label' && steps.p.outputs.msg == ''
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label' && steps.p.outputs.msg == ''
         uses: peter-evans/find-pull-request@v3
         id: find_from_sha
         with:
           commit: ${{ github.sha }}
 
       - name: Resolve PR number
-        if: steps.p.outputs.cmd == 'auto_label'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label'
         id: prnum
         run: |
           NUM="${{ steps.find_from_sha.outputs.number }}"
@@ -142,14 +188,14 @@ jobs:
           echo "number=$NUM" >> $GITHUB_OUTPUT
 
       - name: Checkout PR head
-        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: refs/pull/${{ steps.prnum.outputs.number }}/head
 
       - name: Paths filter (risky changes)
-        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
         id: pf_autolabel
         uses: dorny/paths-filter@v3
         with:
@@ -163,7 +209,7 @@ jobs:
               - 'scripts/**'
 
       - name: Get PR author
-        if: steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'auto_label' && steps.prnum.outputs.number != ''
         id: pr_author
         uses: actions/github-script@v7
         with:
@@ -178,6 +224,7 @@ jobs:
 
       - name: Add automerge label
         if: |
+          steps.gate.outputs.allowed == 'true' &&
           steps.p.outputs.cmd == 'auto_label' &&
           steps.prnum.outputs.number != '' &&
           steps.pf_autolabel.outputs.risky != 'true' &&
@@ -188,7 +235,7 @@ jobs:
           number: ${{ steps.prnum.outputs.number }}
 
       - name: PR (render_menu)
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "codex(docs): render menu diagrams"
@@ -201,7 +248,7 @@ jobs:
             docs/menu_map.svg
 
       - name: PR (build_catalog)
-        if: steps.p.outputs.cmd == 'build_catalog'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'build_catalog'
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "codex(build): rebuild catalog"
@@ -215,7 +262,7 @@ jobs:
             build/**
 
       - name: PR (open_patch_pr)
-        if: steps.p.outputs.cmd == 'open_patch_pr'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'open_patch_pr'
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: ${{ steps.p.outputs.msg != '' && steps.p.outputs.msg || 'codex(patch): apply patch' }}
@@ -226,7 +273,7 @@ jobs:
           labels: "codex,automerge"
 
       - name: PR (lint_autofix)
-        if: steps.p.outputs.cmd == 'lint_autofix'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'lint_autofix'
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "codex(lint): autofix formatting"
@@ -241,7 +288,7 @@ jobs:
             scripts/lint_autofix.sh
 
       - name: Doctor report (gather)
-        if: steps.p.outputs.cmd == 'doctor'
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'doctor'
         id: doctor
         uses: actions/github-script@v7
         with:
@@ -396,3 +443,31 @@ jobs:
             core.setOutput('problems', String(problems.length));
             core.setOutput('missingLabels', JSON.stringify(missingLabels));
             core.setOutput('missingWF', JSON.stringify(missingWF));
+
+      - name: Upload doctor report
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'doctor'
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-doctor-report
+          path: build/reports/
+          if-no-files-found: warn
+
+      - name: Doctor PR (needs-human)
+        if: |
+          steps.gate.outputs.allowed == 'true' &&
+          steps.p.outputs.cmd == 'doctor' &&
+          steps.doctor.outputs.problems != '0'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(doctor): report issues"
+          title: ${{ steps.doctor.outputs.fix == 'true' && 'codex(doctor): auto-fix proposal' || 'codex(doctor): health report' }}
+          body: |
+            Автоматический отчёт doctor.
+
+            Проблемы: ${{ steps.doctor.outputs.problems }}
+          branch: codex-doctor-${{ github.run_id }}
+          base: main
+          labels: codex,needs-human
+          add-paths: |
+            build/reports/dev_check.md
+            build/reports/dev_check.json
