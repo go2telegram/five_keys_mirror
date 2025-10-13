@@ -40,3 +40,7 @@ Thumbs.db
 /dist/
 app/static/images/quiz/**/*
 exports/
+
+# local control
+.codexctl.env
+codexctl.sh
