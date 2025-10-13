@@ -67,7 +67,9 @@ async def catalog_command(message: Message) -> None:
     remaining = touch_throttle(message.from_user.id, "catalog:command", CATALOG_COMMAND_THROTTLE)
     if remaining > 0:
         await message.answer("Каталог уже открыт, попробуйте чуть позже.")
-        log.debug("catalog_command throttled uid=%s remaining=%.2f", message.from_user.id, remaining)
+        log.debug(
+            "catalog_command throttled uid=%s remaining=%.2f", message.from_user.id, remaining
+        )
         return
     await _send_catalog_menu(message)
 
@@ -104,7 +106,9 @@ async def catalog_view_callback(callback: CallbackQuery) -> None:
         return
 
     if callback.from_user:
-        remaining = touch_throttle(callback.from_user.id, f"catalog:view:{product_id}", CATALOG_CALLBACK_THROTTLE)
+        remaining = touch_throttle(
+            callback.from_user.id, f"catalog:view:{product_id}", CATALOG_CALLBACK_THROTTLE
+        )
         if remaining > 0:
             await callback.answer("Слишком часто. Попробуйте чуть позже.", show_alert=False)
             log.debug(

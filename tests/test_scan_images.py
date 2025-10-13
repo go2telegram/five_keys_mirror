@@ -59,7 +59,9 @@ def test_scan_images_requires_source():
 
 
 def test_parse_github_tree_url():
-    location = scan_images._parse_github_tree_url("https://github.com/example/repo/tree/main/media/products")
+    location = scan_images._parse_github_tree_url(
+        "https://github.com/example/repo/tree/main/media/products"
+    )
     assert location.owner == "example"
     assert location.repo == "repo"
     assert location.ref == "main"

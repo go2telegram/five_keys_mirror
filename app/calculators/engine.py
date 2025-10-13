@@ -111,7 +111,9 @@ def _parse_int(text: str) -> int:
     return int(value)
 
 
-def _range_validator(min_value: float, max_value: float, message: str) -> Callable[[Any], str | None]:
+def _range_validator(
+    min_value: float, max_value: float, message: str
+) -> Callable[[Any], str | None]:
     def validate(value: Any) -> str | None:
         try:
             numeric = float(value)
@@ -124,7 +126,9 @@ def _range_validator(min_value: float, max_value: float, message: str) -> Callab
     return validate
 
 
-def _int_range_validator(min_value: int, max_value: int, message: str) -> Callable[[Any], str | None]:
+def _int_range_validator(
+    min_value: int, max_value: int, message: str
+) -> Callable[[Any], str | None]:
     def validate(value: Any) -> str | None:
         try:
             numeric = int(value)
@@ -222,7 +226,9 @@ def _build_water_result(ctx: CalculationContext) -> CalculationResult:
             "— Обновлять бутылку каждые 2–3 часа",
         ],
         "actions": bullets,
-        "notes": ("Следи за самочувствием и корректируй норму с врачом при хронических состояниях."),
+        "notes": (
+            "Следи за самочувствием и корректируй норму с врачом при хронических состояниях."
+        ),
         "order_url": None,
     }
 
@@ -317,9 +323,7 @@ def _compute_calories(
 
 def _calorie_headline(base: int, tdee: int, target: int, goal: str) -> str:
     label = _GOAL_LABELS.get(goal, "Поддержание")
-    return (
-        f"BMR: <b>{base} ккал</b>. Полная норма (TDEE): <b>{tdee} ккал</b>.\nЦель — {label}: <b>{target} ккал/день</b>."
-    )
+    return f"BMR: <b>{base} ккал</b>. Полная норма (TDEE): <b>{tdee} ккал</b>.\nЦель — {label}: <b>{target} ккал/день</b>."
 
 
 def _calorie_bullets(goal: str) -> list[str]:
@@ -426,7 +430,9 @@ _calorie_definition = CalculatorDefinition(
         ChoiceStep(
             key="activity",
             prompt="Выбери уровень активности:",
-            options=[ChoiceOption(key, title, key) for key, (title, _) in _ACTIVITY_FACTORS.items()],
+            options=[
+                ChoiceOption(key, title, key) for key, (title, _) in _ACTIVITY_FACTORS.items()
+            ],
         ),
         ChoiceStep(
             key="goal",
@@ -568,7 +574,9 @@ _macro_definition = CalculatorDefinition(
         ChoiceStep(
             key="preference",
             prompt="Какой стиль питания ближе?",
-            options=[ChoiceOption(key, title, key) for key, (title, _, _) in _PREFERENCE_LABELS.items()],
+            options=[
+                ChoiceOption(key, title, key) for key, (title, _, _) in _PREFERENCE_LABELS.items()
+            ],
         ),
     ],
     build_result=_build_macro_result,

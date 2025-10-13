@@ -144,7 +144,9 @@ async def run_load_test(
             interval = 1.0 / rate_limit
 
         for user_id in range(users):
-            user_tasks.append(asyncio.create_task(simulate_user(client, scenario, user_id, delay_range)))
+            user_tasks.append(
+                asyncio.create_task(simulate_user(client, scenario, user_id, delay_range))
+            )
             if interval:
                 await asyncio.sleep(interval)
 
@@ -200,7 +202,9 @@ def summarize_results(
     for name, step_results in per_step_results.items():
         step_latencies = [r.latency_ms for r in step_results if r.latency_ms is not None]
         step_errors = sum(1 for r in step_results if _is_error(r))
-        step_status_counter = Counter(r.status_code for r in step_results if r.status_code is not None)
+        step_status_counter = Counter(
+            r.status_code for r in step_results if r.status_code is not None
+        )
         per_step_summary[name] = {
             "requests": len(step_results),
             "success": len(step_results) - step_errors,
@@ -359,8 +363,12 @@ def _write_reports(summary: Dict[str, Any], report_dir: Path) -> None:
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Concurrent stress test driver")
-    parser.add_argument("--base-url", default="http://localhost:5000", help="Target service base URL")
-    parser.add_argument("--users", type=int, default=50, help="Number of concurrent users to simulate")
+    parser.add_argument(
+        "--base-url", default="http://localhost:5000", help="Target service base URL"
+    )
+    parser.add_argument(
+        "--users", type=int, default=50, help="Number of concurrent users to simulate"
+    )
     parser.add_argument(
         "--timeout",
         type=float,

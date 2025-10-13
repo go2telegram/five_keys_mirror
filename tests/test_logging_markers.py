@@ -10,7 +10,9 @@ from app.main import _log_router_overview, _log_startup_metadata, _register_audi
 from app.middlewares import AuditMiddleware
 
 
-def test_register_audit_logs_marker(monkeypatch, caplog: pytest.LogCaptureFixture) -> None:  # noqa: ANN001
+def test_register_audit_logs_marker(
+    monkeypatch, caplog: pytest.LogCaptureFixture
+) -> None:  # noqa: ANN001
     dp = Dispatcher()
 
     with caplog.at_level(logging.INFO, logger="startup"):

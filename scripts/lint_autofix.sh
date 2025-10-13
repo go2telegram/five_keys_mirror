@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+# инструменты
 python -m pip install --upgrade pip >/dev/null
-# ставим то, что есть в проекте; если нет, ставим fallback
-python - <<'PY'
-import sys, subprocess
+pip install --disable-pip-version-check -q black==24.8.0 isort==5.13.2
 
-def safe_install(pkgs):
-    for p in pkgs:
-        try:
-            __import__(p.split("==")[0].replace("-","_"))
-        except Exception:
-            subprocess.check_call([sys.executable,"-m","pip","install",p])
+# автофикс
+isort --profile black .
+black .
 
-# базовый набор
-safe_install(["black==24.8.0","isort==5.13.2"])
-PY
-# автофиксы (тихо), затем проверка
-isort . || true
-black . || true
-# Если проект требует strict-проверку:
-isort --check-only . && black --check .
+# строгое подтверждение (если что-то осталось — пусть шаг валится)
+isort --profile black --check-only .
+black --check .

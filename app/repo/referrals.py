@@ -12,7 +12,9 @@ from app.db.models import Referral
 async def upsert_referral(session: AsyncSession, referrer_id: int, invited_id: int) -> Referral:
     """Create a referral record if missing, otherwise return the existing one."""
 
-    stmt = select(Referral).where(Referral.user_id == referrer_id, Referral.invited_id == invited_id)
+    stmt = select(Referral).where(
+        Referral.user_id == referrer_id, Referral.invited_id == invited_id
+    )
     result = await session.execute(stmt)
     referral = result.scalar_one_or_none()
     if referral is not None:
@@ -35,7 +37,9 @@ async def create(session: AsyncSession, referrer_id: int, invited_id: int) -> Re
     return referral
 
 
-async def convert(session: AsyncSession, invited_id: int, bonus_days: int = 0) -> Optional[Referral]:
+async def convert(
+    session: AsyncSession, invited_id: int, bonus_days: int = 0
+) -> Optional[Referral]:
     referral = await get_by_invited(session, invited_id)
     if referral is None:
         return None

@@ -37,7 +37,9 @@ async def safe_edit_text(
         _SAFE_EDIT_LOG.debug("edit_text failed; falling back to answer", exc_info=True)
         return await _answer_fallback(message, new_text, new_markup)
     except (TelegramForbiddenError, TelegramNotFound):
-        _SAFE_EDIT_LOG.debug("edit_text failed with forbidden/not found; falling back", exc_info=True)
+        _SAFE_EDIT_LOG.debug(
+            "edit_text failed with forbidden/not found; falling back", exc_info=True
+        )
         return await _answer_fallback(message, new_text, new_markup)
 
 
@@ -56,7 +58,9 @@ async def reply_or_edit(
             if result is not None:
                 return result
         except Exception:
-            _SAFE_EDIT_LOG.debug("reply_or_edit: safe_edit_text failed, replying instead", exc_info=True)
+            _SAFE_EDIT_LOG.debug(
+                "reply_or_edit: safe_edit_text failed, replying instead", exc_info=True
+            )
             return await message.answer(text, reply_markup=reply_markup)
         return await message.answer(text, reply_markup=reply_markup)
 

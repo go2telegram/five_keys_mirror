@@ -6,12 +6,7 @@ import pytest
 
 pytest.importorskip("aiosqlite")
 
-from app.handlers import (
-    quiz_deficits,
-    quiz_skin_joint,
-    quiz_sleep,
-    quiz_stress2,
-)
+from app.handlers import quiz_deficits, quiz_skin_joint, quiz_sleep, quiz_stress2
 
 
 @asynccontextmanager

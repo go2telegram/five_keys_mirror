@@ -39,7 +39,9 @@ async def test_ref_link_and_keyboard_contains_navigation():
     assert link == "https://t.me/demo_bot?start=ref_123"
 
     markup = referral._kb_ref(link)
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     urls = [btn.url for btn in _flatten(markup) if btn.url]
     assert "ref:menu" in callbacks
     assert "home:main" in callbacks
@@ -77,6 +79,8 @@ async def test_notify_toggle_flow(monkeypatch):
     assert await notify._is_enabled(42) is False
 
     markup = notify._status_keyboard(enabled=False)
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     assert "notify:on" in callbacks
     assert "home:main" in callbacks

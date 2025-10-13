@@ -106,7 +106,9 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
     pii_filter = PiiScrubbingFilter()
     for logger_name in ("audit", "doctor"):
         logger = logging.getLogger(logger_name)
-        logger.filters = [existing for existing in logger.filters if not isinstance(existing, PiiScrubbingFilter)]
+        logger.filters = [
+            existing for existing in logger.filters if not isinstance(existing, PiiScrubbingFilter)
+        ]
         logger.addFilter(pii_filter)
 
     resolved_level = logging.getLevelName(level)
@@ -118,7 +120,12 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> None:
         (log_path / "bot.log").resolve(),
         (log_path / "errors.log").resolve(),
     )
-    root.info("log_config dir_param=%s resolved_dir=%s level_param=%s", log_dir, log_path.resolve(), resolved_level)
+    root.info(
+        "log_config dir_param=%s resolved_dir=%s level_param=%s",
+        log_dir,
+        log_path.resolve(),
+        resolved_level,
+    )
     try:
         aiogram_version = __import__("aiogram").__version__
     except Exception:  # pragma: no cover - aiogram should always be importable

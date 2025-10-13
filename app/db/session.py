@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any, AsyncIterator
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.config import settings
 
@@ -45,7 +50,9 @@ def _fetch_revision_sync(db_url: str) -> str | None:
     engine = create_engine(_strip_driver(db_url), future=True)
     try:
         with engine.connect() as connection:
-            return connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one_or_none()
+            return connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one_or_none()
     finally:
         engine.dispose()
 

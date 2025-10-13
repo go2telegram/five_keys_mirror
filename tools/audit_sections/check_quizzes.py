@@ -32,7 +32,9 @@ def _iter_images(data: dict[str, Any]) -> Iterable[str]:
             yield image
 
 
-def validate_quiz_payload(name: str, data: dict[str, Any], *, image_mode: str) -> List[ValidationIssue]:
+def validate_quiz_payload(
+    name: str, data: dict[str, Any], *, image_mode: str
+) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
 
     questions = data.get("questions")

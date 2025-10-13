@@ -101,7 +101,9 @@ async def _collect_event_stats(
     return counts, sum(counts.values())
 
 
-async def _collect_plan_stats(session: AsyncSession, limit: int | None = None) -> Tuple[int, Counter[str]]:
+async def _collect_plan_stats(
+    session: AsyncSession, limit: int | None = None
+) -> Tuple[int, Counter[str]]:
     stmt = select(Event.meta).where(Event.name == "plan_generated").order_by(Event.ts.desc())
     if limit is not None:
         stmt = stmt.limit(limit)
@@ -201,7 +203,9 @@ def _build_ctr_gauge(value: float) -> str:
     return to_html(fig, include_plotlyjs=False, full_html=False)
 
 
-def _build_utm_chart(items: List[Tuple[growth_attribution.UtmKey, growth_attribution.UtmFunnelMetrics]]) -> str:
+def _build_utm_chart(
+    items: List[Tuple[growth_attribution.UtmKey, growth_attribution.UtmFunnelMetrics]]
+) -> str:
     if not items:
         return "<div class='chart-empty'>Нет данных по UTM-источникам</div>"
 
@@ -241,7 +245,8 @@ def _format_dt(dt: datetime | None) -> str:
 
 def _render_table(rows: List[Tuple[str, str]]) -> str:
     body = "".join(
-        f"<tr><td>{idx + 1}</td><td>{cells[0]}</td><td>{cells[1]}</td></tr>" for idx, cells in enumerate(rows)
+        f"<tr><td>{idx + 1}</td><td>{cells[0]}</td><td>{cells[1]}</td></tr>"
+        for idx, cells in enumerate(rows)
     )
     return body or "<tr><td colspan='3' class='muted'>Нет данных</td></tr>"
 
@@ -614,7 +619,9 @@ async def _gather_dashboard_context() -> Dict[str, Any]:
         "utm_ctr": utm_total.quiz_ctr,
         "utm_cr": utm_total.premium_cr,
         "build_info": build,
-        "build_commit_short": build["commit"][:7] if build["commit"] not in {"unknown", ""} else build["commit"],
+        "build_commit_short": (
+            build["commit"][:7] if build["commit"] not in {"unknown", ""} else build["commit"]
+        ),
     }
 
 
@@ -636,7 +643,8 @@ def _auto_product_link(pid: str) -> str | None:
     return f"{base.rstrip('/')}/{quote(pid)}"
 
 
-LINKS_PAGE_HTML = dedent("""
+LINKS_PAGE_HTML = dedent(
+    """
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1311,7 +1319,8 @@ table.links-table tbody tr:last-child td {
 </script>
 </body>
 </html>
-""")
+"""
+)
 
 
 def _render_links_page() -> str:

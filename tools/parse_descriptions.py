@@ -40,7 +40,9 @@ def _iter_description_texts(path: Path) -> Iterator[tuple[str, str]]:
         yield str(path), path.read_text(encoding="utf-8")
         return
     if path.is_dir():
-        for file_path in sorted(p for p in path.rglob("*") if p.is_file() and p.suffix.lower() == ".txt"):
+        for file_path in sorted(
+            p for p in path.rglob("*") if p.is_file() and p.suffix.lower() == ".txt"
+        ):
             yield str(file_path), file_path.read_text(encoding="utf-8")
 
 
@@ -152,7 +154,9 @@ def build_index(descriptions_path: Path | str) -> list[dict[str, object]]:
 
 def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Parse product descriptions")
-    parser.add_argument("--descriptions-path", required=True, help="Path to descriptions file or directory")
+    parser.add_argument(
+        "--descriptions-path", required=True, help="Path to descriptions file or directory"
+    )
     parser.add_argument("--out", required=True, help="Path to write resulting JSON index")
     return parser.parse_args(argv)
 
@@ -164,7 +168,9 @@ def main(argv: Iterable[str] | None = None) -> None:
         raise SystemExit("No descriptions parsed")
     output_path = Path(args.out)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output_path.write_text(
+        json.dumps(records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI entry point

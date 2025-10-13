@@ -19,7 +19,9 @@ def ensure_aware(moment: dt.datetime) -> dt.datetime:
     return moment
 
 
-def should_send_tip(now_local: dt.datetime, send_time: dt.time, last_sent: dt.datetime | None) -> bool:
+def should_send_tip(
+    now_local: dt.datetime, send_time: dt.time, last_sent: dt.datetime | None
+) -> bool:
     if now_local.time() < send_time:
         return False
     if last_sent is None:

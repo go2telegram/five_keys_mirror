@@ -52,7 +52,9 @@ async def _notify_user(user_id: int, plan: str):
     try:
         bot = Bot(token=settings.BOT_TOKEN)
         kb = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔓 Открыть Premium", callback_data="premium:menu")]
+            ]
         )
         text = (
             "🎉 <b>Подписка активирована</b>\n\n"
@@ -70,7 +72,9 @@ async def _notify_cancel(user_id: int, until: datetime):
     try:
         bot = Bot(token=settings.BOT_TOKEN)
         kb = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="Продлить доступ", callback_data="sub:menu")]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Продлить доступ", callback_data="sub:menu")]
+            ]
         )
         text = f"⚠️ <b>Подписка будет отключена</b>\n\nДоступ сохранится до <b>{until.date().isoformat()}</b>."
         await bot.send_message(user_id, text, reply_markup=kb)
@@ -84,7 +88,11 @@ async def tribute_webhook(request: web.Request) -> web.Response:
     raw = await request.read()
 
     signature_header = request.headers.get("trbt-signature") or ""
-    signature = signature_header.split("=", 1)[1] if signature_header.startswith("sha256=") else signature_header
+    signature = (
+        signature_header.split("=", 1)[1]
+        if signature_header.startswith("sha256=")
+        else signature_header
+    )
 
     mac = hmac.new(settings.TRIBUTE_API_KEY.encode("utf-8"), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(mac, signature):

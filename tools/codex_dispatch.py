@@ -11,7 +11,6 @@ from typing import Any, Dict
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-
 DEFAULT_REPO = "go2telegram/five_keys_bot"
 
 
@@ -127,4 +126,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

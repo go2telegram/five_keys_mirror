@@ -54,21 +54,27 @@ def test_notify_status_keyboard_uses_nav_helper():
 
 def test_premium_links_keyboard_has_back_home():
     markup = premium._kb_links([("Test", "https://example.com")])
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     assert "sub:menu" in callbacks
     assert "home:main" in callbacks
 
 
 def test_subscription_menu_keyboard_has_navigation():
     markup = subscription._kb_sub_menu()
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     assert "sub:check" in callbacks
     assert "home:main" in callbacks
 
 
 def test_referral_keyboard_has_navigation():
     markup = referral._kb_ref("https://example.com")
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     assert "home:main" in callbacks
     assert any(cb == "ref:menu" for cb in callbacks)
 
@@ -86,7 +92,9 @@ def test_picker_helper_appends_navigation_buttons():
     builder.button(text="Опция", callback_data="pick:test")
     picker._extend_with_back_home(builder, "pick:menu")
     markup = builder.as_markup()
-    callbacks = [getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data]
+    callbacks = [
+        getattr(btn, "callback_data", None) for btn in _flatten(markup) if btn.callback_data
+    ]
     assert "pick:menu" in callbacks
     assert "home:main" in callbacks
 

@@ -59,7 +59,10 @@ def ensure_reportlab() -> bool:
         from reportlab.graphics.shapes import Drawing as drawing_cls
         from reportlab.lib import colors as colors_module
         from reportlab.lib.pagesizes import A4 as a4_size
-        from reportlab.lib.styles import ParagraphStyle as paragraph_style, getSampleStyleSheet as get_stylesheet
+        from reportlab.lib.styles import (
+            ParagraphStyle as paragraph_style,
+            getSampleStyleSheet as get_stylesheet,
+        )
         from reportlab.lib.units import cm as cm_value
         from reportlab.pdfbase import pdfmetrics as pdfmetrics_module
         from reportlab.pdfbase.ttfonts import TTFont as ttfont_cls
@@ -138,7 +141,9 @@ def _hline():
 
 
 def _on_page(canvas, doc):
-    canvas.setFont("Cyr-Regular" if "Cyr-Regular" in pdfmetrics.getRegisteredFontNames() else "Helvetica", 9)
+    canvas.setFont(
+        "Cyr-Regular" if "Cyr-Regular" in pdfmetrics.getRegisteredFontNames() else "Helvetica", 9
+    )
     canvas.setFillColor(colors.HexColor("#2E7D32"))
     canvas.drawRightString(A4[0] - 2 * cm, 1.2 * cm, f"Стр. {doc.page}")
 
@@ -155,15 +160,40 @@ def _qr_drawing(url: str, size: float = 2.6 * cm) -> Any:
 
 
 INTAKE_DEFAULTS = {
-    "T8 EXTRA": {"morning": True, "day": False, "evening": True, "note": "1–2 мл в воде; не поздно вечером"},
+    "T8 EXTRA": {
+        "morning": True,
+        "day": False,
+        "evening": True,
+        "note": "1–2 мл в воде; не поздно вечером",
+    },
     "T8 BLEND": {"morning": True, "day": True, "evening": False, "note": "30 мл в воде/кефире"},
-    "NASH ViTEN": {"morning": True, "day": False, "evening": False, "note": "1 стик под язык, курс 5 дней"},
+    "NASH ViTEN": {
+        "morning": True,
+        "day": False,
+        "evening": False,
+        "note": "1 стик под язык, курс 5 дней",
+    },
     "T8 TEO GREEN": {"morning": True, "day": True, "evening": False, "note": "1 порция в воде"},
     "MOBIO+": {"morning": True, "day": True, "evening": False, "note": "1 ч.л. в 30 мл воды"},
-    "NASH Омега-3": {"morning": True, "day": False, "evening": False, "note": "1 капсула с завтраком"},
+    "NASH Омега-3": {
+        "morning": True,
+        "day": False,
+        "evening": False,
+        "note": "1 капсула с завтраком",
+    },
     "Magnesium + B6": {"morning": False, "day": False, "evening": True, "note": "по инструкции"},
-    "Vitamin D3": {"morning": True, "day": False, "evening": False, "note": "по дефициту/согласованию"},
-    "T8 ERA MIT UP": {"morning": True, "day": False, "evening": False, "note": "1 стик утром, 30 мин до еды"},
+    "Vitamin D3": {
+        "morning": True,
+        "day": False,
+        "evening": False,
+        "note": "по дефициту/согласованию",
+    },
+    "T8 ERA MIT UP": {
+        "morning": True,
+        "day": False,
+        "evening": False,
+        "note": "1 стик утром, 30 мин до еды",
+    },
 }
 
 
@@ -222,7 +252,11 @@ def _intake_table(data_rows: list[dict], body_style: ParagraphStyle) -> Any:
                     "FONTNAME",
                     (0, 0),
                     (-1, -1),
-                    "Cyr-Regular" if "Cyr-Regular" in pdfmetrics.getRegisteredFontNames() else "Helvetica",
+                    (
+                        "Cyr-Regular"
+                        if "Cyr-Regular" in pdfmetrics.getRegisteredFontNames()
+                        else "Helvetica"
+                    ),
                 ),
                 ("FONTSIZE", (0, 0), (-1, -1), 10),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8F5E9")),
@@ -262,7 +296,12 @@ def build_pdf(
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=A4, leftMargin=2 * cm, rightMargin=2 * cm, topMargin=2 * cm, bottomMargin=1.5 * cm
+        buf,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=1.5 * cm,
     )
 
     styles = getSampleStyleSheet()
@@ -283,8 +322,12 @@ def build_pdf(
         fontSize=14,
         leading=18,
     )
-    p_s = ParagraphStyle("p_s", parent=styles["BodyText"], fontName=reg_font, fontSize=11, leading=15)
-    bullet_s = ParagraphStyle("bullet_s", parent=p_s, leftIndent=0.2 * cm, bulletFontName=reg_font, bulletFontSize=10)
+    p_s = ParagraphStyle(
+        "p_s", parent=styles["BodyText"], fontName=reg_font, fontSize=11, leading=15
+    )
+    bullet_s = ParagraphStyle(
+        "bullet_s", parent=p_s, leftIndent=0.2 * cm, bulletFontName=reg_font, bulletFontSize=10
+    )
 
     story = []
     story.append(Paragraph(title, title_s))
@@ -298,8 +341,13 @@ def build_pdf(
     if actions:
         story.append(Paragraph("Ключевые шаги на 7 дней", h_s))
         story.append(Spacer(1, 0.2 * cm))
-        a_items = [ListItem(Paragraph(a, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for a in actions]
-        story.append(ListFlowable(a_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
+        a_items = [
+            ListItem(Paragraph(a, bullet_s), bulletColor=colors.HexColor("#2E7D32"))
+            for a in actions
+        ]
+        story.append(
+            ListFlowable(a_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32"))
+        )
         story.append(Spacer(1, 0.5 * cm))
         story.append(_hline())
         story.append(Spacer(1, 0.5 * cm))
@@ -314,20 +362,29 @@ def build_pdf(
             story.append(Paragraph(header, p_s))
             if card_bullets:
                 items = [
-                    ListItem(Paragraph(line, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for line in card_bullets
+                    ListItem(Paragraph(line, bullet_s), bulletColor=colors.HexColor("#2E7D32"))
+                    for line in card_bullets
                 ]
-                story.append(ListFlowable(items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
+                story.append(
+                    ListFlowable(items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32"))
+                )
             story.append(Spacer(1, 0.3 * cm))
         story.append(_hline())
         story.append(Spacer(1, 0.5 * cm))
         products_block_for_intake = [
-            render_product_text(card, context)[0].replace("<b>", "").replace("</b>", "") for card in recommended_cards
+            render_product_text(card, context)[0].replace("<b>", "").replace("</b>", "")
+            for card in recommended_cards
         ]
     elif products:
         story.append(Paragraph("Рекомендованные продукты", h_s))
         story.append(Spacer(1, 0.2 * cm))
-        pr_items = [ListItem(Paragraph(s, bullet_s), bulletColor=colors.HexColor("#2E7D32")) for s in products]
-        story.append(ListFlowable(pr_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32")))
+        pr_items = [
+            ListItem(Paragraph(s, bullet_s), bulletColor=colors.HexColor("#2E7D32"))
+            for s in products
+        ]
+        story.append(
+            ListFlowable(pr_items, bulletType="bullet", bulletColor=colors.HexColor("#2E7D32"))
+        )
         story.append(Spacer(1, 0.5 * cm))
 
     rows = _build_intake_rows(products_block_for_intake, intake_rows)

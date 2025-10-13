@@ -41,13 +41,19 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(_bigint_pk, primary_key=True)
     username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    referred_by: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
+    created: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    referred_by: Mapped[Optional[int]] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=True
+    )
 
     subscription: Mapped["Subscription"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    profile: Mapped["UserProfile"] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     referrals: Mapped[list["Referral"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", foreign_keys="Referral.user_id"
     )
@@ -62,7 +68,9 @@ class Subscription(Base):
     since: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="active")
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     renewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     txn_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
@@ -77,7 +85,9 @@ class CommerceSubscription(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     plan: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     renewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     txn_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     amount: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False, default=0.0)
@@ -99,7 +109,9 @@ class Order(Base):
     provider: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     coupon_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     utm_json: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class Coupon(Base):
@@ -133,9 +145,13 @@ class Referral(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     invited_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     converted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     bonus_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
@@ -149,7 +165,9 @@ class PromoUsage(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
-    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    used_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class Event(Base):
@@ -164,7 +182,9 @@ class Event(Base):
     user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     meta: Mapped[dict] = mapped_column(_json_meta_type, nullable=False, default=dict)
-    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    ts: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class Lead(Base):
@@ -177,7 +197,9 @@ class Lead(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    ts: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class TrackEvent(Base):
@@ -191,13 +213,17 @@ class TrackEvent(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     value: Mapped[float] = mapped_column(Float(asdecimal=False), nullable=False)
-    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    ts: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     plan_json: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
     utm: Mapped[dict | None] = mapped_column(_json_meta_type, nullable=True)
 
@@ -211,7 +237,9 @@ class RetentionPush(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     flow: Mapped[str] = mapped_column(String(32), nullable=False)
-    last_sent: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_sent: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class DailyTip(Base):
@@ -219,7 +247,9 @@ class DailyTip(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class RetentionSetting(Base):
@@ -229,7 +259,9 @@ class RetentionSetting(Base):
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
     tips_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     tips_time: Mapped[time] = mapped_column(Time, nullable=False, default=time(10, 0))
-    last_tip_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_tip_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     last_tip_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     water_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     water_window_start: Mapped[time] = mapped_column(Time, nullable=False, default=time(9, 0))

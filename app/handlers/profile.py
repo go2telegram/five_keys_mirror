@@ -55,7 +55,12 @@ def _plan_lines(events) -> list[str]:
     lines: list[str] = []
     for event in events:
         meta = event.meta or {}
-        title = meta.get("title") or meta.get("context_name") or meta.get("context") or "Персональный план"
+        title = (
+            meta.get("title")
+            or meta.get("context_name")
+            or meta.get("context")
+            or "Персональный план"
+        )
         ts = _format_date(event.ts)
         lines.append(f"• {title} ({ts})")
     return lines

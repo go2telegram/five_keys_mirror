@@ -7,11 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from app.catalog.report import (
-    CatalogReport,
-    CatalogReportError,
-    get_catalog_report,
-)
+from app.catalog.report import CatalogReport, CatalogReportError, get_catalog_report
 
 
 def test_get_catalog_report_prefers_report_file(tmp_path: Path) -> None:

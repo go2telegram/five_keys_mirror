@@ -61,7 +61,9 @@ async def set_plan(
         try:
             premium_metrics.record_new_subscription()
         except Exception:
-            logging.getLogger("premium-metrics").warning("failed to update new_subs metric", exc_info=True)
+            logging.getLogger("premium-metrics").warning(
+                "failed to update new_subs metric", exc_info=True
+            )
     return subscription
 
 

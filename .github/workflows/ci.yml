@@ -26,17 +26,23 @@ jobs:
           python-version: '3.11'
       - name: Lint autofix
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
           bash scripts/lint_autofix.sh
-      - name: Commit fixed files
+
+      - name: Auto-commit formatting changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: apply black/isort"
+          file_pattern: |
+            **/*.py
+            pyproject.toml
+            scripts/lint_autofix.sh
+          branch: ${{ github.head_ref }}
+
+      - name: Lint check (strict)
         run: |
-          git config user.name "chatgpt-codex-connector"
-          git config user.email "bot@codex"
-          git add -A
-          git diff --cached --quiet || git commit -m "codex(lint): autofix formatting"
-          git push || true
-      - name: Lint check (post-fix)
-        run: bash scripts/lint_autofix.sh
+          pip install -q black==24.8.0 isort==5.13.2
+          isort --profile black --check-only .
+          black --check .
 
   test:
     runs-on: ubuntu-latest

@@ -12,7 +12,13 @@ from typing import Any, Iterable
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 from .admin import _is_admin
 
@@ -47,7 +53,9 @@ _CALLBACK_FULL = "admin:self_audit:full"
 
 def _keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="Полный аудит (--ci)", callback_data=_CALLBACK_FULL)]]
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Полный аудит (--ci)", callback_data=_CALLBACK_FULL)]
+        ]
     )
 
 
@@ -57,7 +65,9 @@ def _shorten(text: str, limit: int = 200) -> str:
     return text[: limit - 1] + "…"
 
 
-async def _invoke_self_audit(*flags: str) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+async def _invoke_self_audit(
+    *flags: str,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     env = os.environ.copy()
     if "--no-net" in flags:
         env["NO_NET"] = "1"
@@ -84,7 +94,9 @@ def _format_summary(data: dict[str, Any], *, flags: Iterable[str], returncode: i
     info_lines = [header]
     if meta:
         info_lines.append(
-            "Коммит: {commit} | Ветка: {branch}".format(commit=meta.get("commit", "—"), branch=meta.get("branch", "—"))
+            "Коммит: {commit} | Ветка: {branch}".format(
+                commit=meta.get("commit", "—"), branch=meta.get("branch", "—")
+            )
         )
     for key in [
         "migrations",

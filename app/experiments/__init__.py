@@ -1,6 +1,14 @@
 """Experiment utilities (A/B tests, bandits)."""
 
-from .ab import DEFAULT_STORAGE, AssignmentStorage, Experiment, Variant, assign_variant, load_experiments, select_copy
+from .ab import (
+    DEFAULT_STORAGE,
+    AssignmentStorage,
+    Experiment,
+    Variant,
+    assign_variant,
+    load_experiments,
+    select_copy,
+)
 from .bandit import ArmStats, BanditError, EpsilonGreedyBandit
 
 __all__ = [

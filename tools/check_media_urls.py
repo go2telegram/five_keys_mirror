@@ -87,7 +87,9 @@ async def run(quiet: bool) -> None:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check external media URLs via HTTP HEAD requests")
-    parser.add_argument("--quiet", action="store_true", help="suppress per-URL warnings; print only summary")
+    parser.add_argument(
+        "--quiet", action="store_true", help="suppress per-URL warnings; print only summary"
+    )
     return parser.parse_args(argv)
 
 

@@ -23,7 +23,9 @@ async def get_or_create(session: AsyncSession, user_id: int) -> UserProfile:
     return profile
 
 
-async def save_plan(session: AsyncSession, user_id: int, plan_json: dict[str, Any] | None) -> UserProfile:
+async def save_plan(
+    session: AsyncSession, user_id: int, plan_json: dict[str, Any] | None
+) -> UserProfile:
     profile = await get_or_create(session, user_id)
     profile.plan_json = plan_json
     await session.flush()

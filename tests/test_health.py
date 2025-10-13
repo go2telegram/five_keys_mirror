@@ -59,7 +59,9 @@ async def test_doctor_report(monkeypatch: pytest.MonkeyPatch) -> None:
             self.ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
     monkeypatch.setattr(health, "session_scope", fake_session_scope)
-    monkeypatch.setattr(health.events_repo, "recent_events", lambda *_args, **_kwargs: [_Event("plan_generated")])
+    monkeypatch.setattr(
+        health.events_repo, "recent_events", lambda *_args, **_kwargs: [_Event("plan_generated")]
+    )
 
     await health.doctor(message)  # type: ignore[arg-type]
     joined = "\n".join(message.answers)

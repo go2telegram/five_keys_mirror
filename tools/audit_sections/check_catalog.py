@@ -101,7 +101,9 @@ def run(ctx: AuditContext) -> SectionResult:
 
     reports_path = ctx.reports_dir / REPORT_COPY
     if summary:
-        reports_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        reports_path.write_text(
+            json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
     else:
         reports_path.write_text("{}\n", encoding="utf-8")
 

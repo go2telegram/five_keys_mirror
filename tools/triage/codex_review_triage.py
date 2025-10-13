@@ -63,7 +63,9 @@ class GitHubClient:
             self.session.headers["Authorization"] = f"Bearer {token}"
         self.session.headers["Accept"] = "application/vnd.github+json"
 
-    def graphql(self, query: str, variables: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+    def graphql(
+        self, query: str, variables: Optional[Dict[str, object]] = None
+    ) -> Dict[str, object]:
         response = self.session.post(
             f"{API_URL}/graphql",
             json={"query": query, "variables": variables or {}},
@@ -75,7 +77,9 @@ class GitHubClient:
             raise RuntimeError(f"GraphQL query errors: {payload['errors']}")
         return payload["data"]
 
-    def rest_get(self, path: str, params: Optional[Dict[str, object]] = None) -> List[Dict[str, object]]:
+    def rest_get(
+        self, path: str, params: Optional[Dict[str, object]] = None
+    ) -> List[Dict[str, object]]:
         results: List[Dict[str, object]] = []
         url = f"{API_URL}{path}"
         while url:
@@ -196,7 +200,9 @@ def fetch_review_comments(
 
 def extract_excerpt(diff_hunk: str, body: str) -> str:
     if diff_hunk:
-        lines = [line[1:] if line.startswith(("+", "-")) else line for line in diff_hunk.splitlines()]
+        lines = [
+            line[1:] if line.startswith(("+", "-")) else line for line in diff_hunk.splitlines()
+        ]
         cleaned = [line.strip() for line in lines if line.strip()]
         if cleaned:
             return " ".join(cleaned[-5:])
@@ -206,14 +212,18 @@ def extract_excerpt(diff_hunk: str, body: str) -> str:
     return ""
 
 
-def fetch_file_contents(client: GitHubClient, repo: str, path: str, ref: str = "main") -> Optional[str]:
+def fetch_file_contents(
+    client: GitHubClient, repo: str, path: str, ref: str = "main"
+) -> Optional[str]:
     if not path:
         return None
     response = client.session.get(f"{API_URL}/repos/{repo}/contents/{path}", params={"ref": ref})
     if response.status_code == 404:
         return None
     if response.status_code != 200:
-        raise RuntimeError(f"Unable to load file {path} from {ref}: {response.status_code} {response.text}")
+        raise RuntimeError(
+            f"Unable to load file {path} from {ref}: {response.status_code} {response.text}"
+        )
     payload = response.json()
     if payload.get("encoding") == "base64":
         return base64.b64decode(payload.get("content", "")).decode("utf-8", errors="ignore")
@@ -280,7 +290,9 @@ def classify_comment(
     checks: Dict[str, Dict[str, object]],
 ) -> CommentEvaluation:
     related = determine_related_checks(comment)
-    presence, presence_reason = matchers.evaluate_context(comment.file_path, comment.body, excerpt, file_text or "")
+    presence, presence_reason = matchers.evaluate_context(
+        comment.file_path, comment.body, excerpt, file_text or ""
+    )
     if presence == "manual":
         status = "manual-review"
         reason = "Requires manual confirmation of fuzzy match"
@@ -373,7 +385,9 @@ def apply_labels(client: GitHubClient, repo: str, pr_number: int, statuses: Iter
     client.rest_post(f"/repos/{repo}/issues/{pr_number}/labels", {"labels": labels})
 
 
-def post_summary_comment(client: GitHubClient, repo: str, pr_number: int, summary: str, report_path: Path) -> None:
+def post_summary_comment(
+    client: GitHubClient, repo: str, pr_number: int, summary: str, report_path: Path
+) -> None:
     body = f"Автотриаж: {summary}. Полный отчёт: artifact `{report_path}`."
     client.rest_post(f"/repos/{repo}/issues/{pr_number}/comments", {"body": body})
 

@@ -84,14 +84,18 @@ class InputValidationMiddleware(BaseMiddleware):
 
     async def _notify_too_long(self, message: Message) -> None:
         length = len(message.text or message.caption or "")
-        self._log.warning("message too long uid=%s length=%s", getattr(message.from_user, "id", None), length)
+        self._log.warning(
+            "message too long uid=%s length=%s", getattr(message.from_user, "id", None), length
+        )
         await message.answer(
             "Сообщение слишком длинное. Отправьте короче или нажмите «Домой».",
             reply_markup=kb_back_home(),
         )
 
     async def _notify_bad_callback(self, callback: CallbackQuery, *, reason: str) -> None:
-        self._log.warning("bad callback data reason=%s uid=%s", reason, getattr(callback.from_user, "id", None))
+        self._log.warning(
+            "bad callback data reason=%s uid=%s", reason, getattr(callback.from_user, "id", None)
+        )
         await callback.answer("Запрос устарел. Нажмите «Домой».", show_alert=True)
         if callback.message is not None:
             await callback.message.answer(

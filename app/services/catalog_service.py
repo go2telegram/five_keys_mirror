@@ -37,14 +37,18 @@ async def catalog_search(query: str) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     for product in products.values():
         haystack = " ".join(
-            str(product.get(field, "")) for field in ("title", "name", "short") if product.get(field)
+            str(product.get(field, ""))
+            for field in ("title", "name", "short")
+            if product.get(field)
         ).lower()
         if needle in haystack:
             results.append(_normalize_product_payload(product))
         if len(results) >= 20:
             break
     if results:
-        precache_remote_images(image for item in results for image in item.get("images", []) if isinstance(image, str))
+        precache_remote_images(
+            image for item in results for image in item.get("images", []) if isinstance(image, str)
+        )
     return results
 
 

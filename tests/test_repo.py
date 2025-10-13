@@ -19,7 +19,9 @@ pytest.importorskip("aiosqlite")
 class SessionManager:
     def __init__(self) -> None:
         self._engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-        self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False, class_=AsyncSession)
+        self._sessionmaker = async_sessionmaker(
+            self._engine, expire_on_commit=False, class_=AsyncSession
+        )
         self._session = None
 
     async def __aenter__(self) -> AsyncSession:

@@ -47,7 +47,11 @@ def upgrade() -> None:
     referrer_col = _referrer_column(inspector)
     columns = [referrer_col, "invited_id"]
     if not _has_unique_constraint(inspector, "referrals", columns):
-        constraint_name = "uq_referrals_user_invited" if referrer_col == "user_id" else "uq_referrals_referrer_invited"
+        constraint_name = (
+            "uq_referrals_user_invited"
+            if referrer_col == "user_id"
+            else "uq_referrals_referrer_invited"
+        )
         if bind.dialect.name == "sqlite":
             with op.batch_alter_table("referrals", recreate="auto") as batch_op:
                 batch_op.create_unique_constraint(constraint_name, columns)

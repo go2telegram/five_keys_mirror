@@ -200,7 +200,9 @@ class FeatureFlagManager:
         path = Path(getattr(self._settings, "FEATURE_FLAGS_FILE", "var/feature_flags.json"))
         path.parent.mkdir(parents=True, exist_ok=True)
         filtered = {key: value for key, value in self._overrides.items() if key in self._defaults}
-        path.write_text(json.dumps(filtered, ensure_ascii=False, sort_keys=True, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(filtered, ensure_ascii=False, sort_keys=True, indent=2), encoding="utf-8"
+        )
 
     def _is_canary_user(self, user_id: int) -> bool:
         if not user_id:

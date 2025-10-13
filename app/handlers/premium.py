@@ -92,7 +92,9 @@ def _kb_premium_buy(back_cb: str | None = None):
     return kb.as_markup()
 
 
-async def _log_event(callback: CallbackQuery | Message, event: str, meta: dict | None = None) -> None:
+async def _log_event(
+    callback: CallbackQuery | Message, event: str, meta: dict | None = None
+) -> None:
     user = callback.from_user if isinstance(callback, CallbackQuery) else callback.from_user
     if user is None:
         return
@@ -102,7 +104,9 @@ async def _log_event(callback: CallbackQuery | Message, event: str, meta: dict |
         await commit_safely(session)
 
 
-async def _send_info(target: CallbackQuery | Message, *, replace: bool = False, back_cb: str | None = None) -> None:
+async def _send_info(
+    target: CallbackQuery | Message, *, replace: bool = False, back_cb: str | None = None
+) -> None:
     markup = _kb_premium_info(back_cb)
     if isinstance(target, CallbackQuery):
         if replace and target.message is not None:
@@ -113,7 +117,9 @@ async def _send_info(target: CallbackQuery | Message, *, replace: bool = False, 
         await target.answer(PREMIUM_INFO_TEXT, reply_markup=markup)
 
 
-async def _send_buy(target: CallbackQuery | Message, *, replace: bool = False, back_cb: str | None = None) -> None:
+async def _send_buy(
+    target: CallbackQuery | Message, *, replace: bool = False, back_cb: str | None = None
+) -> None:
     markup = _kb_premium_buy(back_cb)
     text = (
         "Выберите тариф MITO Premium:\n"

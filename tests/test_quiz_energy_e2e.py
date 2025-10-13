@@ -47,7 +47,9 @@ class FakeMessage:
         child.photo = photo
         child.caption = caption
         child.reply_markup = reply_markup
-        self.photos.append({"photo": photo, "caption": caption, "reply_markup": reply_markup, "message": child})
+        self.photos.append(
+            {"photo": photo, "caption": caption, "reply_markup": reply_markup, "message": child}
+        )
         self.last_child = child
         return child
 
@@ -146,7 +148,9 @@ async def test_energy_quiz_flow(monkeypatch):
             markup_dump = _markup_to_snapshot(question_message.reply_markup)
             snapshots.append(markup_dump)
 
-            answer_data = build_answer_callback_data("energy", question.id, question.options[-1].key)
+            answer_data = build_answer_callback_data(
+                "energy", question.id, question.options[-1].key
+            )
             answer_call = FakeCallback(answer_data, question_message)
             await quiz_handlers.quiz_callbacks(answer_call, state)
 

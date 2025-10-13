@@ -186,7 +186,9 @@ def _export_google(rows: Iterable[LeadExportRow], sheet_id: str, worksheet_title
     try:
         worksheet = spreadsheet.worksheet(worksheet_title)
     except gspread.WorksheetNotFound:
-        worksheet = spreadsheet.add_worksheet(title=worksheet_title, rows="100", cols=str(len(_HEADERS) + 5))
+        worksheet = spreadsheet.add_worksheet(
+            title=worksheet_title, rows="100", cols=str(len(_HEADERS) + 5)
+        )
 
     payload = [row.as_row() for row in rows]
     worksheet.clear()
@@ -223,7 +225,9 @@ async def run() -> None:
         raise SystemExit("GOOGLE_SHEET_ID is required for Google Sheets export")
     worksheet_title = os.getenv("GOOGLE_WORKSHEET_TITLE") or settings.GOOGLE_WORKSHEET_TITLE
     _export_google(rows, sheet_id, worksheet_title)
-    print(f"[crm-export] pushed {len(rows)} rows to Google Sheet {sheet_id}/{worksheet_title} ({_summarize(rows)})")
+    print(
+        f"[crm-export] pushed {len(rows)} rows to Google Sheet {sheet_id}/{worksheet_title} ({_summarize(rows)})"
+    )
 
 
 if __name__ == "__main__":

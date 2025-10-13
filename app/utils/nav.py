@@ -11,7 +11,9 @@ BASE_BUTTONS: tuple[tuple[str, str], ...] = (
 )
 
 
-def _normalize_extra(extra: InlineKeyboardButton | tuple[str, str] | tuple[str, str, bool]) -> InlineKeyboardButton:
+def _normalize_extra(
+    extra: InlineKeyboardButton | tuple[str, str] | tuple[str, str, bool]
+) -> InlineKeyboardButton:
     if isinstance(extra, InlineKeyboardButton):
         return extra
     if not isinstance(extra, tuple) or len(extra) < 2:
@@ -29,7 +31,9 @@ def _normalize_extra(extra: InlineKeyboardButton | tuple[str, str] | tuple[str, 
     return InlineKeyboardButton(text=text, callback_data=payload)
 
 
-def nav_footer(*extras: InlineKeyboardButton | tuple[str, str] | tuple[str, str, bool]) -> InlineKeyboardMarkup:
+def nav_footer(
+    *extras: InlineKeyboardButton | tuple[str, str] | tuple[str, str, bool]
+) -> InlineKeyboardMarkup:
     """Build a unified navigation footer with optional extra buttons."""
 
     builder = InlineKeyboardBuilder()

@@ -24,7 +24,9 @@ def run_command(command: str) -> subprocess.CompletedProcess:
 def collect_reports() -> Dict[str, Any]:
     results: Dict[str, Any] = {}
     results["pip_audit"] = run_command("pip-audit -r requirements.txt -f json").stdout or "[]"
-    results["safety"] = run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
+    results["safety"] = (
+        run_command("safety check --full-report -r requirements.txt --json").stdout or "[]"
+    )
     results["bandit"] = run_command("bandit -q -r app -f json").stdout or "{}"
     results["gitleaks"] = run_gitleaks_scan()
     return results
@@ -58,10 +60,20 @@ def run_gitleaks_scan() -> str:
 
 def write_reports(results: Dict[str, Any]) -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    (REPORTS_DIR / "security_audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2))
+    (REPORTS_DIR / "security_audit.json").write_text(
+        json.dumps(results, ensure_ascii=False, indent=2)
+    )
     gitleaks_payload = results.get("gitleaks", "")
-    gitleaks_has_leaks = '"leaks":' in gitleaks_payload if isinstance(gitleaks_payload, str) else bool(gitleaks_payload)
-    gitleaks_summary = "skipped" if gitleaks_payload == "not-installed" else "issues" if gitleaks_has_leaks else "none"
+    gitleaks_has_leaks = (
+        '"leaks":' in gitleaks_payload
+        if isinstance(gitleaks_payload, str)
+        else bool(gitleaks_payload)
+    )
+    gitleaks_summary = (
+        "skipped"
+        if gitleaks_payload == "not-installed"
+        else "issues" if gitleaks_has_leaks else "none"
+    )
 
     summary = (
         "## Security audit\n\n"

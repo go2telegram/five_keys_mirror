@@ -178,18 +178,24 @@ class GitHubClient:
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Audit CI status across pull requests")
     parser.add_argument("--repo", required=True, help="Target repository in <owner>/<name> format")
-    parser.add_argument("--apply-fixes", action="store_true", help="Apply autofixes for known issues")
+    parser.add_argument(
+        "--apply-fixes", action="store_true", help="Apply autofixes for known issues"
+    )
     parser.add_argument("--re-run", action="store_true", help="Re-run failed checks when possible")
     parser.add_argument("--since-days", type=int, default=DEFAULT_SINCE_DAYS)
     parser.add_argument("--post-comments", action="store_true", help="Post status comments in PRs")
-    parser.add_argument("--label-prs", action="store_true", help="Update PR labels based on results")
+    parser.add_argument(
+        "--label-prs", action="store_true", help="Update PR labels based on results"
+    )
     parser.add_argument("--reports-dir", type=Path, default=Path("build/reports"))
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 
 
 def _configure_logging(level: str) -> None:
-    logging.basicConfig(level=getattr(logging, level.upper(), logging.INFO), format="%(levelname)s: %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, level.upper(), logging.INFO), format="%(levelname)s: %(message)s"
+    )
 
 
 def _categorize(name: str) -> str | None:
@@ -273,7 +279,10 @@ def _save_reports(results: list[PRAuditResult], reports_dir: Path) -> None:
     timestamp = dt.datetime.utcnow().strftime(DATE_FMT)
 
     table_header = ["PR", *[CATEGORY_TITLES[c] for c in CATEGORY_ORDER], "Действия", "Итог"]
-    rows = ["| " + " | ".join(table_header) + " |", "| " + " | ".join(["---"] * len(table_header)) + " |"]
+    rows = [
+        "| " + " | ".join(table_header) + " |",
+        "| " + " | ".join(["---"] * len(table_header)) + " |",
+    ]
     for result in results:
         row = result.summary_row()
         rows.append("| " + " | ".join(row) + " |")
@@ -302,7 +311,9 @@ def _save_reports(results: list[PRAuditResult], reports_dir: Path) -> None:
             for result in results
         ],
     }
-    (reports_dir / "ci_audit.json").write_text(json.dumps(json_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (reports_dir / "ci_audit.json").write_text(
+        json.dumps(json_payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def audit_pull_requests(args: argparse.Namespace) -> list[PRAuditResult]:
@@ -319,7 +330,9 @@ def audit_pull_requests(args: argparse.Namespace) -> list[PRAuditResult]:
         author = (pr.get("user") or {}).get("login")
         sha = head.get("sha", "")
         LOGGER.info("Analyzing PR #%s %s", number, title)
-        result = PRAuditResult(number=number, title=title, html_url=html_url, head_sha=sha, author=author)
+        result = PRAuditResult(
+            number=number, title=title, html_url=html_url, head_sha=sha, author=author
+        )
 
         runs = client.check_runs(sha)
         if not runs:

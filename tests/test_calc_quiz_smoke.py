@@ -34,7 +34,9 @@ def _install_yaml_stub() -> None:
             return json.loads(data)
 
         @staticmethod
-        def safe_dump(data, stream, allow_unicode=False, **kwargs):  # noqa: ARG001 - signature compat
+        def safe_dump(
+            data, stream, allow_unicode=False, **kwargs
+        ):  # noqa: ARG001 - signature compat
             json.dump(data, stream)
 
     sys.modules["yaml"] = _YamlStub()
@@ -74,7 +76,9 @@ class DummyMessage:
 
 
 class DummyCallback:
-    def __init__(self, data: str, message: DummyMessage, user_id: int = 1, username: str = "tester") -> None:
+    def __init__(
+        self, data: str, message: DummyMessage, user_id: int = 1, username: str = "tester"
+    ) -> None:
         self.data = data
         self.message = message
         self.from_user = SimpleNamespace(id=user_id, username=username)
@@ -93,7 +97,9 @@ def _make_message(user_id: int, text: str) -> SimpleNamespace:
 
 
 def _make_callback(user_id: int, data: str) -> SimpleNamespace:
-    message = SimpleNamespace(edit_text=AsyncMock(), answer=AsyncMock(), from_user=SimpleNamespace(id=user_id))
+    message = SimpleNamespace(
+        edit_text=AsyncMock(), answer=AsyncMock(), from_user=SimpleNamespace(id=user_id)
+    )
     return SimpleNamespace(
         data=data,
         from_user=SimpleNamespace(id=user_id, username="tester"),
@@ -111,7 +117,9 @@ def _patch_calc_infrastructure(monkeypatch):
     monkeypatch.setattr(calc, "send_product_cards", send_cards)
     premium_mock = AsyncMock()
     monkeypatch.setattr(calc, "send_premium_cta", premium_mock)
-    monkeypatch.setattr(calc, "get_register_link", AsyncMock(return_value="https://example.com/register"))
+    monkeypatch.setattr(
+        calc, "get_register_link", AsyncMock(return_value="https://example.com/register")
+    )
     return send_cards, premium_mock
 
 
@@ -124,7 +132,9 @@ def _patch_calc_unified_infrastructure(monkeypatch):
     monkeypatch.setattr(calc_unified, "send_product_cards", send_cards)
     premium_mock = AsyncMock()
     monkeypatch.setattr(calc_unified, "send_premium_cta", premium_mock)
-    monkeypatch.setattr(calc_unified, "get_register_link", AsyncMock(return_value="https://example.com/register"))
+    monkeypatch.setattr(
+        calc_unified, "get_register_link", AsyncMock(return_value="https://example.com/register")
+    )
     monkeypatch.setattr(calc_unified, "safe_edit_text", AsyncMock())
     return send_cards, premium_mock
 
@@ -241,7 +251,9 @@ def _new_state() -> FSMContext:
 
 
 @pytest.mark.asyncio
-async def test_quiz_flow_smoke(monkeypatch, tmp_path, tmp_path_factory, **_extra):  # noqa: ARG001 - fixture compatibility
+async def test_quiz_flow_smoke(
+    monkeypatch, tmp_path, tmp_path_factory, **_extra
+):  # noqa: ARG001 - fixture compatibility
     quiz_engine.load_quiz.cache_clear()
     original_hooks = dict(quiz_engine.QUIZ_HOOKS)
     quiz_engine.QUIZ_HOOKS.clear()
@@ -263,7 +275,9 @@ async def test_quiz_flow_smoke(monkeypatch, tmp_path, tmp_path_factory, **_extra
         question_message = entry_message.children[-1]
 
         for index, question in enumerate(definition.questions):
-            callback_data = build_answer_callback_data("sample", question.id, question.options[0].key)
+            callback_data = build_answer_callback_data(
+                "sample", question.id, question.options[0].key
+            )
             callback = DummyCallback(callback_data, question_message, user_id=555)
             await answer_callback(callback, state)
             if index < len(definition.questions) - 1:

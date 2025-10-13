@@ -67,7 +67,9 @@ async def test_tribute_new_subscription_activates_plan(monkeypatch):
     monkeypatch.setattr(tribute_webhook, "session_scope", _dummy_scope)
     monkeypatch.setattr(tribute_webhook.users_repo, "get_or_create_user", AsyncMock())
     monkeypatch.setattr(tribute_webhook.subscriptions_repo, "set_plan", AsyncMock())
-    monkeypatch.setattr(tribute_webhook.referrals_repo, "get_by_invited", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        tribute_webhook.referrals_repo, "get_by_invited", AsyncMock(return_value=None)
+    )
     monkeypatch.setattr(tribute_webhook.events_repo, "log", AsyncMock())
     notify_mock = AsyncMock()
     monkeypatch.setattr(tribute_webhook, "_notify_user", notify_mock)

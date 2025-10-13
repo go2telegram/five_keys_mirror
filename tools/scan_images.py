@@ -47,7 +47,9 @@ class GithubEntry:
 
 
 def _http_get(url: str) -> bytes:
-    request = Request(url, headers={"User-Agent": "five-keys-bot/scan-images", "Accept": GITHUB_ACCEPT_HEADER})
+    request = Request(
+        url, headers={"User-Agent": "five-keys-bot/scan-images", "Accept": GITHUB_ACCEPT_HEADER}
+    )
     try:
         with urlopen(request) as response:  # type: ignore[arg-type]
             return response.read()
@@ -61,7 +63,9 @@ def _parse_github_tree_url(url: str) -> GithubLocation:
         raise ScanImagesError("Only github.com URLs are supported for --images-url")
     segments = [segment for segment in parts.path.split("/") if segment]
     if len(segments) < 5 or segments[2] != "tree":
-        raise ScanImagesError("Expected a GitHub tree URL like https://github.com/<owner>/<repo>/tree/<ref>/<path>")
+        raise ScanImagesError(
+            "Expected a GitHub tree URL like https://github.com/<owner>/<repo>/tree/<ref>/<path>"
+        )
     owner, repo, _, ref, *path_segments = segments
     path = "/".join(path_segments)
     return GithubLocation(owner=owner, repo=repo, ref=ref, path=path)
@@ -171,7 +175,9 @@ def _build_records(filenames: Iterable[str]) -> list[dict[str, object]]:
     return records
 
 
-def scan_images(*, images_dir: Path | None = None, images_url: str | None = None) -> list[dict[str, object]]:
+def scan_images(
+    *, images_dir: Path | None = None, images_url: str | None = None
+) -> list[dict[str, object]]:
     if images_url and images_dir:
         raise ScanImagesError("Specify only one of --images-dir or --images-url")
     if not images_url and not images_dir:
@@ -204,7 +210,9 @@ def _emit_warning_if_needed(records: Sequence[dict[str, object]]) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Scan catalog product images")
-    parser.add_argument("--images-dir", type=Path, help="Path to local images directory", default=None)
+    parser.add_argument(
+        "--images-dir", type=Path, help="Path to local images directory", default=None
+    )
     parser.add_argument("--images-url", help="URL of GitHub directory with images", default=None)
     parser.add_argument("--out", type=Path, required=True, help="Path to output JSON index")
     args = parser.parse_args(argv)

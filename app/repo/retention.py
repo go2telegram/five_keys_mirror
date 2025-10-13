@@ -44,7 +44,9 @@ async def set_tips_enabled(session: AsyncSession, user_id: int, enabled: bool) -
     return setting
 
 
-async def set_tips_time(session: AsyncSession, user_id: int, send_time: dt.time) -> RetentionSetting:
+async def set_tips_time(
+    session: AsyncSession, user_id: int, send_time: dt.time
+) -> RetentionSetting:
     setting = await get_or_create_settings(session, user_id)
     setting.tips_time = send_time
     await session.flush()
@@ -108,7 +110,9 @@ async def record_water_progress(
     await session.flush()
 
 
-async def update_weight(session: AsyncSession, setting: RetentionSetting, weight: float | None) -> None:
+async def update_weight(
+    session: AsyncSession, setting: RetentionSetting, weight: float | None
+) -> None:
     setting.weight_kg = weight
     await session.flush()
 
@@ -184,7 +188,9 @@ async def mark_journeys_sent(
 
 
 async def count_tip_enabled(session: AsyncSession) -> int:
-    stmt = select(func.count(RetentionSetting.user_id)).where(RetentionSetting.tips_enabled.is_(True))
+    stmt = select(func.count(RetentionSetting.user_id)).where(
+        RetentionSetting.tips_enabled.is_(True)
+    )
     result = await session.execute(stmt)
     return int(result.scalar_one())
 

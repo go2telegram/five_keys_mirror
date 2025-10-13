@@ -38,7 +38,10 @@ for path in sorted(SCRIPTS_DIR.glob("*.ps1")):
 if failures:
     for item in failures:
         print(f"::error ::{item}")
-    print("PowerShell scripts in scripts/ must be ASCII with CRLF and a single trailing newline", file=sys.stderr)
+    print(
+        "PowerShell scripts in scripts/ must be ASCII with CRLF and a single trailing newline",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 print("PowerShell scripts passed ASCII/CRLF checks")

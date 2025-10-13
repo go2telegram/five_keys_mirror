@@ -34,7 +34,9 @@ def _markup_to_snapshot(markup: InlineKeyboardMarkup) -> str:
         ("kb_calc_menu", kb_calc_menu, {}),
     ],
 )
-def test_keyboard_snapshot(snapshot: str, factory: Callable[..., InlineKeyboardMarkup], kwargs: dict) -> None:
+def test_keyboard_snapshot(
+    snapshot: str, factory: Callable[..., InlineKeyboardMarkup], kwargs: dict
+) -> None:
     markup = factory(**kwargs)
     payload = _markup_to_snapshot(markup)
 

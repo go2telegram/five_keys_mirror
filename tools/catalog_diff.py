@@ -134,7 +134,11 @@ def _write_report(
             lines.append(f"- {product_id}")
             _append_key_value(lines, "title", _normalize_title(product) or "—")
             _append_key_value(lines, "image", _normalize_image(product) or "—")
-            order_display = _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
+            order_display = (
+                _order_to_display(_normalize_order(product))
+                if product.get("order") is not None
+                else "—"
+            )
             _append_key_value(lines, "order", order_display)
             _append_key_value(lines, "tags", _format_tags(_normalize_tags(product)))
     else:
@@ -146,7 +150,11 @@ def _write_report(
             lines.append(f"- {product_id}")
             _append_key_value(lines, "title", _normalize_title(product) or "—")
             _append_key_value(lines, "image", _normalize_image(product) or "—")
-            order_display = _order_to_display(_normalize_order(product)) if product.get("order") is not None else "—"
+            order_display = (
+                _order_to_display(_normalize_order(product))
+                if product.get("order") is not None
+                else "—"
+            )
             _append_key_value(lines, "order", order_display)
             _append_key_value(lines, "tags", _format_tags(_normalize_tags(product)))
     else:
@@ -165,7 +173,9 @@ def _write_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a diff report between two catalog JSON files.")
+    parser = argparse.ArgumentParser(
+        description="Generate a diff report between two catalog JSON files."
+    )
     parser.add_argument("--old", required=True, help="Path to the reference catalog JSON file.")
     parser.add_argument("--new", required=True, help="Path to the new catalog JSON file.")
     parser.add_argument("--out", required=True, help="Path to write the diff report.")

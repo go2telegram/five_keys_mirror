@@ -102,7 +102,13 @@ def _normalize_product(item: str | dict, ctx: str | None) -> dict | None:
     if not order_url:
         order_url = order.get("url")
 
-    name = source.get("title") or source.get("name") or source.get("code") or source.get("id") or "Product"
+    name = (
+        source.get("title")
+        or source.get("name")
+        or source.get("code")
+        or source.get("id")
+        or "Product"
+    )
 
     return {
         "code": source.get("code") or source.get("id") or source.get("title") or name,
@@ -299,7 +305,9 @@ async def send_product_cards(
         text = "\n".join(lines).strip()
         bundle_action = None
         try:
-            upsell_text, bundle_id = await soft_upsell_prompt([card.get("code", "") for card in cards])
+            upsell_text, bundle_id = await soft_upsell_prompt(
+                [card.get("code", "") for card in cards]
+            )
         except Exception:  # pragma: no cover - soft failure
             LOG.exception("soft_upsell_prompt failed")
             upsell_text, bundle_id = None, None

@@ -137,7 +137,9 @@ def test_partner_link_check_diff_skips_existing(tmp_path, monkeypatch):
             ),
         )
     )
-    assert baseline_outcome.new_problems and baseline_outcome.new_problems[0].link.url == links[1].url
+    assert (
+        baseline_outcome.new_problems and baseline_outcome.new_problems[0].link.url == links[1].url
+    )
 
     second_diff = tmp_path / "second_diff.json"
     outcome = asyncio.run(

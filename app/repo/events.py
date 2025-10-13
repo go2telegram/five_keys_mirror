@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Event
 
 
-async def log(session: AsyncSession, user_id: Optional[int], name: str, meta: Optional[Dict[str, Any]] = None) -> Event:
+async def log(
+    session: AsyncSession, user_id: Optional[int], name: str, meta: Optional[Dict[str, Any]] = None
+) -> Event:
     event = Event(
         user_id=user_id,
         name=name,
@@ -47,7 +49,12 @@ async def upsert(
 ) -> Event:
     """Ensure a single event per ``(user_id, name)`` combination."""
 
-    stmt = select(Event).where(Event.user_id == user_id, Event.name == name).order_by(Event.id.asc()).limit(1)
+    stmt = (
+        select(Event)
+        .where(Event.user_id == user_id, Event.name == name)
+        .order_by(Event.id.asc())
+        .limit(1)
+    )
     try:
         result = await session.execute(stmt)
     except (OperationalError, ProgrammingError) as exc:
@@ -80,7 +87,12 @@ async def upsert(
 
 
 async def last_by(session: AsyncSession, user_id: int, name: str) -> Optional[Event]:
-    stmt = select(Event).where(Event.user_id == user_id, Event.name == name).order_by(Event.ts.desc()).limit(1)
+    stmt = (
+        select(Event)
+        .where(Event.user_id == user_id, Event.name == name)
+        .order_by(Event.ts.desc())
+        .limit(1)
+    )
     try:
         result = await session.execute(stmt)
     except (OperationalError, ProgrammingError) as exc:

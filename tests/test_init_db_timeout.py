@@ -9,7 +9,9 @@ from app.db import session as session_module
 
 
 @pytest.mark.anyio
-async def test_init_db_handles_timeout(monkeypatch, caplog: pytest.LogCaptureFixture) -> None:  # noqa: ANN001
+async def test_init_db_handles_timeout(
+    monkeypatch, caplog: pytest.LogCaptureFixture
+) -> None:  # noqa: ANN001
     class _FakeAwaitable:
         def __await__(self):  # noqa: D401 - helper inside test
             async def _stall() -> None:

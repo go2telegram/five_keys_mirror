@@ -186,4 +186,9 @@ def make_idempotency_key(*parts: object | None) -> str | None:
 idempotency_registry = InMemoryIdempotency()
 
 
-__all__ = ["IdempotencyToken", "InMemoryIdempotency", "idempotency_registry", "make_idempotency_key"]
+__all__ = [
+    "IdempotencyToken",
+    "InMemoryIdempotency",
+    "idempotency_registry",
+    "make_idempotency_key",
+]
