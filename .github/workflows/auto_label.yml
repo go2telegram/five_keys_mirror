@@ -1,0 +1,64 @@
+name: auto_label
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  add-automerge-label:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find PR by head SHA
+        id: find
+        uses: peter-evans/find-pull-request@v3
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Exit if no PR
+        if: steps.find.outputs.number == ''
+        run: echo "No PR for this CI run" && exit 0
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/pull/${{ steps.find.outputs.number }}/head
+
+      - name: Paths filter (risky changes)
+        id: pf
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            risky:
+              - '.github/workflows/**'
+              - 'Dockerfile'
+              - 'requirements*.txt'
+              - 'run.py'
+              - 'app/main.py'
+              - 'scripts/**'
+
+      - name: Get PR author
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {data: pr} = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number("${{ steps.find.outputs.number }}"),
+            });
+            core.setOutput('author', pr.user.login);
+
+      - name: Add automerge label (safe PR)
+        if: |
+          steps.pf.outputs.risky != 'true' &&
+          (steps.pr.outputs.author == 'go2telegram' || steps.pr.outputs.author == 'github-actions[bot]')
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: automerge
+          number: ${{ steps.find.outputs.number }}
