@@ -1,0 +1,158 @@
+name: codex_dispatch
+
+on:
+  repository_dispatch:
+    types: [codex_command]
+
+env:
+  PYTHONPATH: .
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse command
+        id: p
+        uses: actions/github-script@v7
+        env:
+          CODEX_SHARED_KEY: ${{ secrets.CODEX_SHARED_KEY }}
+        with:
+          script: |
+            const payload = context.payload.client_payload || {};
+            const expectedKey = process.env.CODEX_SHARED_KEY;
+            if (!expectedKey) {
+              core.setFailed('Secret CODEX_SHARED_KEY is not configured');
+              return;
+            }
+            if (!payload.key) {
+              core.setFailed('client_payload.key is required');
+              return;
+            }
+            if (payload.key !== expectedKey) {
+              core.setFailed('Invalid client payload key');
+              return;
+            }
+            const cmd = payload.cmd || '';
+            const allowed = ['render_menu', 'build_catalog', 'open_patch_pr', 'lint_autofix'];
+            if (!cmd || !allowed.includes(cmd)) {
+              core.setFailed(`Unsupported cmd: ${cmd}`);
+              return;
+            }
+            core.setOutput('cmd', cmd);
+            core.setOutput('msg', payload.msg || '');
+            core.setOutput('patch_b64', payload.patch_b64 || '');
+
+      - name: Checkout
+        if: steps.p.outputs.cmd != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        if: contains('build_catalog open_patch_pr lint_autofix', steps.p.outputs.cmd)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node
+        if: steps.p.outputs.cmd == 'render_menu'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        if: steps.p.outputs.cmd == 'render_menu'
+        run: npm i -g @mermaid-js/mermaid-cli@10
+
+      - name: Render menu diagrams
+        if: steps.p.outputs.cmd == 'render_menu'
+        run: |
+          npx @mermaid-js/mermaid-cli \
+            -i docs/menu_map.mmd \
+            -o docs/menu_map.svg \
+            -b transparent -w 1400
+
+      - name: Install dependencies (build_catalog)
+        if: steps.p.outputs.cmd == 'build_catalog'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build catalog
+        if: steps.p.outputs.cmd == 'build_catalog'
+        run: |
+          python tools/build_products.py build
+          python tools/build_products.py validate
+
+      - name: Apply patch
+        if: steps.p.outputs.cmd == 'open_patch_pr'
+        run: |
+          if [ -z "${{ steps.p.outputs.patch_b64 }}" ]; then
+            echo "patch_b64 is required for open_patch_pr" >&2
+            exit 1
+          fi
+          echo "${{ steps.p.outputs.patch_b64 }}" | base64 -d > /tmp/codex.patch
+          git apply --whitespace=nowarn /tmp/codex.patch
+          git add -A
+
+      - name: Lint autofix
+        if: steps.p.outputs.cmd == 'lint_autofix'
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+          bash scripts/lint_autofix.sh
+
+      - name: PR (render_menu)
+        if: steps.p.outputs.cmd == 'render_menu'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(docs): render menu diagrams"
+          title: ${{ steps.p.outputs.msg != '' && steps.p.outputs.msg || 'codex(docs): render menu diagrams' }}
+          body: "Автогенерация диаграмм Mermaid. Открыто через repository_dispatch."
+          branch: "codex-render-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            docs/menu_map.svg
+
+      - name: PR (build_catalog)
+        if: steps.p.outputs.cmd == 'build_catalog'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(build): rebuild catalog"
+          title: ${{ steps.p.outputs.msg != '' && steps.p.outputs.msg || 'codex(build): rebuild catalog' }}
+          body: "Сборка каталога выполнена через repository_dispatch."
+          branch: "codex-catalog-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            app/catalog/**
+            build/**
+
+      - name: PR (open_patch_pr)
+        if: steps.p.outputs.cmd == 'open_patch_pr'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: ${{ steps.p.outputs.msg != '' && steps.p.outputs.msg || 'codex(patch): apply patch' }}
+          title: ${{ steps.p.outputs.msg != '' && steps.p.outputs.msg || 'codex(patch): apply patch' }}
+          body: "Патч применён через repository_dispatch."
+          branch: "codex-patch-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+
+      - name: PR (lint_autofix)
+        if: steps.p.outputs.cmd == 'lint_autofix'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "codex(lint): autofix formatting"
+          title: "codex(lint): autofix formatting"
+          body: "Автопочинка форматирования. Открыто через repository_dispatch."
+          branch: "codex-lint-${{ github.run_id }}"
+          base: "main"
+          labels: "codex,automerge"
+          add-paths: |
+            **/*.py
+            scripts/lint_autofix.sh

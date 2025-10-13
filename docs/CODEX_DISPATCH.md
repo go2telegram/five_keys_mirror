@@ -26,7 +26,7 @@ Body:
 {
   "event_type": "codex_command",
   "client_payload": {
-    "cmd": "render_menu" | "build_catalog" | "open_patch_pr",
+    "cmd": "render_menu" | "build_catalog" | "open_patch_pr" | "lint_autofix",
     "msg": "Короткий осмысленный заголовок/описание",
     "key": "<значение CODEX_SHARED_KEY>",
     "patch_b64": "<base64 unified diff (только для open_patch_pr)>"
@@ -43,6 +43,8 @@ Body:
   PR появляется только при наличии изменений.
 - `open_patch_pr` — применяет переданный unified diff (`git apply --index`) и
   открывает PR.
+- `lint_autofix` — запускает автоформат Python (isort+black) и открывает PR с
+  изменениями форматирования.
 
 ## 3. Скрипт-обёртка `tools/codex_dispatch.py`
 
@@ -60,7 +62,7 @@ python -m tools.codex_dispatch \
 Параметры:
 
 - позиционный аргумент `cmd` — одна из команд (`render_menu`, `build_catalog`,
-  `open_patch_pr`);
+  `open_patch_pr`, `lint_autofix`);
 - `--msg` — обязательное описание команды;
 - `--repo` — целевой репозиторий (`go2telegram/five_keys_bot` по умолчанию);
 - `--token` — PAT (можно опустить, если задан env `GITHUB_TOKEN`);
@@ -93,6 +95,10 @@ PATCH_B64=$(base64 -w0 /path/to/patch.diff)
 gh api repos/go2telegram/five_keys_bot/dispatches \
   --raw-field event_type=codex_command \
   --raw-field client_payload='{"cmd":"open_patch_pr","msg":"apply doc patch","patch_b64":"'"$PATCH_B64"'","key":"<SHARED_KEY>"}'
+
+gh api repos/go2telegram/five_keys_bot/dispatches \
+  --raw-field event_type=codex_command \
+  --raw-field client_payload='{"cmd":"lint_autofix","msg":"autofix formatting","key":"<SHARED_KEY>"}'
 ```
 
 ### curl
