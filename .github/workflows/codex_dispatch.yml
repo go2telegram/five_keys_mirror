@@ -53,6 +53,7 @@ jobs:
           REASON=""
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
             if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+              # ↓ added tefdvf as trusted sender
               if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
                 ALLOWED=true
               else
