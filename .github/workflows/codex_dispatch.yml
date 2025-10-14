@@ -49,14 +49,16 @@ jobs:
           set -euo pipefail
           echo "event=${{ github.event_name }}"
           echo "actor=${GITHUB_ACTOR}"
+          echo "sender=${{ github.event.sender.login || '' }}"
           ALLOWED=false
           REASON=""
+          SENDER="${{ github.event.sender.login || '' }}"
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
             if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
+              if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${SENDER}" == "tefdvf" || "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
                 ALLOWED=true
               else
-                REASON="not trusted sender: ${GITHUB_ACTOR}"
+                REASON="not trusted sender: actor=${GITHUB_ACTOR}, sender=${SENDER}"
               fi
             else
               REASON="wrong or empty key"
