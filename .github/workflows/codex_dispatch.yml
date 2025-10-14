@@ -18,11 +18,48 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      # ------------- Gate + Debug -------------
+      - name: Gate (key & sender)
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > debug.log
+          echo "event=${{ github.event_name }}" | tee -a debug.log
+          echo "actor=${GITHUB_ACTOR}" | tee -a debug.log
+          ALLOWED=false
+          REASON=""
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+              if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
+                ALLOWED=true
+              else
+                REASON="not trusted sender: ${GITHUB_ACTOR}"
+              fi
+            else
+              REASON="wrong or empty key"
+            fi
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
+              ALLOWED=true
+            else
+              REASON="not trusted sender: ${GITHUB_ACTOR}"
+            fi
+          else
+            REASON="unsupported event: ${{ github.event_name }}"
+          fi
+          echo "allowed=${ALLOWED}" | tee -a debug.log
+          echo "reason=${REASON}"   | tee -a debug.log
+          echo "allowed=${ALLOWED}" >> "$GITHUB_OUTPUT"
+          echo "reason=${REASON}"   >> "$GITHUB_OUTPUT"
+
       - name: Checkout
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
       - name: Bootstrap env
+        if: steps.gate.outputs.allowed == 'true'
         run: .github/scripts/bootstrap-env.sh
         env:
           BOT_TOKEN:            ${{ secrets.BOT_TOKEN }}
@@ -40,35 +77,6 @@ jobs:
           TIMEZONE:             ${{ vars.TIMEZONE }}
           LOG_LEVEL:            ${{ vars.LOG_LEVEL }}
           LOG_DIR:              ${{ vars.LOG_DIR }}
-
-      # ------------- Gate + Debug -------------
-      - name: Gate (key & sender)
-        id: gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "event=${{ github.event_name }}"
-          echo "actor=${GITHUB_ACTOR}"
-          ALLOWED=false
-          REASON=""
-          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              # ↓ added tefdvf as trusted sender
-              if [[ "${GITHUB_ACTOR}" == "tefdvf" || "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
-                ALLOWED=true
-              else
-                REASON="not trusted sender: ${GITHUB_ACTOR}"
-              fi
-            else
-              REASON="wrong or empty key"
-            fi
-          else
-            REASON="not repository_dispatch (event=${{ github.event_name }})"
-          fi
-          echo "allowed=${ALLOWED}" | tee -a debug.log
-          echo "reason=${REASON}"   | tee -a debug.log
-          echo "allowed=${ALLOWED}" >> $GITHUB_OUTPUT
-          echo "reason=${REASON}"   >> $GITHUB_OUTPUT
 
       - name: Read payload
         if: steps.gate.outputs.allowed == 'true'
@@ -198,6 +206,7 @@ jobs:
           add-paths: |
             **/*.py
             pyproject.toml
+
             scripts/lint_autofix.sh
 
       # =============== auto_label (native, no external actions) ===============
