@@ -1,0 +1,8 @@
+name: actions_probe
+on:
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "probe ok :: $GITHUB_REPOSITORY @ $GITHUB_REF"
