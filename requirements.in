@@ -19,7 +19,7 @@ pillow>=10
 reportlab>=3.6
 matplotlib>=3.8
 aiohttp>=3.9
-PyYAML==6.0.2
+PyYAML==6.0.3
 requests>=2.32.3
 redis>=5
 python-slugify==8.0.4
