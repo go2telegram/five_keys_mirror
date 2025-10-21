@@ -112,6 +112,10 @@ pytest -q
 
 Иконки и подписи в схеме должны совпадать с основными клавиатурами бота (см. раздел про UI выше), чтобы визуальные обозначения оставались единообразными.
 
+## Diagrams (Pages)
+
+[https://go2telegram.github.io/five_keys_mirror/](https://go2telegram.github.io/five_keys_mirror/) — автоматически собираемый список SVG-диаграмм из `docs/*.mmd` и `docs/**/*.mmd`.
+
 ## Dev up & self-check
 
 ### One-liner
