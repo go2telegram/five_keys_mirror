@@ -20,26 +20,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Gate: repo_dispatch по ключу, workflow_dispatch для владельца
-      - name: Gate (allow key or owner)
+      # ---- Gate: допускаем repository_dispatch по ключу или ручной запуск владельцем ----
+      - name: Gate
         id: gate
         shell: bash
         run: |
           set -euo pipefail
           : > debug.log
-          EVT="${{ github.event_name }}"
-          ACTOR="${GITHUB_ACTOR}"
-          ALLOWED=false
-          REASON=""
-          if [[ "$EVT" == "repository_dispatch" ]]; then
+          echo "event=${{ github.event_name }}"        | tee -a debug.log
+          echo "actor=${GITHUB_ACTOR}"                 | tee -a debug.log
+          ALLOWED=false; REASON=""
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
             if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              ALLOWED=true; echo "repo_dispatch: key ok" | tee -a debug.log
-            else REASON="wrong or empty key"; fi
-          elif [[ "$EVT" == "workflow_dispatch" ]]; then
-            if [[ "$ACTOR" == "go2telegram" || "$ACTOR" == "github-actions[bot]" ]]; then
-              ALLOWED=true; echo "workflow_dispatch: owner ok" | tee -a debug.log
-            else REASON="manual run not allowed for $ACTOR"; fi
-          else REASON="unsupported event: $EVT"; fi
+              ALLOWED=true
+            else
+              REASON="wrong or empty key"
+            fi
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # ручной запуск допускаем для владельца/бота
+            if [[ "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
+              ALLOWED=true
+            else
+              REASON="manual dispatch but not owner"
+            fi
+          else
+            REASON="unsupported event: ${{ github.event_name }}"
+          fi
           echo "allowed=$ALLOWED" | tee -a debug.log
           echo "reason=$REASON"   | tee -a debug.log
           echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
@@ -50,54 +56,90 @@ jobs:
         id: p
         shell: bash
         run: |
-          echo "cmd=${{ github.event.client_payload.cmd }}"  >> $GITHUB_OUTPUT
-          echo "msg=${{ github.event.client_payload.msg }}"  >> $GITHUB_OUTPUT
-          echo "fix=${{ github.event.client_payload.fix }}"  >> $GITHUB_OUTPUT
-          echo "cmd=${{ github.event.client_payload.cmd }}"  | tee -a debug.log
-          echo "msg=${{ github.event.client_payload.msg }}"  | tee -a debug.log
+          # значения по умолчанию для ручного запуска
+          CMD="${{ github.event.client_payload.cmd || 'render_menu' }}"
+          MSG="${{ github.event.client_payload.msg || 'manual dispatch' }}"
+          FIX="${{ github.event.client_payload.fix || '' }}"
+          echo "cmd=$CMD" >> $GITHUB_OUTPUT
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
+          echo "fix=$FIX" >> $GITHUB_OUTPUT
+          echo "cmd=$CMD" | tee -a debug.log
+          echo "msg=$MSG" | tee -a debug.log
 
-      - name: Setup Node & Fonts
-        if: steps.gate.outputs.allowed == 'true' && (steps.p.outputs.cmd == 'render_menu' || github.event_name == 'workflow_dispatch')
+      # ---- Рендер Mermaid -> SVG ----
+      - name: Setup Node
+        if: steps.p.outputs.cmd == 'render_menu' && steps.gate.outputs.allowed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install mermaid-cli
+        if: steps.p.outputs.cmd == 'render_menu' && steps.gate.outputs.allowed == 'true'
+        run: npm i -g @mermaid-js/mermaid-cli@10.9.1
+
+      - name: Fonts for Cyrillic & emoji
+        if: steps.p.outputs.cmd == 'render_menu' && steps.gate.outputs.allowed == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto fonts-noto-cjk
-          npm i -g @mermaid-js/mermaid-cli@10.9.1
-          echo '{"args":["--no-sandbox","--no-zygote","--disable-setuid-sandbox"]}' > puppeteer.json
+          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
 
-      - name: Render diagrams (docs/**/*.mmd)
-        if: steps.gate.outputs.allowed == 'true' && (steps.p.outputs.cmd == 'render_menu' || github.event_name == 'workflow_dispatch')
+      - name: Puppeteer no-sandbox
+        if: steps.p.outputs.cmd == 'render_menu' && steps.gate.outputs.allowed == 'true'
+        run: |
+          cat > puppeteer.json <<'JSON'
+          { "args": ["--no-sandbox","--disable-setuid-sandbox"] }
+          JSON
+
+      - name: Render docs/**/*.mmd -> artifacts/menu/*.svg
+        if: steps.p.outputs.cmd == 'render_menu' && steps.gate.outputs.allowed == 'true'
         id: render
         shell: bash
         run: |
           set -e
           mkdir -p artifacts/menu
-          mapfile -t files < <(git ls-files 'docs/**/*.mmd' 'docs/*.mmd' || true)
-          echo "Found ${#files[@]} .mmd files" | tee -a debug.log
-          if (( ${#files[@]} == 0 )); then
-            cat > artifacts/menu/index.html <<'HTML'
-<!doctype html><meta charset="utf-8"><title>Diagrams</title>
-<h1>No diagrams</h1><p>Add .mmd into <code>docs/</code> and rerun.</p>
-HTML
-          else
-            for f in "${files[@]}"; do
-              bn="$(basename "${f%.*}")"
-              echo "::group::Render $f"
-              if ! mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json; then
-                echo "::warning file=$f::Mermaid render failed"
-              fi
-              echo "::endgroup::"
+          # если нет ни одного .mmd — всё равно выпустим index.html
+          mapfile -t files < <(git ls-files 'docs/**/*.mmd' 'docs/*.mmd' 2>/dev/null || true)
+          fail=0
+          for f in "${files[@]}"; do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            if ! mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json; then
+              echo "::warning title=Mermaid render failed::$f"; fail=1
+            fi
+          done
+          echo "failed=$fail" >> $GITHUB_OUTPUT
+
+      # ---- index.html даже если рендер пустой/упал ----
+      - name: Build index.html
+        if: steps.gate.outputs.allowed == 'true'
+        shell: bash
+        run: |
+          mkdir -p artifacts/menu
+          {
+            echo '<!doctype html><meta charset="utf-8"><title>Diagrams</title>'
+            echo '<h1>Diagrams</h1><ul>'
+            shopt -s nullglob
+            for s in artifacts/menu/*.svg; do
+              n="$(basename "$s")"
+              echo "<li><a href='$n'>$n</a></li>"
             done
-            {
-              echo '<!doctype html><meta charset="utf-8"><title>Diagrams</title>'
-              echo '<h1>Diagrams</h1><ul>'
-              for s in artifacts/menu/*.svg 2>/dev/null; do
-                [ -f "$s" ] || continue
-                b=$(basename "$s"); echo "<li><a href=\"$b\">$b</a></li>"
-              done
-              echo '</ul>'
-            } > artifacts/menu/index.html
-            ls -la artifacts/menu >> debug.log || true
-          fi
+            echo '</ul>'
+          } > artifacts/menu/index.html
+          echo "Index built:"
+          ls -la artifacts/menu || true
+
+      - name: Upload SVGs artifact
+        if: steps.gate.outputs.allowed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: menu_svgs-${{ github.run_id }}
+          path: artifacts/menu
+          if-no-files-found: warn
+
+      # ---- GitHub Pages ----
+      - name: Setup Pages
+        if: steps.gate.outputs.allowed == 'true'
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         if: steps.gate.outputs.allowed == 'true'
@@ -105,21 +147,19 @@ HTML
         with:
           path: artifacts/menu
           name: github-pages
-
-      - name: Setup Pages
-        if: steps.gate.outputs.allowed == 'true'
-        uses: actions/configure-pages@v5
+          retention-days: 1
 
       - name: Deploy to Pages
         if: steps.gate.outputs.allowed == 'true'
-        id: dp
+        id: deploy
         uses: actions/deploy-pages@v4
 
       - name: Print Pages URL
-        if: steps.gate.outputs.allowed == 'true'
-        run: echo "Pages URL: ${{ steps.dp.outputs.page_url }}" | tee -a debug.log
+        if: always()
+        run: |
+          echo "Pages URL: ${{ steps.deploy.outputs.page_url || '' }}"
 
-      - name: Upload debug
+      - name: Upload debug bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
