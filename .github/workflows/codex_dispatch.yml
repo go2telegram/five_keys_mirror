@@ -19,20 +19,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --- Gate (key only) ---
-      - name: Gate (key only)
+      - name: Gate (allow repo_dispatch by key, workflow_dispatch for owner)
         id: gate
         shell: bash
         run: |
           set -euo pipefail
           : > debug.log
-          if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-            echo "allowed=true"  >> $GITHUB_OUTPUT
-            echo "OK: key match" | tee -a debug.log
+          EVT="${{ github.event_name }}"
+          ACTOR="${GITHUB_ACTOR}"
+          ALLOWED=false
+          REASON=""
+
+          if [[ "$EVT" == "repository_dispatch" ]]; then
+            if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+              ALLOWED=true
+              echo "repo_dispatch: key ok" | tee -a debug.log
+            else
+              REASON="wrong or empty key"
+            fi
+          elif [[ "$EVT" == "workflow_dispatch" ]]; then
+            # Разрешаем ручной запуск владельцу (и actions-боту)
+            if [[ "$ACTOR" == "go2telegram" || "$ACTOR" == "github-actions[bot]" ]]; then
+              ALLOWED=true
+              echo "workflow_dispatch: owner ok" | tee -a debug.log
+            else
+              REASON="manual run not allowed for $ACTOR"
+            fi
           else
-            echo "allowed=false" >> $GITHUB_OUTPUT
-            echo "wrong or empty CODEX_SHARED_KEY" | tee -a debug.log
+            REASON="unsupported event: $EVT"
           fi
+
+          echo "allowed=$ALLOWED" | tee -a debug.log
+          echo "reason=$REASON"   | tee -a debug.log
+          echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
+          echo "reason=$REASON"   >> $GITHUB_OUTPUT
 
       - name: Read payload
         if: steps.gate.outputs.allowed == 'true'
@@ -45,9 +65,8 @@ jobs:
           echo "cmd=${{ github.event.client_payload.cmd }}"  | tee -a debug.log
           echo "msg=${{ github.event.client_payload.msg }}"  | tee -a debug.log
 
-      # --- Render docs/**/*.mmd -> artifacts/menu/*.svg + index.html ---
       - name: Setup Node & Fonts
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && (steps.p.outputs.cmd == 'render_menu' || github.event_name == 'workflow_dispatch')
         run: |
           sudo apt-get update
           sudo apt-get install -y fonts-noto fonts-noto-cjk
@@ -55,7 +74,7 @@ jobs:
           echo '{"args":["--no-sandbox","--no-zygote","--disable-setuid-sandbox"]}' > puppeteer.json
 
       - name: Render diagrams
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true' && (steps.p.outputs.cmd == 'render_menu' || github.event_name == 'workflow_dispatch')
         id: render
         shell: bash
         run: |
@@ -65,65 +84,50 @@ jobs:
           echo "Found ${#files[@]} .mmd files" | tee -a debug.log
 
           if (( ${#files[@]} == 0 )); then
-            # нет диаграмм — всё равно опубликуем index.html
             cat > artifacts/menu/index.html <<HTML
-<!doctype html><meta charset="utf-8">
-<title>No diagrams</title>
-<h1>No diagrams</h1>
-<p>Добавьте .mmd в <code>docs/</code> и перезапустите render.</p>
-HTML
+            <!doctype html><meta charset="utf-8">
+            <title>No diagrams</title>
+            <h1>No diagrams</h1>
+            <p>Добавьте .mmd в <code>docs/</code> и перезапустите render.</p>
+            HTML
           else
             for f in "${files[@]}"; do
               bn="$(basename "${f%.*}")"
               echo "::group::Render $f"
-              mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json || \
-                echo "::warning file=$f::Mermaid render failed"
+              mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json ||                 echo "::warning file=$f::Mermaid render failed"
               echo "::endgroup::"
-            done </dev/null
-            # Генерация index.html с ссылками на SVG
+            done
             {
-              shopt -s nullglob
               echo '<!doctype html><meta charset="utf-8"><title>Diagrams</title>'
               echo '<h1>Diagrams</h1><ul>'
-              for s in artifacts/menu/*.svg; do
-                b=$(basename "$s"); echo "<li><a href=\"$b\">$b</a></li>"
+              for s in artifacts/menu/*.svg 2>/dev/null; do
+                [ -f "$s" ] || continue
+                b=$(basename "$s"); echo "<li><a href="$b">$b</a></li>"
               done
               echo '</ul>'
             } > artifacts/menu/index.html
-            echo "Index generated: artifacts/menu/index.html" >> debug.log
             ls -la artifacts/menu >> debug.log || true
           fi
 
-      # --- Publish to Pages ---
       - name: Upload Pages artifact
-        if: steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/menu
           name: github-pages
 
       - name: Setup Pages
-        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/configure-pages@v5
 
       - name: Deploy to Pages
-        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true'
         id: dp
         uses: actions/deploy-pages@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Print Pages URL
-        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        if: steps.gate.outputs.allowed == 'true'
         run: echo "Pages URL: ${{ steps.dp.outputs.page_url }}" | tee -a debug.log
-
-      # --- Doctor (минимум) ---
-      - name: Doctor
-        if: steps.p.outputs.cmd == 'doctor'
-        run: |
-          echo "repo=$(git remote get-url origin)"         | tee -a debug.log
-          echo "branch=$(git rev-parse --abbrev-ref HEAD)" | tee -a debug.log
-          echo "mmd=$(git ls-files '*.mmd' | wc -l)"       | tee -a debug.log
 
       - name: Upload debug
         if: always()
