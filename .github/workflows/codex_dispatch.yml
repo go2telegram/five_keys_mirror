@@ -1,1 +1,68 @@
-# (вставь тот же YAML что выше)
+name: codex_dispatch
+
+on:
+  repository_dispatch:
+    types: [codex_command]
+  workflow_dispatch:
+
+jobs:
+  run-codex-command:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate (key only)
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > debug.log
+          echo "event=${{ github.event_name }}" | tee -a debug.log
+          echo "actor=${GITHUB_ACTOR}" | tee -a debug.log
+          ALLOWED=false; REASON=""
+          if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+            ALLOWED=true
+          else
+            REASON="wrong or empty key"
+          fi
+          echo "allowed=$ALLOWED" | tee -a debug.log
+          echo "reason=$REASON"   | tee -a debug.log
+          echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
+          echo "reason=$REASON"   >> $GITHUB_OUTPUT
+
+      - name: Read payload
+        if: steps.gate.outputs.allowed == 'true'
+        id: p
+        run: |
+          echo "cmd=${{ github.event.client_payload.cmd }}" >> $GITHUB_OUTPUT
+          echo "msg=${{ github.event.client_payload.msg }}" >> $GITHUB_OUTPUT
+          echo "fix=${{ github.event.client_payload.fix }}" >> $GITHUB_OUTPUT
+          echo "cmd=${{ github.event.client_payload.cmd }}" | tee -a debug.log
+          echo "msg=${{ github.event.client_payload.msg }}" | tee -a debug.log
+
+      - name: Doctor (echo)
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'doctor'
+        run: |
+          echo "DOCTOR (fix=${{ github.event.client_payload.fix }})" | tee -a debug.log
+
+      - name: Render (echo)
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        run: |
+          echo "RENDER (msg=${{ github.event.client_payload.msg }})" | tee -a debug.log
+
+      - name: Gate report (always)
+        if: always()
+        run: |
+          echo "gate.allowed=${{ steps.gate.outputs.allowed }}"
+          echo "gate.reason=${{ steps.gate.outputs.reason }}"
+
+      - name: Upload debug bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex_dispatch-debug-${{ github.run_id }}
+          path: debug.log
+          if-no-files-found: warn
