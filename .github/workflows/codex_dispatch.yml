@@ -20,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Gate (allow repo_dispatch by key, workflow_dispatch for owner)
+      # Gate: repo_dispatch по ключу, workflow_dispatch для владельца
+      - name: Gate (allow key or owner)
         id: gate
         shell: bash
         run: |
@@ -32,21 +33,13 @@ jobs:
           REASON=""
           if [[ "$EVT" == "repository_dispatch" ]]; then
             if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              ALLOWED=true
-              echo "repo_dispatch: key ok" | tee -a debug.log
-            else
-              REASON="wrong or empty key"
-            fi
+              ALLOWED=true; echo "repo_dispatch: key ok" | tee -a debug.log
+            else REASON="wrong or empty key"; fi
           elif [[ "$EVT" == "workflow_dispatch" ]]; then
             if [[ "$ACTOR" == "go2telegram" || "$ACTOR" == "github-actions[bot]" ]]; then
-              ALLOWED=true
-              echo "workflow_dispatch: owner ok" | tee -a debug.log
-            else
-              REASON="manual run not allowed for $ACTOR"
-            fi
-          else
-            REASON="unsupported event: $EVT"
-          fi
+              ALLOWED=true; echo "workflow_dispatch: owner ok" | tee -a debug.log
+            else REASON="manual run not allowed for $ACTOR"; fi
+          else REASON="unsupported event: $EVT"; fi
           echo "allowed=$ALLOWED" | tee -a debug.log
           echo "reason=$REASON"   | tee -a debug.log
           echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
@@ -71,7 +64,7 @@ jobs:
           npm i -g @mermaid-js/mermaid-cli@10.9.1
           echo '{"args":["--no-sandbox","--no-zygote","--disable-setuid-sandbox"]}' > puppeteer.json
 
-      - name: Render diagrams
+      - name: Render diagrams (docs/**/*.mmd)
         if: steps.gate.outputs.allowed == 'true' && (steps.p.outputs.cmd == 'render_menu' || github.event_name == 'workflow_dispatch')
         id: render
         shell: bash
@@ -82,16 +75,16 @@ jobs:
           echo "Found ${#files[@]} .mmd files" | tee -a debug.log
           if (( ${#files[@]} == 0 )); then
             cat > artifacts/menu/index.html <<'HTML'
-<!doctype html><meta charset="utf-8">
-<title>Diagrams</title>
-<h1>No diagrams</h1>
-<p>Add .mmd into <code>docs/</code> and rerun.</p>
+<!doctype html><meta charset="utf-8"><title>Diagrams</title>
+<h1>No diagrams</h1><p>Add .mmd into <code>docs/</code> and rerun.</p>
 HTML
           else
             for f in "${files[@]}"; do
               bn="$(basename "${f%.*}")"
               echo "::group::Render $f"
-              mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json || echo "::warning file=$f::Mermaid render failed"
+              if ! mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json; then
+                echo "::warning file=$f::Mermaid render failed"
+              fi
               echo "::endgroup::"
             done
             {
