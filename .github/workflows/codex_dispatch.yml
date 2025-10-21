@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --- Gate: пускаем по ключу (без проверки sender)
+      # --- Gate: только по ключу из секрета
       - name: Gate (key only)
         id: gate
         shell: bash
@@ -78,6 +78,7 @@ jobs:
       - name: Render *.mmd -> *.svg
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         id: render
+        shell: bash
         run: |
           set -e
           mkdir -p artifacts/menu
@@ -94,6 +95,31 @@ jobs:
             fi
           done
           echo "failed=$fail" >> $GITHUB_OUTPUT
+
+      # === НОВОЕ: собираем index.html, чтобы на Pages не было 404 ===
+      - name: Build index.html for Pages
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        shell: bash
+        run: |
+          set -e
+          mkdir -p artifacts/menu
+          if ! ls artifacts/menu/*.svg >/dev/null 2>&1; then
+            echo '<!doctype html><meta charset="utf-8"><title>No SVG</title><h1>No SVGs were produced</h1>' \
+              > artifacts/menu/index.html
+          else
+            {
+              echo '<!doctype html><meta charset="utf-8">'
+              echo '<title>Rendered SVGs</title>'
+              echo "<h1>Rendered SVGs — $GITHUB_REPOSITORY</h1><ul>"
+              for f in artifacts/menu/*.svg; do
+                b=$(basename "$f")
+                echo "<li><a href=\"$b\">$b</a></li>"
+              done
+              echo '</ul>'
+              first=$(basename "$(ls artifacts/menu/*.svg | head -n1)")
+              echo "<hr><object data=\"$first\" type=\"image/svg+xml\" style=\"width:100%;height:80vh\"></object>"
+            } > artifacts/menu/index.html
+          fi
 
       - name: Upload rendered SVGs (artifact)
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
@@ -113,11 +139,17 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/menu
+          name: github-pages
+          retention-days: 1
 
       - name: Deploy to Pages
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         id: deploy
         uses: actions/deploy-pages@v4
+
+      - name: Print Pages URL
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        run: echo "Pages URL: ${{ steps.deploy.outputs.page_url }}"
 
       # ---------- DOCTOR (минимальный отчёт) ----------
       - name: Doctor report (minimal)
@@ -128,7 +160,7 @@ jobs:
           echo "files_mmd=$(git ls-files '*.mmd' | wc -l)"   | tee -a debug.log
           echo "files_py=$(git ls-files '*.py' | wc -l)"     | tee -a debug.log
 
-      # ---------- Always: gate report + debug bundle ----------
+      # ---------- Всегда: отчёт и debug ----------
       - name: Gate report (always)
         if: always()
         run: |
