@@ -1,31 +1,30 @@
 name: pages_probe
 on:
-  workflow_disPATCH:
+  workflow_dispatch: {}
 permissions:
-  contents: read
   pages: write
   id-token: write
-  # для публикации нужен write на pages
+  contents: read
+
 jobs:
   probe:
-    runs-on: ubuntu-l14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare minimal site
+      - name: Build tiny site
         run: |
           mkdir -p site
           cat > site/index.html <<'HTML'
           <!doctype html><meta charset="utf-8">
           <title>Pages OK</title>
-          <h1>Pages is working ✅</h1>
-          <p>Repo: $GITHUB_REPOSITORY</p>
+          <h1>GitHub Pages is alive ✅</h1>
+          <p>Repository: go2telegram/five_keys_mirror</p>
           HTML
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with: { path: site, name: github-pages }
+        with:
+          path: site
+          name: github-pages
       - id: deploy
         uses: actions/deploy-pages@v4
-      - run: |
-          echo "URL: ${{ steps.deploy.outputs.page_url }}"
-          code=$(curl -s -o /dev/null -w "%{?http_code}" "${{ steps.deploy.outputs.page_url }}")
-          echo "HTTP $code"
+      - run: echo "Probe URL: ${{ steps.deploy.outputs.page_url }}"
