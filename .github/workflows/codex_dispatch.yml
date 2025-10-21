@@ -5,15 +5,23 @@ on:
     types: [codex_command]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: codex_dispatch-${{ github.ref || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   run-codex-command:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
+      # --- Gate: пускаем по ключу (без проверки sender)
       - name: Gate (key only)
         id: gate
         shell: bash
@@ -43,16 +51,84 @@ jobs:
           echo "cmd=${{ github.event.client_payload.cmd }}" | tee -a debug.log
           echo "msg=${{ github.event.client_payload.msg }}" | tee -a debug.log
 
-      - name: Doctor (echo)
-        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'doctor'
-        run: |
-          echo "DOCTOR (fix=${{ github.event.client_payload.fix }})" | tee -a debug.log
+      # ---------- RENDER (Mermaid -> SVG) ----------
+      - name: Setup Node
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Render (echo)
+      - name: Install mermaid-cli
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        run: npm i -g @mermaid-js/mermaid-cli@10.9.1
+
+      - name: Install fonts (cyrillic + emoji)
         if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
         run: |
-          echo "RENDER (msg=${{ github.event.client_payload.msg }})" | tee -a debug.log
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
 
+      - name: Puppeteer no-sandbox
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        run: |
+          cat > puppeteer.json <<'JSON'
+          { "args": ["--no-sandbox","--disable-setuid-sandbox"] }
+          JSON
+
+      - name: Render *.mmd -> *.svg
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        id: render
+        run: |
+          set -e
+          mkdir -p artifacts/menu
+          fail=0
+          mapfile -t files < <(git ls-files '*.mmd' || true)
+          if (( ${#files[@]} == 0 )); then
+            echo "No .mmd files found"; exit 0
+          fi
+          for f in "${files[@]}"; do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            if ! mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json; then
+              echo "::warning title=Mermaid render failed::$f"; fail=1
+            fi
+          done
+          echo "failed=$fail" >> $GITHUB_OUTPUT
+
+      - name: Upload rendered SVGs (artifact)
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        uses: actions/upload-artifact@v4
+        with:
+          name: menu_svgs-${{ github.run_id }}
+          path: artifacts/menu
+          if-no-files-found: warn
+
+      # ---------- Publish to GitHub Pages ----------
+      - name: Setup Pages
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/menu
+
+      - name: Deploy to Pages
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'render_menu'
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      # ---------- DOCTOR (минимальный отчёт) ----------
+      - name: Doctor report (minimal)
+        if: steps.gate.outputs.allowed == 'true' && steps.p.outputs.cmd == 'doctor'
+        run: |
+          echo "repo=$(git remote get-url origin)"           | tee -a debug.log
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)"   | tee -a debug.log
+          echo "files_mmd=$(git ls-files '*.mmd' | wc -l)"   | tee -a debug.log
+          echo "files_py=$(git ls-files '*.py' | wc -l)"     | tee -a debug.log
+
+      # ---------- Always: gate report + debug bundle ----------
       - name: Gate report (always)
         if: always()
         run: |
