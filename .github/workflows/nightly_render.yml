@@ -1,0 +1,60 @@
+name: nightly_render
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm i -g @mermaid-js/mermaid-cli@10.9.1
+
+      - name: Install fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+
+      - name: Puppeteer no-sandbox
+        run: |
+          cat > puppeteer.json <<'JSON'
+          { "args": ["--no-sandbox","--disable-setuid-sandbox"] }
+          JSON
+
+      - name: Render *.mmd -> *.svg
+        run: |
+          set -e
+          mkdir -p artifacts/menu
+          mapfile -t files < <(git ls-files '*.mmd' || true)
+          if (( ${#files[@]} == 0 )); then
+            echo "No .mmd files"; exit 0
+          fi
+          for f in "${files[@]}"; do
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
+            mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json
+          done
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/menu
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
