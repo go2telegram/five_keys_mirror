@@ -1,4 +1,5 @@
 name: codex_dispatch
+
 on:
   repository_dispatch:
     types: [codex_command]
@@ -29,7 +30,6 @@ jobs:
           ACTOR="${GITHUB_ACTOR}"
           ALLOWED=false
           REASON=""
-
           if [[ "$EVT" == "repository_dispatch" ]]; then
             if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
               ALLOWED=true
@@ -38,7 +38,6 @@ jobs:
               REASON="wrong or empty key"
             fi
           elif [[ "$EVT" == "workflow_dispatch" ]]; then
-            # Разрешаем ручной запуск владельцу (и actions-боту)
             if [[ "$ACTOR" == "go2telegram" || "$ACTOR" == "github-actions[bot]" ]]; then
               ALLOWED=true
               echo "workflow_dispatch: owner ok" | tee -a debug.log
@@ -48,7 +47,6 @@ jobs:
           else
             REASON="unsupported event: $EVT"
           fi
-
           echo "allowed=$ALLOWED" | tee -a debug.log
           echo "reason=$REASON"   | tee -a debug.log
           echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
@@ -82,19 +80,18 @@ jobs:
           mkdir -p artifacts/menu
           mapfile -t files < <(git ls-files 'docs/**/*.mmd' 'docs/*.mmd' || true)
           echo "Found ${#files[@]} .mmd files" | tee -a debug.log
-
           if (( ${#files[@]} == 0 )); then
-            cat > artifacts/menu/index.html <<HTML
-            <!doctype html><meta charset="utf-8">
-            <title>No diagrams</title>
-            <h1>No diagrams</h1>
-            <p>Добавьте .mmd в <code>docs/</code> и перезапустите render.</p>
-            HTML
+            cat > artifacts/menu/index.html <<'HTML'
+<!doctype html><meta charset="utf-8">
+<title>Diagrams</title>
+<h1>No diagrams</h1>
+<p>Add .mmd into <code>docs/</code> and rerun.</p>
+HTML
           else
             for f in "${files[@]}"; do
               bn="$(basename "${f%.*}")"
               echo "::group::Render $f"
-              mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json ||                 echo "::warning file=$f::Mermaid render failed"
+              mmdc -i "$f" -o "artifacts/menu/${bn}.svg" --puppeteerConfigFile puppeteer.json || echo "::warning file=$f::Mermaid render failed"
               echo "::endgroup::"
             done
             {
@@ -102,7 +99,7 @@ jobs:
               echo '<h1>Diagrams</h1><ul>'
               for s in artifacts/menu/*.svg 2>/dev/null; do
                 [ -f "$s" ] || continue
-                b=$(basename "$s"); echo "<li><a href="$b">$b</a></li>"
+                b=$(basename "$s"); echo "<li><a href=\"$b\">$b</a></li>"
               done
               echo '</ul>'
             } > artifacts/menu/index.html
