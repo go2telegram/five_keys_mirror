@@ -3,7 +3,7 @@ name: codex_dispatch
 on:
   repository_dispatch:
     types: [codex_command]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -11,18 +11,16 @@ permissions:
   id-token: write
 
 concurrency:
-  group: codex-pages-${{ github.ref || github.run_id }}
+  group: codex-${{ github.ref || 'default' }}
   cancel-in-progress: false
 
 jobs:
-  run:
+  run-codex-command:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ---- Gate: разрешаем repository_dispatch по ключу, а workflow_dispatch — владельцу/коллабораторов
+      # ---- GATE ----
       - name: Gate
         id: gate
         shell: bash
@@ -31,46 +29,44 @@ jobs:
           : > debug.log
           echo "event=${{ github.event_name }}" | tee -a debug.log
           echo "actor=${GITHUB_ACTOR}" | tee -a debug.log
-
-          allowed=false
-          reason=""
-
-          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            if [[ "${{ github.event.client_payload.key || '' }}" == "${{ secrets.CODEX_SHARED_KEY || '' }}" && -n "${{ secrets.CODEX_SHARED_KEY || '' }}" ]]; then
-              allowed=true
+          ALLOWED=false; REASON=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${GITHUB_ACTOR}" == "go2telegram" || "${GITHUB_ACTOR}" == "github-actions[bot]" ]]; then
+              ALLOWED=true
             else
-              reason="wrong or empty key"
+              REASON="workflow_dispatch by non-owner"
+            fi
+          elif [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            if [[ "${{ github.event.client_payload.key }}" == "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+              ALLOWED=true
+            else
+              REASON="wrong or empty key"
             fi
           else
-            # workflow_dispatch — пускаем владельца/коллабораторов
-            if [[ "${GITHUB_ACTOR}" != "" ]]; then
-              allowed=true
-            else
-              reason="not allowed actor"
-            fi
+            REASON="unsupported event: ${{ github.event_name }}"
           fi
+          echo "allowed=$ALLOWED" | tee -a debug.log
+          echo "reason=$REASON"   | tee -a debug.log
+          echo "allowed=$ALLOWED" >> $GITHUB_OUTPUT
+          echo "reason=$REASON"   >> $GITHUB_OUTPUT
 
-          echo "allowed=$allowed" | tee -a debug.log
-          echo "reason=$reason"   | tee -a debug.log
-          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
-          echo "reason=$reason"   >> "$GITHUB_OUTPUT"
-
-      - name: Read payload (optional)
+      - name: Read payload
         if: steps.gate.outputs.allowed == 'true'
-        id: payload
+        id: p
         shell: bash
         run: |
-          echo "cmd=${{ github.event.client_payload.cmd || 'render_menu' }}" >> "$GITHUB_OUTPUT"
-          echo "msg=${{ github.event.client_payload.msg || '' }}" >> "$GITHUB_OUTPUT"
-          echo "cmd=${{ github.event.client_payload.cmd || 'render_menu' }}" | tee -a debug.log
-          echo "msg=${{ github.event.client_payload.msg || '' }}" | tee -a debug.log
+          CMD="${{ github.event.client_payload.cmd || '' }}"
+          MSG="${{ github.event.client_payload.msg || '' }}"
+          echo "cmd=${CMD}" >> $GITHUB_OUTPUT
+          echo "msg=${MSG}" >> $GITHUB_OUTPUT
+          echo "cmd=${CMD}" | tee -a debug.log
+          echo "msg=${MSG}" | tee -a debug.log
 
-      # ---- Install toolchain for Mermaid
+      # ---- Render Mermaid -> SVG ----
       - name: Setup Node
         if: steps.gate.outputs.allowed == 'true'
         uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        with: { node-version: '20' }
 
       - name: Install mermaid-cli
         if: steps.gate.outputs.allowed == 'true'
@@ -79,152 +75,101 @@ jobs:
       - name: Install fonts (cyrillic + emoji)
         if: steps.gate.outputs.allowed == 'true'
         run: |
-          sudo apt-get update -y
+          sudo apt-get update
           sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
 
       - name: Puppeteer no-sandbox
         if: steps.gate.outputs.allowed == 'true'
-        run: |
-          cat > puppeteer.json <<'JSON'
-          { "args": ["--no-sandbox","--disable-setuid-sandbox"] }
-          JSON
+        run: echo '{ "args":["--no-sandbox","--disable-setuid-sandbox"] }' > puppeteer.json
 
-      # ---- Render Mermaid => SVG (docs/**/*.mmd)
-      - name: Render diagrams
+      - name: Render docs/**/*.mmd -> artifacts/menu/*.svg
         if: steps.gate.outputs.allowed == 'true'
         id: render
         shell: bash
         run: |
-          set -e
+          set -euo pipefail; shopt -s globstar nullglob
           mkdir -p artifacts/menu
-          mapfile -t files < <(git ls-files 'docs/**/*.mmd' 'docs/*.mmd' 2>/dev/null || true)
-          if (( ${#files[@]} == 0 )); then
-            echo "no_diagrams=1" >> "$GITHUB_OUTPUT"
-            echo "No Mermaid files found in docs/ — будет сгенерирован чистый index.html" | tee -a debug.log
-            exit 0
-          fi
-
-          fail=0
-          for f in "${files[@]}"; do
-            name="$(basename "${f%.mmd}")"
-            out="artifacts/menu/${name}.svg"
-            echo "[render] $f -> $out" | tee -a debug.log
+          fail=0; count=0
+          for f in docs/**/*.mmd docs/*.mmd; do
+            [[ -f "$f" ]] || continue
+            out="artifacts/menu/$(basename "${f%.mmd}").svg"
+            echo "[render] $f -> $out"
             if ! mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json; then
-              echo "::warning title=Mermaid render failed::$f"
-              fail=1
+              echo "::warning title=Mermaid render failed::$f"; fail=1
+            else
+              count=$((count+1))
             fi
           done
-          echo "render_failed=$fail" >> "$GITHUB_OUTPUT"
+          echo "rendered=$count" >> $GITHUB_OUTPUT
+          echo "failed=$fail"   >> $GITHUB_OUTPUT
 
-      # ---- Build index.html всегда (даже если нет SVG), кладём его в корень публикации
+      # ---- Build index.html (всегда) ----
       - name: Build index.html
         if: steps.gate.outputs.allowed == 'true'
         shell: bash
         run: |
-          set -e
           mkdir -p artifacts/menu
-
-          # Список SVG, если есть
-          mapfile -t svgs < <(ls -1 artifacts/menu/*.svg 2>/dev/null || true)
-
           cat > artifacts/menu/index.html <<'HTML'
-          <!doctype html>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Diagrams · five_keys_mirror</title>
+          <!doctype html><meta charset="utf-8">
+          <title>Mermaid Diagrams</title>
           <style>
-            :root{--bg:#0b1020;--fg:#e9eef7;--muted:#9fb0c3;--card:#141a2a;--acc:#5ec8ff}
-            *{box-sizing:border-box}
-            body{margin:0;font:16px/1.5 system-ui,Segoe UI,Roboto,Ubuntu,sans-serif;background:var(--bg);color:var(--fg)}
-            header{padding:24px 16px;background:linear-gradient(90deg,#102040,transparent)}
-            .wrap{max-width:1100px;margin:0 auto;padding:16px}
-            h1{margin:0 0 6px;font-size:22px}
-            p{margin:0;color:var(--muted)}
-            .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:20px}
-            .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid #223}
-            .card h3{margin:6px 0 8px;font-size:16px;color:#cfe6ff}
-            .thumb{display:block;overflow:auto;max-height:360px;background:#0d1324;border-radius:8px;padding:6px;border:1px dashed #223}
-            .thumb img{display:block;width:100%;height:auto}
-            .empty{margin:28px 0;padding:16px;border:1px dashed #334;border-radius:10px;color:#9bb0c9;background:#0f1628}
-            footer{margin:40px 0 10px;color:#8393a7}
-            code{background:#0e1526;border:1px solid #223;border-radius:6px;padding:2px 6px}
-            a{color:var(--acc)}
+            body{font:16px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;max-width:1080px;margin:40px auto;padding:0 16px;color:#111;background:#fafafa}
+            h1{margin:0 0 20px}
+            .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:20px}
+            .card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+            .card a{display:block;text-decoration:none;color:#0ea5e9;font-weight:600;margin:8px 0 4px}
+            .empty{padding:20px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc}
+            footer{margin-top:36px;color:#6b7280;font-size:13px}
           </style>
-          <header><div class="wrap">
-            <h1>GitHub Pages · <code>go2telegram/five_keys_mirror</code></h1>
-            <p>Автогенерация <b>Mermaid</b>-диаграмм из <code>docs/**/*.mmd</code> и предпросмотр ниже.</p>
-          </div></header>
-          <main class="wrap">
-            <section id="empty" class="empty" style="display:none">
-              Диаграммы в каталоге <code>docs/</code> не найдены. Добавь файл
-              <code>docs/sample.mmd</code>, запусти workflow, и тут появятся SVG-превью.
-            </section>
-            <section class="grid" id="grid"></section>
-          </main>
-          <footer class="wrap">
-            <div>Последняя публикация: <span id="ts"></span></div>
-          </footer>
+          <h1>Mermaid Diagrams (GitHub Pages)</h1>
+          <div id="root"></div>
           <script>
-            const svgs = [/*__SVGLIST__*/];
-            const grid = document.getElementById('grid');
-            const empty = document.getElementById('empty');
-            const ts = new Date().toLocaleString();
-            document.getElementById('ts').textContent = ts;
-
-            if (!svgs.length) {
-              empty.style.display = 'block';
-            } else {
-              svgs.forEach(name => {
-                const card = document.createElement('div'); card.className = 'card';
-                card.innerHTML = `
-                  <h3>${name}</h3>
-                  <a class="thumb" href="./${name}" target="_blank" rel="noopener">
-                    <img src="./${name}" alt="${name}">
-                  </a>
-                `;
-                grid.appendChild(card);
+            const list = [
+          <!--__INJECT__-->
+            ];
+            const root = document.getElementById('root');
+            if(!list.length){
+              root.innerHTML = '<div class="empty">Нет диаграмм. Добавьте *.mmd в папку <code>docs/</code> и запустите публикацию.</div>';
+            }else{
+              const grid=document.createElement('div'); grid.className='grid'; root.appendChild(grid);
+              list.forEach(n=>{
+                const card=document.createElement('div'); card.className='card'; grid.appendChild(card);
+                const link=document.createElement('a'); link.href=n; link.textContent=n; card.appendChild(link);
+                const img=document.createElement('img'); img.src=n; img.alt=n; img.loading='lazy'; img.style.maxWidth='100%'; img.style.height='auto'; card.appendChild(img);
               });
             }
           </script>
+          <footer>Published: <span id="dt"></span> via <code>codex_dispatch</code>
+            <script>document.getElementById('dt').textContent=new Date().toISOString();</script>
+          </footer>
           HTML
+          svgs=()
+          while IFS= read -r -d '' f; do svgs+=("$(basename "$f")"); done < <(find artifacts/menu -maxdepth 1 -type f -name '*.svg' -print0)
+          mapfile -t lines < <(for s in "${svgs[@]}"; do printf "              '%s',\n" "$s"; done)
+          sed -i "s/<!--__INJECT__-->/\n${lines[*]}/" artifacts/menu/index.html
 
-          # Вклеиваем список SVG (если есть)
-          if ls artifacts/menu/*.svg >/dev/null 2>&1; then
-            NAMES=$(ls -1 artifacts/menu/*.svg | sed 's!.*/!!')
-            JSON=$(printf '%s\n' "$NAMES" | jq -R . | jq -s .)
-            tmpf=$(mktemp)
-            awk -v repl="$JSON" '{gsub("/\\*__SVGLIST__\\*/", repl)}1' artifacts/menu/index.html > "$tmpf"
-            mv "$tmpf" artifacts/menu/index.html
-          fi
-
-          echo "--- files in artifacts/menu/ ---" | tee -a debug.log
-          ls -lah artifacts/menu/ | tee -a debug.log
-
-      # ---- Upload Pages artifact & deploy
-      - name: Setup Pages
+      - name: List publish content
         if: steps.gate.outputs.allowed == 'true'
-        uses: actions/configure-pages@v5
+        run: |
+          echo "----- artifacts/menu -----"
+          ls -la artifacts/menu || true
 
-      - name: Upload Pages artifact
+      # ---- Deploy to Pages ----
+      - uses: actions/configure-pages@v5
         if: steps.gate.outputs.allowed == 'true'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: artifacts/menu
-          name: github-pages
-
-      - name: Deploy to Pages
+      - uses: actions/upload-pages-artifact@v3
         if: steps.gate.outputs.allowed == 'true'
-        id: deploy
+        with: { path: artifacts/menu, name: github-pages }
+      - id: deploy
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/deploy-pages@v4
 
-      - name: Print Pages URL
-        if: steps.gate.outputs.allowed == 'true'
-        run: echo "Pages URL: ${{ steps.deploy.outputs.page_url }}"
-
+      # ---- Debug artifacts ----
       - name: Upload debug bundle
         if: always()
         uses: actions/upload-artifact@v4
-        with:
-          name: codex_dispatch-debug-${{ github.run_id }}
-          path: debug.log
-          if-no-files-found: warn
+        with: { name: codex_dispatch-debug-${{ github.run_id }}, path: debug.log, if-no-files-found: warn }
+
+      - name: Print Pages URL
+        if: always()
+        run: echo "Pages URL: ${{ steps.deploy.outputs.page_url }}"
