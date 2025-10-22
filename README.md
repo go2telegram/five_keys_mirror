@@ -531,6 +531,9 @@ Docker-compose поднимет Postgres, выполнит миграции и �
 - `alembic current` — проверить версию схемы.
 - `make dev` / `make migrate msg=...` — см. Makefile.
 
+## Published diagrams
+- **Pages:** https://go2telegram.github.io/five_keys_mirror/
+
 ## Документация
 
 - [CODEX_DISPATCH.md](docs/CODEX_DISPATCH.md) — вызовы GitHub Actions через `repository_dispatch`
