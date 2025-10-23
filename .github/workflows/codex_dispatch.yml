@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Gate: только для repository_dispatch (workflow_dispatch проходит без ключа)
+      # Gate: для repository_dispatch проверяем секрет; для workflow_dispatch пускаем всегда
       - name: Gate (repo_dispatch key)
         id: gate
         shell: bash
@@ -34,7 +34,7 @@ jobs:
           fi
           echo "allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
 
-      # Генерируем простую страницу (даже если диаграмм нет)
+      # Минимальный билд: всегда кладём index.html, чтобы Pages не были пустыми
       - name: Build site (index.html)
         if: steps.gate.outputs.allowed == 'true' || github.event_name == 'workflow_dispatch'
         shell: bash
@@ -57,33 +57,30 @@ jobs:
             <h1>Mermaid diagrams</h1>
             <span class="pill">auto-published via GitHub Pages</span>
           </header>
-          <p>Ниже отображаются SVG из папки <code>artifacts/menu/</code>, если они присутствуют. Страница генерируется всегда.</p>
+          <p>Страница генерируется всегда. SVG берём из <code>artifacts/menu/</code>.</p>
           <div class="grid">
           <!-- LIST -->
           HTML
 
-          # если есть svg (например docs/sample.mmd -> sample.svg), положим рядом
-          # подберём все найденные *.mmd и попробуем отрендерить в *.svg — МИН. попытка
-          mapfile -t mmds < <(git ls-files 'docs/**/*.mmd' 'docs/*.mmd' 2>/dev/null || true)
-          if ((${#mmds[@]})); then
-            echo "found ${#mmds[@]} *.mmd" | tee -a debug.log
-          else
-            echo "no *.mmd sources; placing placeholder svg" | tee -a debug.log
-            cat > artifacts/menu/sample.svg <<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" width="600" height="200">
-              <rect width="100%" height="100%" fill="#f8fafc"/>
-              <text x="20" y="60" font-size="24" fill="#334155">No diagrams yet</text>
-              <text x="20" y="100" font-size="14" fill="#64748b">Add docs/*.mmd to publish SVG here.</text>
-            </svg>
-            SVG
-          fi
-
-          # перечислим все .svg в artifacts/menu и добавим в index.html
+          # Если SVG нет — положим placeholder, чтобы не было пусто
           shopt -s nullglob
+          has_svg=false
           for s in artifacts/menu/*.svg; do
+            has_svg=true
             b=$(basename "$s")
             printf '<div class="card"><h3>%s</h3><img src="%s" alt="%s"></div>\n' "$b" "$b" "$b" >> artifacts/menu/index.html
           done
+          if ! $has_svg; then
+            cat > artifacts/menu/sample.svg <<'SVG'
+            <svg xmlns="http://www.w3.org/2000/svg" width="640" height="200">
+              <rect width="100%" height="100%" fill="#f8fafc"/>
+              <text x="20" y="60" font-size="24" fill="#334155">No diagrams yet</text>
+              <text x="20" y="100" font-size="14" fill="#64748b">Add docs/*.mmd and wire rendering later.</text>
+            </svg>
+            SVG
+            printf '<div class="card"><h3>%s</h3><img src="%s" alt="%s"></div>\n' "sample.svg" "sample.svg" "sample.svg" >> artifacts/menu/index.html
+          fi
+
           cat >> artifacts/menu/index.html <<'HTML'
           </div>
           <footer>
