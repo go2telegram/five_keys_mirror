@@ -3,126 +3,105 @@ name: codex_dispatch
 on:
   repository_dispatch:
     types: [codex_command]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: codex-pages-${{ github.ref || github.run_id }}
-  cancel-in-progress: false
+  workflow_dispatch: {}
 
 jobs:
   publish:
+    name: codex_dispatch
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Gate: пропускаем вручную запущенный workflow_dispatch всегда,
-      # а для repository_dispatch проверяем секретный ключ.
-      - name: Gate
+      - name: Gate (allow workflow_dispatch; repo_dispatch requires CODEX key)
         id: gate
         shell: bash
         run: |
           set -euo pipefail
-          : > debug.log
+          : > debug.txt
+          mkdir -p artifacts/menu
           echo "event=${{ github.event_name }}" | tee -a debug.txt
-          echo "ref=${{ github.ref }}"        | tee -a debug.txt
-          echo "workflow_ref=${{ github.workflow_ref }}" | tee -a debug.txt
           allowed=true
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            if [[ -z "${{ secrets.CODEX_HIDE_KEYS || '' }}" && -z "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              echo "missing CODEX_SHARED_KEY" | tee -a debug.txt
+            if [[ -z "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
+              echo "ERROR: Missing secret CODEX_SHARED_KEY" | tee -a debug.txt
               allowed=false
             elif [[ "${{ github.event.client_payload.key }}" != "${{ secrets.CODEX_SHARED_KEY }}" ]]; then
-              echo "wrong or empty key" | tee -a debug.txt
+              echo "ERROR: client_payload.key mismatch" | tee -a debug.txt
               allowed=false
+            else
+              echo "OK: key verified" | tee -a debug.txt
             fi
+          else
+            echo "workflow_dispatch -> allowed" | tee -a debug.txt
           fi
           echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
 
-      # Всегда соберём минимальный сайт (index.html),
-      # чтобы деплой на Pages не падал из-за пустой директории.
-      - name: Build site (always produce index.html)
-        if: steps.gate.outputs.allowed == 'true' || github.event_name == 'workflow_dispatch'
+      - name: Prepare static site
+        if: steps.gate.outputs.allowed == 'true'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/menu
           shopt -s nullglob
-          # если уже есть svg — подхватим
-          for s in docs/*.svg docs/**/*.svg artifacts/menu/*.svg; do
-            cp -f "$s" "artifacts/menu/" || true
+          for s in docs/*.svg docs/**/*.svg; do
+            [[ -f "$s" ]] && cp -f "$s" "artifacts/menu/"
           done
-          # если диаграмм нет — сделаем простой placeholder
-          if ! compgen -G "artifacts/menu/*.svg" > /dev/null; then
-            cat > artifacts/menu/index.svg <<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" width="640" height="200">
+          if ! compgen -G "artifacts/menu/*.svg" >/dev/null; then
+            cat > artifacts/menu/placeholder.svg <<'SVG'
+            <svg xmlns="http://www.w3.org/2000/svg" width="640" height="240">
               <rect width="100%" height="100%" fill="#f8fafc"/>
-              <text x="20" y="60" font-size="24" fill="#334155">No diagrams yet</text>
-              <text x="20" y="100" font-size="14" fill="#64748b">Add docs/*.mmd or *.svg to publish diagrams.</text>
+              <text x="24" y="60"  font-size="24" fill="#334155">No diagrams yet</text>
+              <text x="24" y="110" font-size="14" fill="#64748b">Add SVG or build Mermaid to docs/</text>
             </svg>
             SVG
           fi
-          # Соберём простую витрину
-          {
-            echo '<!doctype html><meta charset="utf-8"><title>five_keys_mirror · Diagrams</title>'
-            cat <<'CSS'
-            <style>
-              body{font:16px/1.5 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:24px;max-width:980px;margin:auto}
-              h1{margin:0 0 6px}
-              .sub{color:#667;margin:0 0 20px}
-              .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-              .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}
-              .card img{max-width:100%;height:auto;display:block;border:1px solid #e57; border-radius:8px}
-              footer{margin-top:24px;color:#667}
-              a{color:#0a66c2;text-decoration:none}
-            </style>
-            CSS
-            echo '<h1>Mermaid / diagram gallery</h1>'
-            echo '<p class="sub">Auto-published by codex_dispatch. Source: <code>docs/</code>, deployed to GitHub Pages.</p>'
-            echo '<div class="grid">'
-            for f in artifacts/menu/*.svg; do
-              n=$(basename "$f"); echo "<div class='card'><div>$n</div><img src='$n' alt='$n'></div>"
-            done
-            echo '</div>'
-            echo "<hr><footer>Repo: <a href='https://github.com/${GITHUB_REPOSITORY}'>${GITHUB_REPOSITORY}</a></footer>"
-          } > artifacts/menu/index.html
+          cat > artifacts/menu/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <title>five_keys_mirror · Diagrams</title>
+          <style>
+            body{font:16px/1.5 system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:980px;margin:24px auto;padding:0 16px}
+            h1{margin:0 0 8px}
+            .sub{color:#667;margin-bottom:20px}
+            .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+            .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}
+            .card img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #e5e7eb}
+            footer{margin-top:24px;color:#64748b}
+            a{color:#0a66c2;text-decoration:none}
+          </style>
+          <h1>Mermaid / diagram gallery</h1>
+          <p class="sub">Published by codex_dispatch → GitHub Pages. Source: <code>docs/*.mmd / *.svg</code></p>
+          <div class="grid">
+          <script>
+            const imgs = %s;
+            document.write(imgs.map(n => `<div class="card"><div>${n}</div><img src="${n}" alt="${n}"></div>`).join(''));
+          </script>
+          </div>
+          <footer>Repo: <a href="https://github.com/${GITHUB_REPOSITORY}">${GITHUB_REPOSITORY}</a></footer>
+          HTML
+          mapfile -t LIST < <(basename -a artifacts/menu/*.svg || true)
+          node -e "const fs=require('fs');const file=fs.readFileSync('artifacts/menu/index.html','utf8');const data=JSON.stringify(process.argv.slice(1));fs.writeFileSync('artifacts/menu/index.html',file.replace('%s',data));" "${LIST[@]}"
 
       - name: Configure Pages
-        if: steps.gate.outputs.valid == '' || steps.gate.outputs.allowed == 'true'
-        uses: actions/configuration@v1
-        with:
-          # Начиная с 2024/25 нужен id-token и pages perms, уже выставлены выше
-          # Никаких лишних прав не даём.
-          # Артефакт сгенерируем из каталога artifacts/menu.
-          # Форма — html+svg, так проще и надёжнее.
-          token: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.gate.outputs.allowed == 'true'
+        uses: actions/configure-pages@v5
 
       - name: Upload static site
-        if: steps.gate.outputs.allowed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.gate.outputs.allowed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: artifacts/menu
 
-      - name: Deploy to GitHub Pages
-        if: steps.gate.outputs.allowed == 'true' || github.event_name == 'workflow_dispatch'
+      - name: Deploy to Pages
+        if: steps.gate.outputs.allowed == 'true'
         id: deploy
-        uses: actions/deployment@v4
+        uses: actions/deploy-pages@v4
 
-      - name: Report
-        if: always()
-        run: |
-          echo "event=${{ github.event_name }}" >> debug.txt
-          echo "ref=${{ github.ref }}" >> debug.txt
-          echo "workflow_ref=${{ github.workflow_ref }}" >> debug.txt
-          echo "gate.allowed=${{ steps.gate.outputs.allowed }}" >> debug.txt
-          echo "Pages URL: ${{ steps.deploy.outputs.page_url }}" >> debug.txt
-          cat debug.txt
-      - name: Upload debug
+      - name: Attach debug
         if: always()
         uses: actions/upload-artifact@v4
         with:
