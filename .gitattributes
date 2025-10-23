@@ -1,4 +1,4 @@
-# нормализуем перевод строки
+# enforce LF to avoid CRLF corruption in workflows/scripts
 * text=auto eol=lf
 *.yml  text eol=lf
 *.yaml text eol=lf
