@@ -5,4 +5,4 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "probe ok :: $GITHUB_REPOSITORY @ $GITHUB_REF"
+      - run: echo "Actions OK on $GITHUB_REPOSITORY @ $GITHUB_REF ($GITHUB_SHA)"
