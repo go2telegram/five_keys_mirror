@@ -1,0 +1,73 @@
+name: pages_fallback
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-fallback-${{ github.ref || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare site (SVG + index.html)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/menu
+
+          shopt -s nullglob
+          # Собираем все SVG из docs/ и docs/**/
+          for s in docs/*.svg docs/**/*.svg; do
+            [[ -f "$s" ]] && cp -f "$s" artifacts/menu/
+          done
+
+          # Если SVG нет — кладём placeholder
+          if ! compgen -G "artifacts/menu/*.svg" >/dev/null; then
+            cat > artifacts/menu/placeholder.svg <<'SVG'
+            <svg xmlns="http://www.w3.org/2000/svg" width="640" height="240">
+              <rect width="100%" height="100%" fill="#f8fafc"/>
+              <text x="24" y="60"  font-size="24" fill="#334155">No diagrams yet</text>
+              <text x="24" y="110" font-size="14" fill="#64748b">Add SVG or build Mermaid to docs/</text>
+            </svg>
+            SVG
+          fi
+
+          # index.html
+          cat > artifacts/menu/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <title>five_keys_mirror · Diagrams</title>
+          <style>
+            body{font:16px/1.5 system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:980px;margin:24px auto;padding:0 16px}
+            h1{margin:0 0 8px}.sub{color:#667;margin-bottom:20px}
+            .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+            .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}
+            .card img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #e5e7eb}
+            footer{margin-top:24px;color:#64748b}
+            a{color:#0a66c2;text-decoration:none}
+          </style>
+          <h1>Mermaid / diagram gallery</h1>
+          <p class="sub">Published via GitHub Actions → Pages. Source: <code>docs/*.svg</code></p>
+          <div class="grid">
+          HTML
+
+          mapfile -t LIST < <(basename -a artifacts/menu/*.svg || true)
+          node -e "const fs=require('fs');const f='artifacts/menu/index.html';const html=fs.readFileSync(f,'utf8');const imgs=JSON.stringify(process.argv.slice(1));fs.writeFileSync(f,html+imgs.slice(1,-1).split(',').map(n=>\`<div class=\"card\"><div>\${JSON.parse(n)}</div><img src=\${JSON.parse(n)}></div>\`).join('')+'</div><footer>Repo: <a href=\"https://github.com/${process.env.GITHUB_REPOSITORY}\">${process.env.GITHUB_REPOSITORY}</a></footer>');" "${LIST[@]}"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/menu
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Print URL
+        run: echo "Pages URL: ${{ steps.deploy.outputs.page_url }}"
