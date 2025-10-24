@@ -1,30 +1,12 @@
+%%{init: {'theme':'neutral','flowchart': {'htmlLabels': false}} }%%
 flowchart TD
-  HOME[🏠 Домой]
-  TESTS[⚡ Тесты]
-  PLAN[🎯 План (AI)]
-  CATALOG[🛍 Каталог]
-  PREMIUM[💎 Премиум]
-  PROFILE[👤 Профиль]
-  HELP[ℹ️ Помощь]
+  START([Старт]) --> PLAN["🎯 План (AI)"]
+  PLAN --> CATALOG["🛍 Каталог"]
+  PLAN --> CONTENT["📚 Контент"]
+  PLAN --> HEALTH["💊 Здоровье"]
 
-  HOME --> TESTS
-  HOME --> PLAN
-  HOME --> CATALOG
-  HOME --> PREMIUM
-  HOME --> PROFILE
-  HOME --> HELP
+  CATALOG -->|выбор| ITEMS["Товары"]
+  CONTENT -->|советы| ARTICLES["Статьи"]
+  HEALTH --> CHECKUP["Проверки/чекапы"]
 
-  TESTS --> SON[🛌 Сон]
-  TESTS --> ENERGY[⚡ Энергия]
-  TESTS --> IMMUNITY[🛡 Иммунитет]
-  TESTS --> SKIN[🧴 Кожа/суставы]
-  TESTS --> STRESS[😮‍💨 Стресс]
-
-  PLAN --> ADVICE[💡 AI-совет]
-  PLAN --> PREMIUM_UPSELL[💎 Премиум-план]
-  PREMIUM_UPSELL --> HOME
-  CATALOG --> CART[🛒 Корзина]
-  PROFILE --> REMINDERS[⏰ Напоминания]
-  PROFILE --> REF[🔗 Рефералы]
-%% ping 2025-10-13-21:56:37
-%% ping 2025-10-13-22:58:20
+  START --> HELP["Помощь"]
