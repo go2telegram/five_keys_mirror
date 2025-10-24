@@ -1,0 +1,44 @@
+name: Publish to gh-pages
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write   # нужно для коммита в gh-pages
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build static site
+        run: |
+          set -e
+          rm -rf dist && mkdir -p dist/menu
+          # копируем все готовые SVG из docs/ рекурсивно
+          find ./docs -type f -name '*.svg' -exec cp -f {} dist/menu/ \; || true
+          # если SVG нет — делаем минимальный index.html
+          if [ -z "$(ls -A dist/menu 2>/dev/null)" ]; then
+            cat > dist/index.html <<'HTML'
+            <!doctype html><meta charset="utf-8">
+            <h1>Site is up</h1>
+            <p>No SVG yet. Put files into <code>docs/</code>.</p>
+            HTML
+          else
+            {
+              echo '<!doctype html><meta charset="utf-8"><title>five_keys_mirror</title><h1>SVG</h1><ul>'
+              for f in $(ls dist/menu); do echo "<li><a href=\"menu/$f\">$f</a></li>"; done
+              echo '</ul>'
+            } > dist/index.html
+          fi
+
+      # Публикуем готовую папку dist на ветку gh-pages
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          publish_branch: gh-pages
+          enable_jekyll: false
