@@ -1,0 +1,13 @@
+{
+  "name": "five-keys-mirror",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-site.mjs"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^10.9.1",
+    "globby": "^14.0.1",
+    "fs-extra": "^11.2.0"
+  }
+}

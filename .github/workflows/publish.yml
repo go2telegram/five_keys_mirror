@@ -1,44 +1,64 @@
-name: Publish to gh-pages
+name: Publish to Pages
 
 on:
   push:
     branches: [ "main" ]
 
 permissions:
-  contents: write   # нужно для коммита в gh-pages
+  contents: read
+  pages: write
+  id-token: write
+
+consecutive-failures: 1
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build static site
-        run: |
-          set -e
-          rm -rf dist && mkdir -p dist/menu
-          # копируем все готовые SVG из docs/ рекурсивно
-          find ./docs -type f -name '*.svg' -exec cp -f {} dist/menu/ \; || true
-          # если SVG нет — делаем минимальный index.html
-          if [ -z "$(ls -A dist/menu 2>/dev/null)" ]; then
-            cat > dist/index.html <<'HTML'
-            <!doctype html><meta charset="utf-8">
-            <h1>Site is up</h1>
-            <p>No SVG yet. Put files into <code>docs/</code>.</p>
-            HTML
-          else
-            {
-              echo '<!doctype html><meta charset="utf-8"><title>five_keys_mirror</title><h1>SVG</h1><ul>'
-              for f in $(ls dist/menu); do echo "<li><a href=\"menu/$f\">$f</a></li>"; done
-              echo '</ul>'
-            } > dist/index.html
-          fi
-
-      # Публикуем готовую папку dist на ветку gh-pages
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
-          publish_branch: gh-pages
-          enable_jekyll: false
+          node-version: '20'
+
+      - name: Install system deps (fonts for Mermaid)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Enable Corepack & install deps
+        run: |
+          corepack enable
+          npm ci
+
+      - name: Build static site (render Mermaid → SVG)
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
