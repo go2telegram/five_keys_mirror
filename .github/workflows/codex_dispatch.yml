@@ -1,0 +1,90 @@
+name: codex_dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      cmd:
+        description: "Action to perform (render|publish)"
+        required: false
+        default: "publish"
+      key:
+        description: "Shared key (only if repository_dispatch отсутствует)"
+        required: false
+  repository_dispatch:
+    types: [ "codex_command" ]  # payload: { "cmd": "publish", "key": "cdx_..." }
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-manual"
+  cancel-in-progress: true
+
+env:
+  DEFAULT_CMD: publish
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse intent
+        id: intent
+        run: |
+          echo "cmd=${{ inputs.cmd || github.event.client_payload.cmd || env.DEFAULT_CMD }}" >> "$GITHUB_OUTPUT"
+          echo "incoming_key=${{ github.event.client_payload.key }}" >> "$GITHUB_OUTPUT"
+
+      - name: Gate by secret (for repository_dispatch)
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        shell: bash
+        env:
+          INCOMING: ${{ steps.intent.outputs.incoming_key }}
+          EXPECTED: ${{ secrets.CODEX_ASYNC_KEY || secrets.CODEX_SHARED_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${EXPECTED:-}" ]]; then
+            echo "::error::Missing secret CODEX_ASYNC_KEY (or CODEX_SHARED_KEY)"; exit 1
+          fi
+          if [[ -z "${INCOMING:-}" || "${INCOMING}" != "${EXPECTED}" ]]; then
+            echo "::error::Invalid or missing 'key' in repository_dispatch payload"
+            exit 1
+          fi
+          echo "Gate OK"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install system deps (fonts for Mermaid)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Enable Corepack & install deps
+        run: |
+          corepack enable
+          npm ci
+
+      - name: Build static site
+        if: ${{ steps.intent.outputs.cmd != 'noop' }}
+        run: npm run build
+
+      - name: Setup Pages
+        if: ${{ steps.intent.outputs.cmd == 'publish' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: ${{ steps.intent.outputs.cmd == 'publish' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to Pages
+        if: ${{ steps.intent.outputs.cmd == 'publish' }}
+        uses: actions/deploy-pages@v4

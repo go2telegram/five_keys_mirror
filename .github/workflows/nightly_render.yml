@@ -1,8 +1,8 @@
-name: nightly_render
+name: Nightly Render
 
 on:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 2 * * *"   # каждый день в 02:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -10,107 +10,34 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages-nightly"
+  cancel-in-progress: true
+
 jobs:
-  publish:
+  nightly:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
-      - name: Install mermaid-cli
-        run: npm i -g @mermaid-js/mermaid-cli@10.9.1
-
-      - name: Install fonts (cyrillic + emoji)
+          node-version: '20'
+      - name: Install system deps (fonts for Mermaid)
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto fonts-noto-cjk fonts-noto-color-emoji
-
-      - name: Configure Puppeteer (no-sandbox)
-        run: echo '{ "args":["--no-sandbox","--disable-setuid-sandbox"] }' > puppeteer.json
-
-      - name: Render *.mmd → artifacts/menu/*.svg
-        shell: bash
+          sudo apt-get install -y --no-install-recommends fonts-noto fonts-noto-cjk fonts-noto-color-emoji
+          sudo rm -rf /var/lib/apt/lists/*
+      - name: Enable Corepack & install deps
         run: |
-          set -euo pipefail
-          shopt -s globstar nullglob
-          mkdir -p artifacts/menu
-          count=0
-          for f in docs/**/*.mmd docs/*.mmd; do
-            [[ -f "$f" ]] || continue
-            out="artifacts/menu/$(basename "${f%.mmd}").svg"
-            echo "[render] $f -> $out"
-            mmdc -i "$f" -o "$out" --puppeteerConfigFile puppeteer.json
-            count=$((count+1))
-          done
-          echo "Rendered $count diagram(s)"
-
-      - name: Build index.html
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts/menu
-          cat > artifacts/menu/index.html <<'HTML'
-          <!doctype html><meta charset="utf-8">
-          <title>Mermaid diagrams</title>
-          <style>
-            body{font:15px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:40px auto;max-width:860px;padding:0 16px;background:#fafafa;color:#111}
-            h1{margin:0 0 16px;font-size:28px}
-            ul{padding:0;margin:0;list-style:none}
-            li{margin:12px 0;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-            li img{display:block;max-width:100%;height:auto;margin-top:10px}
-            .empty{padding:20px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc}
-            footer{margin-top:32px;font-size:13px;color:#6b7280}
-          </style>
-          <h1>Mermaid diagrams</h1>
-          <div id="root"></div>
-          <footer>Published: <span id="dt"></span> via <code>nightly_render</code></footer>
-          <script>
-            const list = [
-          <!--__INJECT__-->
-            ];
-            const root=document.getElementById('root');
-            if(!list.length){
-              root.innerHTML='<div class="empty">Нет диаграмм. Добавьте *.mmd в папку <code>docs/</code>.</div>';
-            }else{
-              const ul=document.createElement('ul');
-              root.appendChild(ul);
-              list.forEach(name=>{
-                const li=document.createElement('li');
-                const a=document.createElement('a');
-                a.href=name; a.textContent=name; a.style.fontWeight='600'; a.style.textDecoration='none';
-                li.appendChild(a);
-                const img=document.createElement('img');
-                img.src=name; img.alt=name; img.loading='lazy';
-                li.appendChild(img);
-                ul.appendChild(li);
-              });
-            }
-            document.getElementById('dt').textContent=new Date().toISOString();
-          </script>
-          HTML
-          mapfile -t svgs < <(find artifacts/menu -maxdepth 1 -type f -name '*.svg' -printf '%f\n' | sort)
-          mapfile -t lines < <(for s in "${svgs[@]}"; do printf "              '%s',\n" "$s"; done)
-          sed -i "s/<!--__INJECT__-->/\n${lines[*]}/" artifacts/menu/index.html
-
-      - name: List publish content
-        run: |
-          echo "----- artifacts/menu -----"
-          ls -la artifacts/menu
-
+          corepack enable
+          npm ci
+      - name: Build
+        run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: artifacts/menu
-          name: github-pages
-
-      - name: Deploy to Pages
-        id: deploy
+          path: ./dist
+      - name: Deploy
         uses: actions/deploy-pages@v4

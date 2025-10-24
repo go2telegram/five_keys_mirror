@@ -1,46 +1,4 @@
-﻿# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
-.venv/
-venv/
-.env
-.env.*
-!.env.example
-*.sqlite
-
-# Node (tunnel, tools)
 node_modules/
-npm-debug.log*
-
-# OS
+dist/
 .DS_Store
-Thumbs.db
-
-# VSCode/IDE
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-
-# Logs
-/logs/
 *.log
-
-# Build artifacts
-/build/
-!build/
-!build/load_report.md
-
-# Offline artifacts
-/wheels/
-/var/
-/dist/
-app/static/images/quiz/**/*
-exports/
-
-# local control
-.codexctl.env
-codexctl.sh
